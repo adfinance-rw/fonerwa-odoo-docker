@@ -1,0 +1,10 @@
+# Production Python dependencies for Odoo
+# Essential packages only - most dependencies are already in Odoo base image
+
+# Database connectors
+psycopg2-binary>=2.9.7
+
+# Additional utilities for specific use cases
+num2words>=0.5.12
+python-stdnum>=1.19
+passlib>=1.7.4

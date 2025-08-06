@@ -1,41 +1,60 @@
 services:
   web:
-    image: odoo:18.0
-    depends_on:
-      - db
-    ports:
-      - "8069:8069"
+    build: .
+    container_name: fonerwa-odoo-web
+    restart: unless-stopped
+    expose:
+      - "8069"
     volumes:
       - odoo-web-data:/var/lib/odoo
-      - ./config:/etc/odoo
-      - ./addons:/mnt/extra-addons
-      - ./custom_addons:/mnt/custom_addons
+      - ./config:/etc/odoo:ro
+      - ./addons:/mnt/extra-addons:ro
+      - ./custom_addons:/mnt/custom_addons:ro
+      - ./logs:/var/log/odoo
+      - ./requirements.txt:/tmp/requirements.txt:ro
     environment:
-      - HOST=db
-      - USER=odoo
-      - PASSWORD_FILE=/run/secrets/postgresql_password
-      - ODOO_ADMIN_EMAIL=admin@example.com
-      - ODOO_ADMIN_PASSWORD=admin123
-    secrets:
-      - postgresql_password
+      - ODOO_RC=/etc/odoo/odoo.conf
+    networks:
+      - odoo-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8069/web/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    ports:
+      - "8069:8069"
 
-  db:
-    image: postgres:15
-    environment:
-      - POSTGRES_DB=postgres
-      - POSTGRES_PASSWORD_FILE=/run/secrets/postgresql_password
-      - POSTGRES_USER=odoo
-      - PGDATA=/var/lib/postgresql/data/pgdata
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: fonerwa-odoo-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
     volumes:
-      - odoo-db-data:/var/lib/postgresql/data/pgdata
-    secrets:
-      - postgresql_password
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./logs/nginx:/var/log/nginx
+    networks:
+      - odoo-network
+    depends_on:
+      web:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
 volumes:
   odoo-web-data:
-  odoo-db-data:
+    driver: local
 
-secrets:
-  postgresql_password:
-    file: odoo_pg_pass
-
+networks:
+  odoo-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
