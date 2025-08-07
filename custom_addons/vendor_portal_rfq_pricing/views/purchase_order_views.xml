@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Purchase Order Form View Extension -->
+    <record id="purchase_order_form_inherit_vendor_pricing" model="ir.ui.view">
+        <field name="name">purchase.order.form.vendor.pricing</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_form"/>
+        <field name="arch" type="xml">
+            
+            <!-- Add vendor pricing fields in header -->
+            <xpath expr="//div[@name='button_box']" position="after">
+                <div class="oe_title">
+                    <div class="row" invisible="state not in ['draft', 'sent']">
+                        <div class="col-6">
+                            <field name="vendor_prices_submitted" readonly="1"/>
+                            <label for="vendor_prices_submitted" string="Vendor Prices Submitted"/>
+                        </div>
+                        <div class="col-6" invisible="not vendor_submission_date">
+                            <field name="vendor_submission_date" readonly="1"/>
+                            <label for="vendor_submission_date" string="Submission Date"/>
+                        </div>
+                    </div>
+                </div>
+            </xpath>
+
+            <!-- Add vendor pricing information in the order lines -->
+            <xpath expr="//field[@name='order_line']/list/field[@name='price_unit']" position="after">
+                <field name="x_supplier_price" optional="show" 
+                       readonly="state not in ['draft', 'sent']"
+                       decoration-info="x_supplier_price > 0"/>
+                <field name="price_difference" optional="hide" readonly="1"
+                       decoration-success="price_difference &lt; 0"
+                       decoration-danger="price_difference &gt; 0"/>
+                <field name="price_difference_percent" optional="hide" readonly="1"
+                       decoration-success="price_difference_percent &lt; 0"
+                       decoration-danger="price_difference_percent &gt; 0"/>
+                <field name="supplier_price_submitted" invisible="1"/>
+            </xpath>
+
+            <!-- Add action buttons -->
+            <xpath expr="//header" position="inside">
+                <button name="action_transfer_vendor_prices" string="Transfer Vendor Prices" 
+                        type="object" class="btn-primary"
+                        invisible="not has_vendor_prices or state not in ['draft', 'sent']"
+                        groups="purchase.group_purchase_user"/>
+            </xpath>
+
+            <!-- Add computed field for has_vendor_prices -->
+            <xpath expr="//field[@name='partner_ref']" position="after">
+                <field name="has_vendor_prices" invisible="1"/>
+            </xpath>
+
+        </field>
+    </record>
+
+
+
+    <!-- Purchase Order List View Extension -->
+    <record id="purchase_order_list_inherit_vendor_pricing" model="ir.ui.view">
+        <field name="name">purchase.order.list.vendor.pricing</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_view_tree"/>
+        <field name="arch" type="xml">
+            
+            <xpath expr="//field[@name='amount_total']" position="after">
+                <field name="vendor_prices_submitted" optional="show" 
+                       widget="boolean_toggle"/>
+                <field name="has_vendor_prices" optional="hide" 
+                       widget="boolean_toggle"/>
+            </xpath>
+
+        </field>
+    </record>
+
+    <!-- Add Search View with Vendor Pricing Filters -->
+    <record id="purchase_order_search_inherit_vendor_pricing" model="ir.ui.view">
+        <field name="name">purchase.order.search.vendor.pricing</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.view_purchase_order_filter"/>
+        <field name="arch" type="xml">
+            
+            <xpath expr="//filter[@name='activities_exception']" position="after">
+                <separator/>
+                <filter string="Vendor Prices Submitted" name="vendor_prices_submitted"
+                        domain="[('vendor_prices_submitted', '=', True)]"/>
+                <filter string="Pending Vendor Pricing" name="pending_vendor_pricing"
+                        domain="[('state', 'in', ['draft', 'sent']), ('vendor_prices_submitted', '=', False)]"/>
+            </xpath>
+
+            <xpath expr="//filter[@name='order_date']" position="after">
+                <filter string="Vendor Price Status" name="group_vendor_price_status"
+                        domain="[]" context="{'group_by': 'vendor_prices_submitted'}"/>
+            </xpath>
+
+        </field>
+    </record>
+
+    <!-- Vendor Pricing Dashboard Action -->
+    <record id="action_purchase_vendor_pricing_dashboard" model="ir.actions.act_window">
+        <field name="name">Vendor Pricing Dashboard</field>
+        <field name="res_model">purchase.order</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('state', 'in', ['draft', 'sent'])]</field>
+        <field name="context">{
+            'search_default_pending_vendor_pricing': 1,
+            'default_state': 'draft'
+        }</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No RFQs pending vendor pricing
+            </p>
+            <p>
+                This dashboard shows all RFQs that are waiting for vendor price submissions.
+                Vendors can submit their prices through the portal, and you can review and 
+                transfer them here.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu Items -->
+    <menuitem id="menu_purchase_vendor_pricing_dashboard"
+              name="Vendor Pricing Dashboard"
+              parent="purchase.menu_purchase_root"
+              action="action_purchase_vendor_pricing_dashboard"
+              sequence="15"
+              groups="purchase.group_purchase_user"/>
+
+    <!-- Purchase Order Line List with Vendor Pricing -->
+    <record id="purchase_order_line_list_vendor_pricing" model="ir.ui.view">
+        <field name="name">purchase.order.line.list.vendor.pricing</field>
+        <field name="model">purchase.order.line</field>
+        <field name="arch" type="xml">
+            <list string="Purchase Order Lines with Vendor Pricing" editable="bottom">
+                <field name="order_id" readonly="1"/>
+                <field name="product_id" readonly="1"/>
+                <field name="name" readonly="1"/>
+                <field name="product_qty" readonly="1"/>
+                <field name="product_uom" readonly="1"/>
+                <field name="price_unit" readonly="1"/>
+                <field name="x_supplier_price" 
+                       decoration-info="x_supplier_price > 0"
+                       decoration-muted="not x_supplier_price"/>
+                <field name="price_difference" readonly="1"
+                       decoration-success="price_difference &lt; 0"
+                       decoration-danger="price_difference &gt; 0"/>
+                <field name="price_difference_percent" readonly="1"
+                       decoration-success="price_difference_percent &lt; 0"
+                       decoration-danger="price_difference_percent &gt; 0"/>
+                <field name="supplier_price_submitted" readonly="1" widget="boolean_toggle"/>
+                <button name="action_accept_supplier_price" string="Accept" type="object" 
+                        icon="fa-check" class="btn-success"
+                        invisible="not x_supplier_price"/>
+                <button name="action_reject_supplier_price" string="Reject" type="object" 
+                        icon="fa-times" class="btn-danger"
+                        invisible="not x_supplier_price"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Action for Purchase Order Lines with Vendor Pricing -->
+    <record id="action_purchase_order_line_vendor_pricing" model="ir.actions.act_window">
+        <field name="name">Order Lines with Vendor Pricing</field>
+        <field name="res_model">purchase.order.line</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="purchase_order_line_list_vendor_pricing"/>
+        <field name="domain">[('x_supplier_price', '>', 0)]</field>
+        <field name="context">{}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No vendor prices submitted yet
+            </p>
+            <p>
+                This view shows all purchase order lines where vendors have submitted prices.
+                You can review, accept, or reject individual vendor prices from here.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu for Purchase Order Lines with Vendor Pricing -->
+    <menuitem id="menu_purchase_order_line_vendor_pricing"
+              name="Lines with Vendor Pricing"
+              parent="purchase.menu_purchase_root"
+              action="action_purchase_order_line_vendor_pricing"
+              sequence="16"
+              groups="purchase.group_purchase_user"/>
+
+
+
+</odoo> 

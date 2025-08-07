@@ -1,0 +1,273 @@
+/* Vendor Portal RFQ Pricing Styles */
+
+.o_portal_rfq_pricing_form {
+    max-width: 100%;
+}
+
+/* Enhanced Portal Button Styles */
+.portal-pricing-button {
+    position: relative;
+    overflow: hidden;
+    transform: perspective(1px) translateZ(0);
+    transition-duration: 0.3s;
+    transition-property: color, background-color, transform, box-shadow;
+}
+
+.portal-pricing-button:hover {
+    transform: translateY(-3px);
+    color: white !important;
+    text-decoration: none;
+}
+
+.portal-pricing-button:before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+    transform: scaleX(0);
+    transform-origin: 0 50%;
+    transition-property: transform;
+    transition-duration: 0.3s;
+    transition-timing-function: ease-out;
+}
+
+.portal-pricing-button:hover:before {
+    transform: scaleX(1);
+}
+
+.supplier-price-input {
+    font-weight: bold;
+    background-color: #f8f9fa;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.supplier-price-input:focus {
+    background-color: #fff;
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.supplier-price-input.has-value {
+    background-color: #d4edda;
+    border-color: #28a745;
+}
+
+.supplier-price-input.error {
+    background-color: #f8d7da;
+    border-color: #dc3545;
+}
+
+/* Enhanced table styles for RFQ pricing */
+.table-vendor-pricing {
+    margin-bottom: 0;
+}
+
+.table-vendor-pricing th {
+    background-color: #f8f9fa;
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.table-vendor-pricing tr:hover {
+    background-color: #f8f9fa;
+}
+
+.table-vendor-pricing .vendor-price-column {
+    background-color: #e3f2fd;
+    font-weight: bold;
+}
+
+/* Price difference indicators */
+.price-positive {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.price-negative {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.price-neutral {
+    color: #6c757d;
+}
+
+/* Progress indicators */
+.pricing-progress {
+    margin: 20px 0;
+}
+
+.pricing-progress .progress-bar {
+    transition: width 0.6s ease;
+}
+
+/* Responsive pricing table */
+@media (max-width: 768px) {
+    .table-responsive .table-vendor-pricing {
+        font-size: 0.875rem;
+    }
+    
+    .supplier-price-input {
+        padding: 0.375rem 0.5rem;
+    }
+    
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.775rem;
+    }
+}
+
+/* Card enhancements */
+.card-vendor-pricing {
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-vendor-pricing .card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    font-weight: 600;
+}
+
+/* Status badges */
+.badge-submitted {
+    background-color: #28a745;
+}
+
+.badge-pending {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.badge-rejected {
+    background-color: #dc3545;
+}
+
+/* Animation for price updates */
+@keyframes priceUpdate {
+    0% { background-color: #fff3cd; }
+    100% { background-color: transparent; }
+}
+
+.price-updated {
+    animation: priceUpdate 1s ease-out;
+}
+
+/* Loading states */
+.loading-overlay {
+    position: relative;
+}
+
+.loading-overlay::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.8);
+    display: none;
+    z-index: 999;
+}
+
+.loading-overlay.loading::after {
+    display: block;
+}
+
+.loading-spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    display: none;
+}
+
+.loading .loading-spinner {
+    display: block;
+}
+
+/* Vendor portal specific styles */
+.o_portal_vendor_section {
+    background-color: #f8f9fa;
+    border-left: 4px solid #007bff;
+    padding: 1rem;
+    margin: 1rem 0;
+}
+
+.vendor-pricing-summary {
+    background-color: #e9ecef;
+    border-radius: 0.25rem;
+    padding: 1rem;
+    margin: 1rem 0;
+}
+
+.vendor-pricing-summary h5 {
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+/* Success/Error messages */
+.alert-vendor-success {
+    border-color: #28a745;
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.alert-vendor-warning {
+    border-color: #ffc107;
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.alert-vendor-error {
+    border-color: #dc3545;
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* Portal breadcrumb enhancements */
+.o_portal_submenu.vendor-pricing {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+/* Form validation styles */
+.form-control.is-invalid {
+    border-color: #dc3545;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23dc3545' viewBox='-2 -2 7 7'%3e%3cpath stroke='%23dc3545' d='m0 0l3 3m0-3L0 3'/%3e%3ccircle r='.5'/%3e%3ccircle cx='3' r='.5'/%3e%3ccircle cy='3' r='.5'/%3e%3ccircle cx='3' cy='3' r='.5'/%3e%3c/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+.form-control.is-valid {
+    border-color: #28a745;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%2328a745' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+/* Print styles */
+@media print {
+    .o_portal_rfq_pricing_form .btn,
+    .o_portal_rfq_pricing_form .card-header {
+        display: none !important;
+    }
+    
+    .table-vendor-pricing {
+        -webkit-print-color-adjust: exact;
+        color-adjust: exact;
+    }
+} 

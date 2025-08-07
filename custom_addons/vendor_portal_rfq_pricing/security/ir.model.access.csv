@@ -1,0 +1,9 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_vendor_price_transfer_wizard_purchase_user,vendor.price.transfer.wizard.purchase.user,model_vendor_price_transfer_wizard,purchase.group_purchase_user,1,1,1,1
+access_vendor_price_transfer_wizard_line_purchase_user,vendor.price.transfer.wizard.line.purchase.user,model_vendor_price_transfer_wizard_line,purchase.group_purchase_user,1,1,1,1
+access_vendor_price_transfer_preview_purchase_user,vendor.price.transfer.preview.purchase.user,model_vendor_price_transfer_preview,purchase.group_purchase_user,1,1,1,1
+access_vendor_price_transfer_wizard_purchase_manager,vendor.price.transfer.wizard.purchase.manager,model_vendor_price_transfer_wizard,purchase.group_purchase_manager,1,1,1,1
+access_vendor_price_transfer_wizard_line_purchase_manager,vendor.price.transfer.wizard.line.purchase.manager,model_vendor_price_transfer_wizard_line,purchase.group_purchase_manager,1,1,1,1
+access_vendor_price_transfer_preview_purchase_manager,vendor.price.transfer.preview.purchase.manager,model_vendor_price_transfer_preview,purchase.group_purchase_manager,1,1,1,1
+access_purchase_order_portal_user,purchase.order.portal.user,purchase.model_purchase_order,base.group_portal,1,0,0,0
+access_purchase_order_line_portal_user,purchase.order.line.portal.user,purchase.model_purchase_order_line,base.group_portal,1,1,0,0

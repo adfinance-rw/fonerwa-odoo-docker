@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Email Template for Vendor Price Submission Notification -->
+    <record id="email_template_vendor_prices_submitted" model="mail.template">
+        <field name="name">Vendor Prices Submitted - Notification</field>
+        <field name="model_id" ref="purchase.model_purchase_order"/>
+        <field name="subject">Vendor Prices Submitted for RFQ {{ object.name }}</field>
+        <field name="email_from">{{ (object.company_id.email or user.email) }}</field>
+        <field name="email_to">{{ object.user_id.email }}</field>
+        <field name="email_cc">{{ object.company_id.email }}</field>
+        <field name="auto_delete" eval="True"/>
+        <field name="body_html" type="html">
+<div style="margin: 0px; padding: 0px;">
+    <div style="margin: 0px; padding: 0px; background-color: #f9f9f9;">
+        <table cellpadding="0" cellspacing="0" style="width: 100%; margin: 0px auto; background-color: white; border: 1px solid #e1e1e1;">
+            <tbody>
+                <tr>
+                    <td style="padding: 20px;">
+                        <div style="text-align: center; margin-bottom: 20px;">
+                            <img src="/logo.png" style="max-height: 50px;" alt="Company Logo"/>
+                        </div>
+                        
+                        <h2 style="color: #2c5282; margin-bottom: 20px;">
+                            🎯 Vendor Prices Submitted
+                        </h2>
+                        
+                        <p>Dear <t t-out="object.user_id.name or 'Purchase Team'">Purchase Team</t>,</p>
+                        
+                        <p>
+                            <strong><t t-out="object.partner_id.name or ''">Vendor Name</t></strong> has submitted their pricing for 
+                            RFQ <strong><t t-out="object.name or ''">RFQ Reference</t></strong>.
+                        </p>
+                        
+                        <div style="background-color: #f7fafc; padding: 15px; border-left: 4px solid #4299e1; margin: 20px 0;">
+                            <h3 style="margin-top: 0; color: #2d3748;">RFQ Details:</h3>
+                            <ul style="margin-bottom: 0;">
+                                <li><strong>RFQ Number:</strong> <t t-out="object.name or ''">RFQ-001</t></li>
+                                <li><strong>Vendor:</strong> <t t-out="object.partner_id.name or ''">Vendor Name</t></li>
+                                <li><strong>Order Date:</strong> 
+                                    <t t-if="object.date_order">
+                                        <t t-out="object.date_order.strftime('%B %d, %Y')">January 01, 2024</t>
+                                    </t>
+                                    <t t-else="">Not set</t>
+                                </li>
+                                <li><strong>Total Lines:</strong> <t t-out="len(object.order_line)">0</t></li>
+                                <li><strong>Lines with Prices:</strong> <t t-out="len(object.order_line.filtered(lambda l: l.x_supplier_price > 0))">0</t></li>
+                            </ul>
+                        </div>
+                        
+                        <div style="margin: 20px 0;">
+                            <h3 style="color: #2d3748;">Pricing Details:</h3>
+                            <p>The vendor has submitted their pricing for the RFQ. Please review the details in the purchase order.</p>
+                        </div>
+                        
+                        <div style="background-color: #f0fff4; padding: 15px; border-left: 4px solid #48bb78; margin: 20px 0;">
+                            <h3 style="margin-top: 0; color: #2d3748;">Next Steps:</h3>
+                            <ul style="margin-bottom: 0;">
+                                <li>Review the submitted prices in the purchase order</li>
+                                <li>Use the "Transfer Vendor Prices" button to apply prices</li>
+                                <li>Contact the vendor if clarification is needed</li>
+                                <li>Proceed with order confirmation when ready</li>
+                            </ul>
+                        </div>
+                        
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a t-att-href="object.get_portal_url()" 
+                               style="display: inline-block; padding: 12px 24px; background-color: #4299e1; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">
+                                View RFQ in Odoo
+                            </a>
+                        </div>
+                        
+                        <hr style="border: none; border-top: 1px solid #e1e1e1; margin: 30px 0;"/>
+                        
+                        <p style="color: #718096; font-size: 14px; margin-bottom: 0;">
+                            This notification was sent automatically when the vendor submitted their pricing through the portal.
+                        </p>
+                        
+                        <p style="color: #718096; font-size: 12px; margin-top: 20px;">
+                            <strong><t t-out="object.company_id.name or ''">Company Name</t></strong><br/>
+                            <t t-if="object.company_id.email">
+                                <t t-out="object.company_id.email or ''">company@example.com</t><br/>
+                            </t>
+                            <t t-if="object.company_id.phone">
+                                <t t-out="object.company_id.phone or ''">+1-234-567-8900</t>
+                            </t>
+                        </p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+        </field>
+    </record>
+
+    <!-- Email Template for RFQ with Pricing Link -->
+    <record id="email_template_rfq_with_pricing_link" model="mail.template">
+        <field name="name">RFQ - Request for Quotation with Pricing Portal</field>
+        <field name="model_id" ref="purchase.model_purchase_order"/>
+        <field name="subject">Request for Quotation - {{ object.name }}</field>
+        <field name="email_from">{{ (object.company_id.email or user.email) }}</field>
+        <field name="email_to">{{ object.partner_id.email }}</field>
+        <field name="auto_delete" eval="True"/>
+        <field name="body_html" type="html">
+<div style="margin: 0px; padding: 0px;">
+    <div style="margin: 0px; padding: 0px; background-color: #f9f9f9;">
+        <table cellpadding="0" cellspacing="0" style="width: 100%; margin: 0px auto; background-color: white; border: 1px solid #e1e1e1;">
+            <tbody>
+                <tr>
+                    <td style="padding: 20px;">
+                        <div style="text-align: center; margin-bottom: 20px;">
+                            <img src="/logo.png" style="max-height: 50px;" alt="Company Logo"/>
+                        </div>
+                        
+                        <h2 style="color: #2c5282; margin-bottom: 20px;">
+                            📋 Request for Quotation
+                        </h2>
+                        
+                        <p>Dear <t t-out="object.partner_id.name or ''">Vendor Name</t>,</p>
+                        
+                        <p>
+                            We are requesting a quotation for the products listed below. 
+                            Please review the requirements and submit your pricing through our vendor portal.
+                        </p>
+                        
+                        <div style="background-color: #f7fafc; padding: 15px; border-left: 4px solid #4299e1; margin: 20px 0;">
+                            <h3 style="margin-top: 0; color: #2d3748;">RFQ Information:</h3>
+                            <ul style="margin-bottom: 0;">
+                                <li><strong>RFQ Number:</strong> <t t-out="object.name or ''">RFQ-001</t></li>
+                                <li><strong>Order Date:</strong> 
+                                    <t t-if="object.date_order">
+                                        <t t-out="object.date_order.strftime('%B %d, %Y')">January 01, 2024</t>
+                                    </t>
+                                    <t t-else="">Not set</t>
+                                </li>
+                                <li><strong>Expected Date:</strong> 
+                                    <t t-if="object.date_planned">
+                                        <t t-out="object.date_planned.strftime('%B %d, %Y')">January 01, 2024</t>
+                                    </t>
+                                    <t t-else="">Not set</t>
+                                </li>
+                                <li><strong>Currency:</strong> <t t-out="object.currency_id.name or ''">USD</t></li>
+                            </ul>
+                        </div>
+                        
+                        <div style="background-color: #f0fff4; padding: 15px; border-left: 4px solid #48bb78; margin: 20px 0;">
+                            <h3 style="margin-top: 0; color: #2d3748;">🚀 Submit Your Pricing Online!</h3>
+                            <p style="margin-bottom: 0;">
+                                Use our convenient vendor portal to submit your prices directly online. 
+                                This ensures faster processing and eliminates email back-and-forth.
+                            </p>
+                        </div>
+                        
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a t-attf-href="{{object.get_portal_url()}}/pricing" 
+                               style="display: inline-block; padding: 15px 30px; background-color: #48bb78; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">
+                                🎯 Submit Your Pricing
+                            </a>
+                        </div>
+                        
+                        <div style="text-align: center; margin: 20px 0;">
+                            <a t-att-href="object.get_portal_url()" 
+                               style="display: inline-block; padding: 10px 20px; background-color: #4299e1; color: white; text-decoration: none; border-radius: 6px;">
+                                View Full RFQ Details
+                            </a>
+                        </div>
+                        
+                        <div style="background-color: #fffbf0; padding: 15px; border-left: 4px solid #ed8936; margin: 20px 0;">
+                            <h3 style="margin-top: 0; color: #2d3748;">Important Notes:</h3>
+                            <ul style="margin-bottom: 0;">
+                                <li>Please submit your pricing by 
+                                    <t t-if="object.date_planned">
+                                        <t t-out="object.date_planned.strftime('%B %d, %Y')">January 01, 2024</t>
+                                    </t>
+                                    <t t-else="">the expected delivery date</t>
+                                </li>
+                                <li>Prices should be inclusive of all applicable taxes</li>
+                                <li>Delivery terms and conditions apply</li>
+                                <li>Contact us if you have any questions</li>
+                            </ul>
+                        </div>
+                        
+                        <div style="background-color: #f0fff4; padding: 15px; border-left: 4px solid #48bb78; margin: 20px 0;">
+                            <p style="margin-bottom: 0;">
+                                <strong>Thank you for your partnership.</strong> We look forward to receiving your competitive quotation.
+                            </p>
+                        </div>
+                        
+                        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e1e1e1; color: #666;">
+                            <p style="margin-bottom: 5px;"><strong><t t-out="object.company_id.name or ''">Company Name</t></strong></p>
+                            <p style="margin-bottom: 5px;">Purchasing Department</p>
+                            <t t-if="object.company_id.email">
+                                <p style="margin-bottom: 5px;"><t t-out="object.company_id.email or ''">company@example.com</t></p>
+                            </t>
+                            <t t-if="object.company_id.phone">
+                                <p style="margin-bottom: 0;"><t t-out="object.company_id.phone or ''">+1-234-567-8900</t></p>
+                            </t>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+        </field>
+    </record>
+
+</odoo> 

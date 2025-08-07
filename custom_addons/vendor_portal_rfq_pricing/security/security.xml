@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Security Groups -->
+    <record id="group_vendor_portal_pricing" model="res.groups">
+        <field name="name">Vendor Portal Pricing</field>
+        <field name="category_id" ref="base.module_category_user_type"/>
+        <field name="implied_ids" eval="[(4, ref('base.group_portal'))]"/>
+        <field name="comment">Group for vendors who can submit pricing through the portal</field>
+    </record>
+
+    <!-- Record Rules -->
+    
+    <!-- Vendors can only access their own RFQs -->
+    <record id="purchase_order_vendor_portal_rule" model="ir.rule">
+        <field name="name">Vendor Portal: Purchase Orders</field>
+        <field name="model_id" ref="purchase.model_purchase_order"/>
+        <field name="domain_force">[('partner_id', '=', user.partner_id.id)]</field>
+        <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- Vendors can only access order lines from their own RFQs -->
+    <record id="purchase_order_line_vendor_portal_rule" model="ir.rule">
+        <field name="name">Vendor Portal: Purchase Order Lines</field>
+        <field name="model_id" ref="purchase.model_purchase_order_line"/>
+        <field name="domain_force">[('order_id.partner_id', '=', user.partner_id.id)]</field>
+        <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- Restrict vendors to only update x_supplier_price field -->
+    <record id="purchase_order_line_vendor_pricing_rule" model="ir.rule">
+        <field name="name">Vendor Portal: Purchase Order Line Pricing Only</field>
+        <field name="model_id" ref="purchase.model_purchase_order_line"/>
+        <field name="domain_force">[
+            ('order_id.partner_id', '=', user.partner_id.id),
+            ('order_id.state', 'in', ['draft', 'sent'])
+        ]</field>
+        <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- Internal users have full access to wizard models -->
+    <record id="vendor_price_transfer_wizard_internal_rule" model="ir.rule">
+        <field name="name">Internal Users: Vendor Price Transfer Wizard</field>
+        <field name="model_id" ref="model_vendor_price_transfer_wizard"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('purchase.group_purchase_user'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+
+</odoo> 

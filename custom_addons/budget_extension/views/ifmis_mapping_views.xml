@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- IFMIS Mapping Tree View -->
+    <record id="ifmis_mapping_tree_view" model="ir.ui.view">
+        <field name="name">ifmis.mapping.tree</field>
+        <field name="model">ifmis.mapping</field>
+        <field name="arch" type="xml">
+            <list string="IFMIS Mappings" editable="bottom">
+                <field name="ifmis_code"/>
+                <field name="name"/>
+                <field name="ifmis_category"/>
+                <field name="budget_line_count"/>
+                <field name="sync_status"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- IFMIS Mapping Form View -->
+    <record id="ifmis_mapping_form_view" model="ir.ui.view">
+        <field name="name">ifmis.mapping.form</field>
+        <field name="model">ifmis.mapping</field>
+        <field name="arch" type="xml">
+            <form string="IFMIS Mapping">
+                <header>
+                    <button name="action_sync_with_ifmis" type="object" string="Sync with IFMIS" 
+                            class="btn-primary" invisible="sync_status == 'synced'"/>
+                    <field name="sync_status" widget="statusbar" 
+                           statusbar_visible="not_synced,pending,synced"/>
+                </header>
+                <sheet>
+                    <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger" invisible="active"/>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="ifmis_code" placeholder="IFMIS Code"/>
+                        </h1>
+                        <h2>
+                            <field name="name" placeholder="IFMIS Item Name"/>
+                        </h2>
+                    </div>
+                    
+                    <group>
+                        <group>
+                            <field name="ifmis_category"/>
+                            <field name="ifmis_parent_code"/>
+                            <field name="ifmis_level"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <group>
+                            <field name="active"/>
+                            <field name="external_system_id"/>
+                            <field name="budget_line_count"/>
+                            <field name="last_sync_date"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Description">
+                        <field name="description" nolabel="1"/>
+                    </group>
+                    
+                    <group string="Sync Error" invisible="not sync_error_message">
+                        <field name="sync_error_message" nolabel="1"/>
+                    </group>
+                    
+                    <notebook>
+                        <page string="Budget Lines" name="budget_lines" invisible="budget_line_count == 0">
+                            <field name="budget_line_ids">
+                                <list string="Budget Lines">
+                                    <field name="name"/>
+                                    <field name="budget_amount"/>
+                                    <field name="achieved_amount"/>
+                                    <field name="committed_amount"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- IFMIS Mapping Action -->
+    <record id="ifmis_mapping_action" model="ir.actions.act_window">
+        <field name="name">IFMIS Mappings</field>
+        <field name="res_model">ifmis.mapping</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first IFMIS Mapping
+            </p>
+            <p>
+                IFMIS Mappings connect your budget lines to external IFMIS system codes.
+                This enables integration and reporting with government financial systems.
+            </p>
+        </field>
+    </record>
+
+</odoo> 

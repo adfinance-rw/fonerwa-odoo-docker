@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Budget Activity Tree View -->
+    <record id="budget_activity_tree_view" model="ir.ui.view">
+        <field name="name">budget.activity.tree</field>
+        <field name="model">budget.activity</field>
+        <field name="arch" type="xml">
+            <list string="Budget Activities" editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="code"/>
+                <field name="name"/>
+                <field name="parent_id"/>
+                <field name="budget_line_count"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Budget Activity Form View -->
+    <record id="budget_activity_form_view" model="ir.ui.view">
+        <field name="name">budget.activity.form</field>
+        <field name="model">budget.activity</field>
+        <field name="arch" type="xml">
+            <form string="Budget Activity">
+                <sheet>
+                    <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger" invisible="active"/>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="code" placeholder="Activity Code"/>
+                        </h1>
+                        <h2>
+                            <field name="name" placeholder="Activity Name"/>
+                        </h2>
+                    </div>
+                    
+                    <group>
+                        <group>
+                            <field name="parent_id"/>
+                            <field name="sequence"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <group>
+                            <field name="active"/>
+                            <field name="color" widget="color"/>
+                            <field name="budget_line_count"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Description">
+                        <field name="description" nolabel="1"/>
+                    </group>
+                    
+                    <notebook>
+                        <page string="Sub-Activities" name="children" invisible="not child_ids">
+                            <field name="child_ids">
+                                <list string="Sub-Activities">
+                                    <field name="code"/>
+                                    <field name="name"/>
+                                    <field name="budget_line_count"/>
+                                    <field name="active"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Budget Lines" name="budget_lines" invisible="budget_line_count == 0">
+                            <field name="budget_line_ids">
+                                <list string="Budget Lines">
+                                    <field name="name"/>
+                                    <field name="budget_amount"/>
+                                    <field name="achieved_amount"/>
+                                    <field name="committed_amount"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Budget Activity Action -->
+    <record id="budget_activity_action" model="ir.actions.act_window">
+        <field name="name">Budget Activities</field>
+        <field name="res_model">budget.activity</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first Budget Activity
+            </p>
+            <p>
+                Budget Activities help classify and organize your budget lines.
+                Each activity can have a code and description for better reporting.
+            </p>
+        </field>
+    </record>
+
+</odoo> 

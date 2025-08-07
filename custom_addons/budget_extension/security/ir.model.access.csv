@@ -1,0 +1,13 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_budget_activity_user,budget.activity.user,budget_extension.model_budget_activity,account.group_account_user,1,1,1,0
+access_budget_activity_manager,budget.activity.manager,budget_extension.model_budget_activity,account.group_account_manager,1,1,1,1
+access_budget_activity_invoice,budget.activity.invoice,budget_extension.model_budget_activity,account.group_account_invoice,1,0,0,0
+access_budget_activity_readonly,budget.activity.readonly,budget_extension.model_budget_activity,account.group_account_readonly,1,0,0,0
+access_ifmis_mapping_user,ifmis.mapping.user,budget_extension.model_ifmis_mapping,account.group_account_user,1,1,1,0
+access_ifmis_mapping_manager,ifmis.mapping.manager,budget_extension.model_ifmis_mapping,account.group_account_manager,1,1,1,1
+access_ifmis_mapping_invoice,ifmis.mapping.invoice,budget_extension.model_ifmis_mapping,account.group_account_invoice,1,0,0,0
+access_ifmis_mapping_readonly,ifmis.mapping.readonly,budget_extension.model_ifmis_mapping,account.group_account_readonly,1,0,0,0
+access_budget_report_user,budget.report.user,account_budget.model_budget_report,account.group_account_user,1,0,0,0
+access_budget_report_manager,budget.report.manager,account_budget.model_budget_report,account.group_account_manager,1,0,0,0
+access_budget_report_invoice,budget.report.invoice,account_budget.model_budget_report,account.group_account_invoice,1,0,0,0
+access_budget_report_readonly,budget.report.readonly,account_budget.model_budget_report,account.group_account_readonly,1,0,0,0

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+    
+        <!-- Demo Budget Activities -->
+        <record id="demo_activity_hr" model="budget.activity">
+            <field name="code">HR</field>
+            <field name="name">Human Resources</field>
+            <field name="description">Human resources management and development</field>
+            <field name="sequence">40</field>
+        </record>
+        
+        <record id="demo_activity_it" model="budget.activity">
+            <field name="code">IT</field>
+            <field name="name">Information Technology</field>
+            <field name="description">IT infrastructure and software</field>
+            <field name="sequence">50</field>
+        </record>
+        
+        <!-- Demo IFMIS Mappings -->
+        <record id="demo_ifmis_training" model="ifmis.mapping">
+            <field name="ifmis_code">22050</field>
+            <field name="name">Training Expenses</field>
+            <field name="ifmis_category">expense</field>
+            <field name="description">Employee training and development costs</field>
+        </record>
+        
+        <record id="demo_ifmis_software" model="ifmis.mapping">
+            <field name="ifmis_code">22030</field>
+            <field name="name">Software Licenses</field>
+            <field name="ifmis_category">expense</field>
+            <field name="description">Software licensing and subscription costs</field>
+        </record>
+        
+    </data>
+</odoo> 

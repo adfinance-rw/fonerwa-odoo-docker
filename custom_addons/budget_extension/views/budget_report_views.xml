@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Extend Budget Report Search View -->
+    <record id="view_budget_report_search_extended" model="ir.ui.view">
+        <field name="name">budget.report.search.extended</field>
+        <field name="model">budget.report</field>
+        <field name="inherit_id" ref="account_budget.budget_report_view_search"/>
+        <field name="arch" type="xml">
+            <!-- Add filters after existing ones -->
+            <xpath expr="//filter[@name='committed']" position="after">
+                <!-- Activity and IFMIS Filters -->
+                <separator/>
+                <filter string="Has Budget Activity" name="filter_has_activity"
+                        domain="[('budget_activity_id', '!=', False)]"/>
+                <filter string="Has IFMIS Mapping" name="filter_has_ifmis"
+                        domain="[('ifmis_mapping_id', '!=', False)]"/>
+                <filter string="No Activity Assigned" name="filter_no_activity"
+                        domain="[('budget_activity_id', '=', False)]"/>
+                <filter string="No IFMIS Mapping" name="filter_no_ifmis"
+                        domain="[('ifmis_mapping_id', '=', False)]"/>
+                
+                <!-- IFMIS Category Filters -->
+                <separator/>
+                <filter string="Revenue Activities" name="filter_revenue_activities"
+                        domain="[('ifmis_category', '=', 'revenue')]"/>
+                <filter string="Transfer Activities" name="filter_transfer_activities"
+                        domain="[('ifmis_category', '=', 'transfer')]"/>
+                <filter string="Other Activities" name="filter_other_activities"
+                        domain="[('ifmis_category', '=', 'other')]"/>
+            </xpath>
+
+            <!-- Add search fields -->
+            <xpath expr="//field[@name='budget_analytic_id']" position="after">
+                <field name="budget_activity_id"/>
+                <field name="budget_activity_code"/>
+                <field name="budget_activity_name"/>
+                <field name="ifmis_mapping_id"/>
+                <field name="ifmis_code"/>
+                <field name="ifmis_category"/>
+            </xpath>
+
+            <!-- Add group by options -->
+            <xpath expr="//filter[@name='budget_analytic_id']" position="after">
+                <filter string="Budgetary Activity" name="group_by_activity" 
+                        context="{'group_by': 'budget_activity_id'}"/>
+                <filter string="Activity Code" name="group_by_activity_code" 
+                        context="{'group_by': 'budget_activity_code'}"/>
+                <filter string="IFMIS Mapping" name="group_by_ifmis" 
+                        context="{'group_by': 'ifmis_mapping_id'}"/>
+                <filter string="IFMIS Category" name="group_by_ifmis_category" 
+                        context="{'group_by': 'ifmis_category'}"/>
+                <filter string="IFMIS Code" name="group_by_ifmis_code" 
+                        context="{'group_by': 'ifmis_code'}"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Enhanced Budget Report Pivot View -->
+    <record id="view_budget_report_pivot_extended" model="ir.ui.view">
+        <field name="name">budget.report.pivot.extended</field>
+        <field name="model">budget.report</field>
+        <field name="inherit_id" ref="account_budget.budget_report_view_pivot"/>
+        <field name="arch" type="xml">
+            <!-- Add new fields to the pivot view -->
+            <xpath expr="//field[@name='budget_analytic_id'][@type='col']" position="after">
+                <field name="budget_activity_id" type="row" string="Activity"/>
+                <field name="budget_activity_code" type="row" string="Activity Code"/>
+                <field name="budget_activity_name" type="row" string="Activity Name"/>
+                <field name="ifmis_mapping_id" type="row" string="IFMIS Mapping"/>
+                <field name="ifmis_code" type="row" string="IFMIS Code"/>
+                <field name="ifmis_category" type="row" string="IFMIS Category"/>
+            </xpath>
+            
+            <!-- Add new measure fields -->
+            <xpath expr="//field[@name='achieved'][@type='measure']" position="after">
+                <field name="activity_count" type="measure" string="Activity Lines Count"/>
+                <field name="ifmis_count" type="measure" string="IFMIS Lines Count"/>
+                <field name="budget_by_activity" type="measure" string="Budget by Activity"/>
+                <field name="budget_by_ifmis" type="measure" string="Budget by IFMIS"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Enhanced Budget Report List View -->
+    <record id="view_budget_report_tree_extended" model="ir.ui.view">
+        <field name="name">budget.report.tree.extended</field>
+        <field name="model">budget.report</field>
+        <field name="inherit_id" ref="account_budget.budget_report_view_tree"/>
+        <field name="arch" type="xml">
+            <!-- Add new fields to the list view -->
+            <xpath expr="//field[@name='account_id']" position="after">
+                <field name="budget_activity_code" optional="show"/>
+                <field name="budget_activity_name" optional="hide"/>
+                <field name="ifmis_code" optional="show"/>
+                <field name="ifmis_category" optional="hide"/>
+                <field name="activity_count" optional="hide" string="Activity Count"/>
+                <field name="ifmis_count" optional="hide" string="IFMIS Count"/>
+                <field name="budget_by_activity" optional="hide" string="Budget by Activity"/>
+                <field name="budget_by_ifmis" optional="hide" string="Budget by IFMIS"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Enhanced Budget Report Graph View -->
+    <record id="view_budget_report_graph_extended" model="ir.ui.view">
+        <field name="name">budget.report.graph.extended</field>
+        <field name="model">budget.report</field>
+        <field name="inherit_id" ref="account_budget.budget_report_view_graph"/>
+        <field name="arch" type="xml">
+            <!-- Allow grouping by new fields -->
+            <xpath expr="//field[@name='account_id'][@type='col']" position="after">
+                <field name="budget_activity_id"/>
+                <field name="budget_activity_code"/>
+                <field name="ifmis_mapping_id"/>
+                <field name="ifmis_category"/>
+            </xpath>
+            
+            <!-- Add new measure fields for graph -->
+            <xpath expr="//field[@name='committed'][@type='measure']" position="after">
+                <field name="activity_count" type="measure"/>
+                <field name="ifmis_count" type="measure"/>
+                <field name="budget_by_activity" type="measure"/>
+                <field name="budget_by_ifmis" type="measure"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Enhanced Budget Report Action (Main Report with all data) -->
+    <record id="action_budget_report_enhanced" model="ir.actions.act_window">
+        <field name="name">Enhanced Budget Report</field>
+        <field name="res_model">budget.report</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="search_view_id" ref="view_budget_report_search_extended"/>
+        <field name="context">{
+            'pivot_measures': ['budget', 'committed', 'achieved'],
+        }</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No budget data found!
+            </p>
+            <p>
+                Enhanced budget report with activity and IFMIS classification support.
+                Use filters to analyze by activity or IFMIS mappings.
+            </p>
+        </field>
+    </record>
+
+    <!-- Budget Analysis by Activity Action -->
+    <record id="action_budget_report_by_activity" model="ir.actions.act_window">
+        <field name="name">Budget Analysis by Activity</field>
+        <field name="res_model">budget.report</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="search_view_id" ref="view_budget_report_search_extended"/>
+        <field name="context">{
+            'search_default_group_by_activity': 1,
+            'search_default_filter_has_activity': 1,
+            'pivot_measures': ['budget', 'committed', 'achieved', 'activity_count', 'budget_by_activity'],
+        }</field>
+        <field name="domain">[('budget_activity_id', '!=', False)]</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No budget data with activities found!
+            </p>
+            <p>
+                This report shows budget analysis grouped by budgetary activities.
+                Use pivot view for detailed analysis with subtotals.
+            </p>
+        </field>
+    </record>
+
+    <!-- Budget Analysis by IFMIS Action -->
+    <record id="action_budget_report_by_ifmis" model="ir.actions.act_window">
+        <field name="name">Budget Analysis by IFMIS</field>
+        <field name="res_model">budget.report</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="search_view_id" ref="view_budget_report_search_extended"/>
+        <field name="context">{
+            'search_default_group_by_ifmis_category': 1,
+            'search_default_group_by_ifmis': 1,
+            'search_default_filter_has_ifmis': 1,
+            'pivot_measures': ['budget', 'committed', 'achieved', 'ifmis_count', 'budget_by_ifmis'],
+        }</field>
+        <field name="domain">[('ifmis_mapping_id', '!=', False), ('ifmis_category', 'not in', ['expense', 'capital'])]</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No budget data with IFMIS mappings found!
+            </p>
+            <p>
+                This report shows budget analysis grouped by IFMIS categories and mappings.
+                Perfect for reconciliation with external IFMIS system.
+            </p>
+        </field>
+    </record>
+
+    <!-- Add menu items for enhanced budget reports -->
+    <menuitem
+        id="menu_budget_report_enhanced"
+        name="Enhanced Budget Report"
+        parent="account.account_reports_management_menu"
+        action="action_budget_report_enhanced"
+        groups="account.group_account_readonly"
+        sequence="14"/>
+
+    <menuitem
+        id="menu_budget_analysis_by_activity"
+        name="Budget by Activity"
+        parent="account.account_reports_management_menu"
+        action="action_budget_report_by_activity"
+        groups="account.group_account_readonly"
+        sequence="15"/>
+
+    <menuitem
+        id="menu_budget_analysis_by_ifmis"
+        name="Budget by IFMIS"
+        parent="account.account_reports_management_menu"
+        action="action_budget_report_by_ifmis"
+        groups="account.group_account_readonly"
+        sequence="16"/>
+
+</odoo> 

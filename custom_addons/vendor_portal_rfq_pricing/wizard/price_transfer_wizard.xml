@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Price Transfer Wizard Form -->
+    <record id="vendor_price_transfer_wizard_form" model="ir.ui.view">
+        <field name="name">vendor.price.transfer.wizard.form</field>
+        <field name="model">vendor.price.transfer.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Transfer Vendor Prices">
+                <header>
+                    <button string="Preview Changes" name="action_preview_changes" type="object" 
+                            class="btn-secondary" invisible="not line_ids"/>
+                    <button string="Transfer Prices" name="action_transfer_prices" type="object" 
+                            class="btn-primary" invisible="not line_ids"/>
+                    <button string="Reload Lines" name="action_reload_wizard_lines" type="object" 
+                            class="btn-info" invisible="line_ids" 
+                            help="Refresh the list of products with vendor prices"/>
+                    <button string="Debug Order Lines" name="action_debug_order_lines" type="object" 
+                            class="btn-warning" invisible="line_ids" 
+                            help="Debug: Check what's in the order lines (check server logs)"/>
+                    <button string="Cancel" special="cancel" class="btn-light"/>
+                </header>
+                
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="purchase_order_id" readonly="1"/>
+                        </h1>
+                        <h3>Transfer Vendor Prices to Official Prices</h3>
+                    </div>
+                    
+                    <group>
+                        <group>
+                            <field name="transfer_all"/>
+                        </group>
+                        <group>
+                            <!-- Empty group for layout -->
+                        </group>
+                    </group>
+                    
+                    <notebook>
+                        <page string="Lines to Transfer" name="lines">
+                            <div invisible="line_ids" class="alert alert-warning" role="alert">
+                                <strong>No products found with vendor prices!</strong>
+                                <p>This can happen if:</p>
+                                <ul>
+                                    <li>Vendors haven't submitted any prices yet</li>
+                                    <li>All vendor prices are zero</li>
+                                    <li>The order lines don't have the vendor price field (x_supplier_price)</li>
+                                </ul>
+                                <p>Please check the purchase order lines and ensure vendors have submitted their pricing.</p>
+                            </div>
+                            <field name="line_ids" readonly="transfer_all" invisible="not line_ids">
+                                <list string="Price Transfer Lines" editable="bottom">
+                                    <field name="product_id" readonly="1"/>
+                                    <field name="product_qty" readonly="1"/>
+                                    <field name="current_price" readonly="1"/>
+                                    <field name="vendor_price" readonly="1"/>
+                                    <field name="price_difference" readonly="1"
+                                           decoration-success="price_difference &lt; 0"
+                                           decoration-danger="price_difference &gt; 0"/>
+                                    <field name="price_difference_percent" readonly="1"
+                                           decoration-success="price_difference_percent &lt; 0"
+                                           decoration-danger="price_difference_percent &gt; 0"/>
+                                    <field name="line_savings" readonly="1"
+                                           decoration-success="line_savings &gt; 0"
+                                           decoration-danger="line_savings &lt; 0"/>
+                                    <field name="transfer" widget="boolean_toggle" 
+                                           invisible="parent.transfer_all"/>
+                                    <field name="notes" placeholder="Notes for this line..."/>
+                                </list>
+                            </field>
+                        </page>
+                        
+                        <page string="Transfer Notes" name="notes">
+                            <group>
+                                <field name="notes" nolabel="1" 
+                                       placeholder="Add any notes about this price transfer..."/>
+                            </group>
+                        </page>
+                    </notebook>
+                    
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Price Transfer Preview Form -->
+    <record id="vendor_price_transfer_preview_form" model="ir.ui.view">
+        <field name="name">vendor.price.transfer.preview.form</field>
+        <field name="model">vendor.price.transfer.preview</field>
+        <field name="arch" type="xml">
+            <form string="Price Transfer Preview">
+                <header>
+                    <button string="Confirm Transfer" name="action_confirm_transfer" type="object" 
+                            class="btn-primary"/>
+                    <button string="Cancel" name="action_cancel" type="object" 
+                            class="btn-secondary"/>
+                </header>
+                
+                <sheet>
+                    <div class="oe_title">
+                        <h1>Price Transfer Preview</h1>
+                        <h3>Review the changes before confirming</h3>
+                    </div>
+                    
+                    <group>
+                        <group>
+                            <field name="total_savings" readonly="1" 
+                                   decoration-success="total_savings &gt; 0"
+                                   decoration-danger="total_savings &lt; 0"/>
+                        </group>
+                    </group>
+                    
+                    <div class="alert alert-info" role="alert">
+                        <strong>Note:</strong> These changes will be applied to the purchase order when you confirm.
+                        Make sure to review all changes carefully.
+                    </div>
+                    
+                    <field name="preview_data" widget="html" readonly="1"/>
+                    
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+</odoo> 
