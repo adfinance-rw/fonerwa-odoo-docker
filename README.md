@@ -34,8 +34,8 @@ A production-ready Docker setup for Fonerwa Odoo 18.0 with Nginx reverse proxy, 
 
 3. **Set up SSL certificates:**
    ```bash
-   # For development (self-signed)
-   ./scripts/deploy.sh
+   # Generate development certificates for odoo.greenfund.rw
+   ./scripts/generate-ssl.sh
    
    # For production, place your certificates:
    cp your-certificate.crt nginx/ssl/odoo.crt
@@ -47,9 +47,15 @@ A production-ready Docker setup for Fonerwa Odoo 18.0 with Nginx reverse proxy, 
    ./scripts/deploy.sh production
    ```
 
-5. **Access your Odoo instance:**
-   - HTTP: `http://localhost` (redirects to HTTPS)
-   - HTTPS: `https://localhost`
+5. **For local testing, update your hosts file:**
+   ```bash
+   # Add this line to /etc/hosts for local testing
+   echo "127.0.0.1 odoo.greenfund.rw" | sudo tee -a /etc/hosts
+   ```
+
+6. **Access your Odoo instance:**
+   - HTTP: `http://odoo.greenfund.rw` or `http://localhost` (redirects to HTTPS)
+   - HTTPS: `https://odoo.greenfund.rw` or `https://localhost`
 
 ## 📁 Project Structure
 
@@ -151,10 +157,16 @@ docker-compose pull && docker-compose up -d
 
 ## 🔒 Security Considerations
 
+### Domain Configuration
+- **Production domain**: `odoo.greenfund.rw`
+- **Local testing**: Update `/etc/hosts` to point domain to `127.0.0.1`
+- **DNS**: Ensure domain points to your server's public IP in production
+
 ### SSL/TLS
 - Use proper SSL certificates from a trusted CA for production
 - Configure your domain name in the Nginx configuration
 - Consider using Let's Encrypt for free SSL certificates
+- For development, use the provided script: `./scripts/generate-ssl.sh`
 
 ### Database Security
 - Use a dedicated database user with minimal privileges
