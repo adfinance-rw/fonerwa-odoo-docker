@@ -6,6 +6,11 @@
 set -e
 
 ENVIRONMENT=${1:-production}
+# Domain and email for Let's Encrypt
+DOMAIN=${DOMAIN:-odoo.greenfund.rw}
+CERTBOT_EMAIL=${CERTBOT_EMAIL:-}
+# If set to 1, use Let's Encrypt staging to avoid rate limits
+CERTBOT_STAGING=${CERTBOT_STAGING:-0}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
@@ -37,21 +42,19 @@ for file in "${required_files[@]}"; do
     fi
 done
 
-# Check SSL certificates
-echo "🔒 Checking SSL certificates..."
-if [[ ! -f "$PROJECT_DIR/nginx/ssl/odoo.crt" ]] || [[ ! -f "$PROJECT_DIR/nginx/ssl/odoo.key" ]]; then
-    echo "⚠️  SSL certificates not found. Generating self-signed certificates..."
-    mkdir -p "$PROJECT_DIR/nginx/ssl"
-    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-        -keyout "$PROJECT_DIR/nginx/ssl/odoo.key" \
-        -out "$PROJECT_DIR/nginx/ssl/odoo.crt" \
-        -subj "/C=US/ST=State/L=City/O=Fonerwa/CN=localhost" \
+# Prepare Let's Encrypt directories and dummy cert so Nginx can start
+echo "🔒 Preparing Let's Encrypt directories and bootstrap cert..."
+mkdir -p "$PROJECT_DIR/certbot/www" "$PROJECT_DIR/certbot/conf/live/$DOMAIN"
+if [[ ! -f "$PROJECT_DIR/certbot/conf/live/$DOMAIN/fullchain.pem" ]] || [[ ! -f "$PROJECT_DIR/certbot/conf/live/$DOMAIN/privkey.pem" ]]; then
+    echo "⚠️  No existing certs for $DOMAIN. Creating temporary self-signed cert..."
+    openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
+        -keyout "$PROJECT_DIR/certbot/conf/live/$DOMAIN/privkey.pem" \
+        -out "$PROJECT_DIR/certbot/conf/live/$DOMAIN/fullchain.pem" \
+        -subj "/CN=$DOMAIN" \
         2>/dev/null
-    
-    # Set proper permissions
-    chmod 600 "$PROJECT_DIR/nginx/ssl/odoo.key"
-    chmod 644 "$PROJECT_DIR/nginx/ssl/odoo.crt"
-    echo "✅ Self-signed certificates generated"
+    chmod 600 "$PROJECT_DIR/certbot/conf/live/$DOMAIN/privkey.pem" || true
+    chmod 644 "$PROJECT_DIR/certbot/conf/live/$DOMAIN/fullchain.pem" || true
+    echo "✅ Temporary cert created"
 fi
 
 # Create necessary directories
@@ -109,6 +112,28 @@ if [[ "$nginx_healthy" != true ]]; then
     exit 1
 fi
 
+# Obtain/renew real Let's Encrypt certificate if needed
+echo "🔐 Ensuring real Let's Encrypt certificate for $DOMAIN..."
+LE_LIVE_DIR="$PROJECT_DIR/certbot/conf/live/$DOMAIN"
+if [[ ! -f "$LE_LIVE_DIR/cert.pem" ]] || [[ ! -f "$LE_LIVE_DIR/chain.pem" ]]; then
+    echo "📥 Requesting certificate from Let's Encrypt..."
+    if [[ -n "$CERTBOT_EMAIL" ]]; then
+        EMAIL_ARGS="--email $CERTBOT_EMAIL --agree-tos"
+    else
+        EMAIL_ARGS="--register-unsafely-without-email --agree-tos"
+        echo "⚠️  CERTBOT_EMAIL not set. Proceeding without email registration."
+    fi
+    if [[ "$CERTBOT_STAGING" == "1" ]]; then
+        STAGING_FLAG="--staging"
+        echo "ℹ️  Using Let's Encrypt staging environment"
+    else
+        STAGING_FLAG=""
+    fi
+    docker-compose run --rm --entrypoint "" certbot certbot certonly --webroot -w /var/www/certbot -d "$DOMAIN" $EMAIL_ARGS --no-eff-email $STAGING_FLAG || true
+    echo "🔁 Reloading Nginx to pick up certificates..."
+    docker-compose exec -T nginx nginx -s reload || true
+fi
+
 # Show service status
 echo "📊 Service status:"
 docker-compose ps
@@ -117,9 +142,9 @@ echo ""
 echo "🎉 Deployment completed successfully!"
 echo ""
 echo "📝 Next steps:"
-echo "  1. Access your Odoo instance at: https://localhost"
-echo "  2. Configure your domain name in the Nginx configuration"
-echo "  3. Replace self-signed certificates with proper SSL certificates"
+echo "  1. Access your Odoo instance at: https://$DOMAIN"
+echo "  2. If you need a different domain, set DOMAIN env var and re-run"
+echo "  3. Set CERTBOT_EMAIL env var for certificate registration"
 echo "  4. Update passwords and security settings"
 echo "  5. Configure monitoring and backup solutions"
 echo ""
