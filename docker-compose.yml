@@ -34,8 +34,9 @@ services:
       - "443:443"
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
       - ./logs/nginx:/var/log/nginx
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt
     networks:
       - odoo-network
     depends_on:
@@ -47,6 +48,19 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: fonerwa-odoo-certbot
+    restart: unless-stopped
+    volumes:
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt
+    networks:
+      - odoo-network
+    depends_on:
+      - nginx
+    entrypoint: sh -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet || true; sleep 12h; done"
 
 volumes:
   odoo-web-data:
