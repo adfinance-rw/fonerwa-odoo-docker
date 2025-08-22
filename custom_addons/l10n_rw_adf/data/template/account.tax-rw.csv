@@ -1,0 +1,33 @@
+id,sequence,code,name,description,invoice_label,price_include,amount,amount_type,type_tax_use,tax_group_id,repartition_line_ids/factor_percent,repartition_line_ids/repartition_type,repartition_line_ids/document_type,repartition_line_ids/tag_ids,repartition_line_ids/account_id,description@rw,active
+l10n_rw_sale_vat_a,101,A,A-Ex,A-Ex VAT,A-Ex,False,0,percent,sale,tax_group_vat_a,100,base,invoice,,,A-Ex,True
+,,,,,,,,,,,100,tax,invoice,,l10n_rw_500502,,
+,,,,,,,,,,,100,base,refund,,,,
+,,,,,,,,,,,100,tax,refund,,l10n_rw_500502,,
+l10n_rw_sale_vat_b,102,B,B-18%,B-18% VAT,B-18%,False,18,percent,sale,tax_group_vat_b,100,base,invoice,,,B-18%,True
+,,,,,,,,,,,100,tax,invoice,,l10n_rw_500502,,
+,,,,,,,,,,,100,base,refund,,,,
+,,,,,,,,,,,100,tax,refund,,l10n_rw_500502,,
+l10n_rw_sale_vat_c,103,C,C,C VAT,C,False,0,percent,sale,tax_group_vat_c,100,base,invoice,,,C,True
+,,,,,,,,,,,100,tax,invoice,,l10n_rw_500502,,
+,,,,,,,,,,,100,base,refund,,,,
+,,,,,,,,,,,100,tax,refund,,l10n_rw_500502,,
+l10n_rw_sale_vat_d,104,D,D,D VAT,D,False,0,percent,sale,tax_group_vat_d,100,base,invoice,,,D,True
+,,,,,,,,,,,100,tax,invoice,,l10n_rw_500502,,
+,,,,,,,,,,,100,base,refund,,,,
+,,,,,,,,,,,100,tax,refund,,l10n_rw_500502,,
+l10n_rw_purchase_vat_a,105,D,A-Ex,A-Ex VAT,A-Ex,False,0,percent,purchase,tax_group_vat_a,100,base,invoice,,,A-Ex,True
+,,,,,,,,,,,100,tax,invoice,,l10n_rw_500502,,
+,,,,,,,,,,,100,base,refund,,,,
+,,,,,,,,,,,100,tax,refund,,l10n_rw_500502,,
+l10n_rw_purchase_vat_b,106,D,B-18%,B-18% VAT,B-18%,False,18,percent,purchase,tax_group_vat_b,100,base,invoice,,,B-18%,True
+,,,,,,,,,,,100,tax,invoice,,l10n_rw_500502,,
+,,,,,,,,,,,100,base,refund,,,,
+,,,,,,,,,,,100,tax,refund,,l10n_rw_500502,,
+l10n_rw_purchase_vat_c,107,D,C,C VAT,C,False,0,percent,purchase,tax_group_vat_c,100,base,invoice,,,C,True
+,,,,,,,,,,,100,tax,invoice,,l10n_rw_500502,,
+,,,,,,,,,,,100,base,refund,,,,
+,,,,,,,,,,,100,tax,refund,,l10n_rw_500502,,
+l10n_rw_purchase_vat_d,108,D,D,D VAT,D,False,0,percent,purchase,tax_group_vat_d,100,base,invoice,,,D,True
+,,,,,,,,,,,100,tax,invoice,,l10n_rw_500502,,
+,,,,,,,,,,,100,base,refund,,,,
+,,,,,,,,,,,100,tax,refund,,l10n_rw_500502,,

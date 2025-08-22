@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="l10n_rw_pl" model="account.report">
+        <field name="name">Profit and loss</field>
+        <field name="root_report_id" ref="account_reports.profit_and_loss"/>
+        <field name="country_id" ref="base.rw"/>
+        <field name="filter_analytic_groupby" eval="True"/>
+        <field name="filter_unfold_all" eval="True"/>
+        <field name="filter_journals" eval="True"/>
+        <field name="filter_multi_company">selector</field>
+        <field name="default_opening_date_filter">this_year</field>
+        <field name="column_ids">
+            <record id="l10n_bg_pl_column" model="account.report.column">
+                <field name="name">Balance</field>
+                <field name="expression_label">balance</field>
+            </record>
+        </field>
+        <field name="line_ids">
+            <record id="l10n_rw_pl_revenue" model="account.report.line">
+                <field name="name">Revenue</field>
+                <field name="code">rw_revenue</field>
+                <field name="foldable" eval="True"/>
+                <field name="groupby">account_id</field>
+                <field name="domain_formula">-sum([('account_id.l10n_rw_report_mapping', '=', 'revenue')])</field>
+            </record>
+            <record id="l10n_rw_pl_cost_of_sales" model="account.report.line">
+                <field name="name">Cost of Sales</field>
+                <field name="code">rw_cost_of_sales</field>
+                <field name="foldable" eval="True"/>
+                <field name="groupby">account_id</field>
+                <field name="domain_formula">sum([('account_id.l10n_rw_report_mapping', '=', 'cost_of_sales')])</field>
+            </record>
+            <record id="l10n_rw_pl_gross_profit" model="account.report.line">
+                <field name="name">Gross Profit</field>
+                <field name="code">rw_gross_profit</field>
+                <field name="aggregation_formula">rw_revenue.balance-rw_cost_of_sales.balance</field>
+            </record>
+            <record id="l10n_rw_pl_other_income" model="account.report.line">
+                <field name="name">Other Income</field>
+                <field name="code">rw_other_income</field>
+                <field name="foldable" eval="True"/>
+                <field name="groupby">account_id</field>
+                <field name="domain_formula">-sum([('account_id.l10n_rw_report_mapping', '=', 'other_income')])</field>
+            </record>
+            <record id="l10n_rw_pl_administrative_expenses" model="account.report.line">
+                <field name="name">Administrative Expenses</field>
+                <field name="code">rw_administrative_expenses</field>
+                <field name="foldable" eval="True"/>
+                <field name="groupby">account_id</field>
+                <field name="domain_formula">sum([('account_id.l10n_rw_report_mapping', '=', 'administrative_expenses')])</field>
+            </record>
+            <record id="l10n_rw_pl_selling_and_distribution" model="account.report.line">
+                <field name="name">Selling and Distribution</field>
+                <field name="code">rw_selling_and_distribution</field>
+                <field name="foldable" eval="True"/>
+                <field name="groupby">account_id</field>
+                <field name="domain_formula">sum([('account_id.l10n_rw_report_mapping', '=', 'selling_and_distribution')])</field>
+            </record>
+            <record id="l10n_rw_pl_staff_cost" model="account.report.line">
+                <field name="name">Staff Cost</field>
+                <field name="code">rw_staff_cost</field>
+                <field name="foldable" eval="True"/>
+                <field name="groupby">account_id</field>
+                <field name="domain_formula">sum([('account_id.l10n_rw_report_mapping', '=', 'staff_cost')])</field>
+            </record>
+            <record id="l10n_rw_pl_ebitda" model="account.report.line">
+                <field name="name">EBITDA</field>
+                <field name="code">rw_ebitda</field>
+                <field name="aggregation_formula">(rw_gross_profit.balance + rw_other_income.balance)
+                    - ( rw_administrative_expenses.balance + rw_selling_and_distribution.balance
+                    + rw_staff_cost.balance)
+                </field>
+            </record>
+            <record id="l10n_rw_pl_depreciation_and_amortisation" model="account.report.line">
+                <field name="name">Depreciation and Amortisation</field>
+                <field name="code">rw_depreciation_and_amortisation</field>
+                <field name="foldable" eval="True"/>
+                <field name="groupby">account_id</field>
+                <field name="domain_formula">sum([('account_id.l10n_rw_report_mapping', '=', 'depreciation_and_amortisation')])</field>
+            </record>
+            <record id="l10n_rw_pl_ebit" model="account.report.line">
+                <field name="name">EBIT</field>
+                <field name="code">rw_ebit</field>
+                <field name="aggregation_formula">rw_ebitda.balance - rw_depreciation_and_amortisation.balance</field>
+            </record>
+            <record id="l10n_rw_pl_finance_costs" model="account.report.line">
+                <field name="name">Finance Costs</field>
+                <field name="code">rw_finance_costs</field>
+                <field name="foldable" eval="True"/>
+                <field name="groupby">account_id</field>
+                <field name="domain_formula">sum([('account_id.l10n_rw_report_mapping', '=', 'finance_costs')])</field>
+            </record>
+            <record id="l10n_rw_pl_profit_before_tax" model="account.report.line">
+                <field name="name">Profit Before Tax</field>
+                <field name="code">rw_profit_before_tax</field>
+                <field name="aggregation_formula">rw_ebit.balance - rw_finance_costs.balance</field>
+            </record>
+            <record id="l10n_rw_pl_cit" model="account.report.line">
+                <field name="name">CIT (Current Income Tax</field>
+                <field name="code">rw_cit</field>
+                <field name="foldable" eval="True"/>
+                <field name="groupby">account_id</field>
+                <field name="domain_formula">sum([('account_id.l10n_rw_report_mapping', '=', 'cit')])</field>
+            </record>
+            <record id="l10n_rw_pl_profit_for_year" model="account.report.line">
+                <field name="name">Profit for Year</field>
+                <field name="code">rw_profit_for_year</field>
+                <field name="aggregation_formula">rw_profit_before_tax.balance - rw_cit.balance</field>
+            </record>
+        </field>
+    </record>
+
+</odoo>
