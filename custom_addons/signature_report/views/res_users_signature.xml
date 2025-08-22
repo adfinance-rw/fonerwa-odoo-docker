@@ -1,0 +1,15 @@
+<odoo>
+    <record id="view_users_form_signature_image" model="ir.ui.view">
+        <field name="name">res.users.form.signature.image</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_form"/>
+        <field name="arch" type="xml">
+            <!-- Add the signature image field just after the user photo -->
+            <xpath expr="//field[@name='login']" position="after">
+                <group>
+                    <field name="signature_image" widget="image" string="Signature Image" style="max-width: 50px; max-height: 25px;margin-left: 10px;"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>
