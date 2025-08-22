@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="view_account_list" model="ir.ui.view">
+        <field name="name">account.account.view.l10n_rw.inherit</field>
+        <field name="model">account.account</field>
+        <field name="inherit_id" ref="account.view_account_list"></field>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='account_type']" position="after">
+                <field name="l10n_rw_report_mapping" />
+            </xpath>
+        </field>
+    </record>
+</odoo>

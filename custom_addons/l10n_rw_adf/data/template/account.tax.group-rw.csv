@@ -1,0 +1,5 @@
+id,name,country_id
+tax_group_vat_a,A-Ex,base.rw
+tax_group_vat_b,B-18%,base.rw
+tax_group_vat_c,C,base.rw
+tax_group_vat_d,D,base.rw

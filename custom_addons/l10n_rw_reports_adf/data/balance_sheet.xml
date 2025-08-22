@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <record id="l10n_rw_balance_sheet" model="account.report">
+        <field name="name">Balance Sheet</field>
+        <field name="root_report_id" ref="account_reports.balance_sheet"></field>
+        <field name="country_id" ref="base.rw"/>
+        <field name="column_ids">
+            <record id="l10n_rw_balance_sheet_balance" model="account.report.column">
+                <field name="name">Balance</field>
+                <field name="expression_label">balance</field>
+            </record>
+        </field>
+        <field name="line_ids">
+            <record id="l10n_rw_balance_sheet_assets" model="account.report.line">
+                <field name="name">Assets</field>
+                <field name="code">rw_assets</field>
+                <field name="children_ids">
+                    <record id="l10n_rw_balance_sheet_assets_non_current" model="account.report.line">
+                        <field name="name">Non Current Assets</field>
+                        <field name="code">rw_assets_non_current</field>
+                        <field name="foldable" eval="True"/>
+                        <field name="children_ids">
+                            <record id="l10n_rw_balance_sheet_assets_non_current_a" model="account.report.line">
+                                <field name="name">Property, plant and equipment and Investment Property</field>
+                                <field name="code">rw_assets_non_current_a</field>
+                                <field name="foldable" eval="True"/>
+                                <field name="groupby">account_id</field>
+                                <field name="domain_formula">sum([('account_id.l10n_rw_report_mapping', '=', 'property_plant_and_equipment')])</field>
+                            </record>
+                            <record id="l10n_rw_balance_sheet_assets_non_current_b" model="account.report.line">
+                                <field name="name">Intangible assets</field>
+                                <field name="code">rw_assets_non_current_b</field>
+                                <field name="foldable" eval="True"/>
+                                <field name="groupby">account_id</field>
+                                <field name="domain_formula">sum([('account_id.l10n_rw_report_mapping', '=', 'intangible_assets')])</field>
+                            </record>
+                        </field>
+                    </record>
+                    <record id="l10n_rw_balance_sheet_assets_non_current_total" model="account.report.line">
+                        <field name="name">Total Non Current Assets</field>
+                        <field name="code">rw_assets_non_current_total</field>
+                        <field name="aggregation_formula">rw_assets_non_current_a.balance +
+                            rw_assets_non_current_b.balance
+                        </field>
+                    </record>
+                    <record id="l10n_rw_balance_sheet_assets_current" model="account.report.line">
+                        <field name="name">Current Assets</field>
+                        <field name="code">rw_assets_current</field>
+                        <field name="foldable" eval="True"/>
+                        <field name="children_ids">
+                            <record id="l10n_rw_balance_sheet_assets_current_a" model="account.report.line">
+                                <field name="name">Inventories</field>
+                                <field name="code">rw_assets_current_a</field>
+                                <field name="foldable" eval="True"/>
+                                <field name="groupby">account_id</field>
+                                <field name="domain_formula">sum([('account_id.l10n_rw_report_mapping', '=', 'inventories')])</field>
+                            </record>
+                            <record id="l10n_rw_balance_sheet_assets_current_b" model="account.report.line">
+                                <field name="name">Trade receivables</field>
+                                <field name="code">rw_assets_current_b</field>
+                                <field name="foldable" eval="True"/>
+                                <field name="groupby">account_id</field>
+                                <field name="domain_formula">sum([('account_id.l10n_rw_report_mapping', '=', 'trade_receivables')])</field>
+                            </record>
+                            <record id="l10n_rw_balance_sheet_assets_current_c" model="account.report.line">
+                                <field name="name">Other current assets</field>
+                                <field name="code">rw_assets_current_c</field>
+                                <field name="foldable" eval="True"/>
+                                <field name="groupby">account_id</field>
+                                <field name="domain_formula">sum([('account_id.l10n_rw_report_mapping', '=', 'other_current_assets')])</field>
+                            </record>
+                            <record id="l10n_rw_balance_sheet_assets_current_d" model="account.report.line">
+                                <field name="name">Income tax asset</field>
+                                <field name="code">rw_assets_current_d</field>
+                                <field name="foldable" eval="True"/>
+                                <field name="groupby">account_id</field>
+                                <field name="domain_formula">sum([('account_id.l10n_rw_report_mapping', '=', 'income_tax_asset')])</field>
+                            </record>
+                            <record id="l10n_rw_balance_sheet_assets_current_e" model="account.report.line">
+                                <field name="name">Cash and cash equivalents</field>
+                                <field name="code">rw_assets_current_e</field>
+                                <field name="foldable" eval="True"/>
+                                <field name="groupby">account_id</field>
+                                <field name="domain_formula">sum([('account_id.l10n_rw_report_mapping', '=', 'cash_and_cash_equivalents')])</field>
+                            </record>
+                        </field>
+                    </record>
+                    <record id="l10n_rw_balance_sheet_assets_current_total" model="account.report.line">
+                        <field name="name">Total Current Assets</field>
+                        <field name="code">rw_assets_current_total</field>
+                        <field name="aggregation_formula">rw_assets_current_a.balance +
+                            rw_assets_current_b.balance + rw_assets_current_c.balance +
+                            rw_assets_current_d.balance + rw_assets_current_e.balance
+                        </field>
+                    </record>
+                    <record id="l10n_rw_balance_sheet_assets_total" model="account.report.line">
+                        <field name="name">Total Assets</field>
+                        <field name="code">rw_assets_total</field>
+                        <field name="aggregation_formula">rw_assets_current_total.balance
+                            + rw_assets_non_current_total.balance
+                        </field>
+                    </record>
+                </field>
+            </record>
+            <record id="l10n_rw_balance_sheet_liability_and_equity" model="account.report.line">
+                <field name="name">Equity and Liabilities</field>
+                <field name="code">rw_liability_and_equity</field>
+                <field name="children_ids">
+                    <record id="l10n_rw_balance_sheet_equity" model="account.report.line">
+                        <field name="name">Equity</field>
+                        <field name="code">rw_equity</field>
+                        <field name="foldable" eval="True"/>
+                        <field name="children_ids">
+                            <record id="l10n_rw_balance_sheet_equity_a" model="account.report.line">
+                                <field name="name">Share capital</field>
+                                <field name="code">rw_equity_a</field>
+                                <field name="foldable" eval="True"/>
+                                <field name="groupby">account_id</field>
+                                <field name="domain_formula">-sum([('account_id.l10n_rw_report_mapping', '=', 'share_capital')])</field>
+                            </record>
+                            <record id="l10n_rw_balance_sheet_equity_b" model="account.report.line">
+                                <field name="name">Retained earnings</field>
+                                <field name="code">rw_equity_b</field>
+                                <field name="foldable" eval="True"/>
+                                <field name="groupby">account_id</field>
+                                <field name="expression_ids">
+                                            <record id="l10n_rw_balance_sheet_equity_b_2_balance" model="account.report.expression">
+                                                <field name="label">balance</field>
+                                                <field name="engine">domain</field>
+                                                <field name="formula">[('account_id.l10n_rw_report_mapping', 'in', ['retained_earnings','revenue','cost_of_sales','other_income','administrative_expenses','','selling_and_distribution','staff_cost',
+'depreciation_and_amortisation','finance_costs','cit'])]</field>
+
+                                                <field name="subformula">-sum</field>
+                                            </record>
+
+                                </field>
+                            </record>
+                            <record id="l10n_rw_balance_sheet_equity_c" model="account.report.line">
+                                <field name="name">Revaluation Reserves</field>
+                                <field name="code">rw_equity_c</field>
+                                <field name="foldable" eval="True"/>
+                                <field name="groupby">account_id</field>
+                                <field name="domain_formula">-sum([('account_id.l10n_rw_report_mapping', '=', 'revaluation_reserves')])</field>
+                            </record>
+                        </field>
+                    </record>
+                    <record id="l10n_rw_balance_sheet_equity_total" model="account.report.line">
+                        <field name="name">Total Equity</field>
+                        <field name="code">rw_equity_total</field>
+                        <field name="aggregation_formula">rw_equity_a.balance + rw_equity_b.balance
+                            + rw_equity_c.balance
+                        </field>
+                    </record>
+                    <record id="l10n_rw_balance_sheet_non_current_liabilities" model="account.report.line">
+                        <field name="name">Non Current Liabilities</field>
+                        <field name="code">rw_non_current_liabilities</field>
+                        <field name="foldable" eval="True"/>
+                        <field name="children_ids">
+                            <record id="l10n_rw_balance_sheet_non_current_liabilities_a" model="account.report.line">
+                                <field name="name">Long term borrowings</field>
+                                <field name="code">rw_non_current_liabilities_a</field>
+                                <field name="foldable" eval="True"/>
+                                <field name="groupby">account_id</field>
+                                <field name="domain_formula">-sum([('account_id.l10n_rw_report_mapping', '=', 'long_term_borrowings')])</field>
+                            </record>
+                            <record id="l10n_rw_balance_sheet_non_current_liabilities_b" model="account.report.line">
+                                <field name="name">Long term Provisions</field>
+                                <field name="code">rw_non_current_liabilities_b</field>
+                                <field name="foldable" eval="True"/>
+                                <field name="groupby">account_id</field>
+                                <field name="domain_formula">-sum([('account_id.l10n_rw_report_mapping', '=', 'long_term_provisions')])</field>
+                            </record>
+                        </field>
+                    </record>
+                    <record id="l10n_rw_balance_sheet_non_current_liabilities_total"
+                            model="account.report.line">
+                        <field name="name">Total Non Current Liabilities</field>
+                        <field name="code">rw_non_current_liabilities_total</field>
+                        <field name="aggregation_formula">rw_non_current_liabilities_a.balance +
+                            rw_non_current_liabilities_b.balance
+                        </field>
+                    </record>
+                    <record id="l10n_rw_balance_sheet_current_liabilities" model="account.report.line">
+                        <field name="name">Current Liabilities</field>
+                        <field name="code">rw_current_liabilities</field>
+                        <field name="foldable" eval="True"/>
+                        <field name="children_ids">
+                            <record id="l10n_rw_balance_sheet_current_liabilities_a" model="account.report.line">
+                                <field name="name">Short-term borrowings</field>
+                                <field name="code">rw_current_liabilities_a</field>
+                                <field name="foldable" eval="True"/>
+                                <field name="groupby">account_id</field>
+                                <field name="domain_formula">-sum([('account_id.l10n_rw_report_mapping', '=', 'short_term_borrowings')])</field>
+                            </record>
+                            <record id="l10n_rw_balance_sheet_current_liabilities_b" model="account.report.line">
+                                <field name="name">Short term provision</field>
+                                <field name="code">rw_current_liabilities_b</field>
+                                <field name="foldable" eval="True"/>
+                                <field name="groupby">account_id</field>
+                                <field name="domain_formula">-sum([('account_id.l10n_rw_report_mapping', '=', 'short_term_provision')])</field>
+                            </record>
+                            <record id="l10n_rw_balance_sheet_current_liabilities_c" model="account.report.line">
+                                <field name="name">Trade payables</field>
+                                <field name="code">rw_current_liabilities_c</field>
+                                <field name="foldable" eval="True"/>
+                                <field name="groupby">account_id</field>
+                                <field name="domain_formula">-sum([('account_id.l10n_rw_report_mapping', '=', 'trade_payables')])</field>
+                            </record>
+                            <record id="l10n_rw_balance_sheet_current_liabilities_d" model="account.report.line">
+                                <field name="name">Income tax liability</field>
+                                <field name="code">rw_current_liabilities_d</field>
+                                <field name="foldable" eval="True"/>
+                                <field name="groupby">account_id</field>
+                                <field name="domain_formula">-sum([('account_id.l10n_rw_report_mapping', '=', 'income_tax_liability')])</field>
+                            </record>
+                            <record id="l10n_rw_balance_sheet_current_liabilities_e" model="account.report.line">
+                                <field name="name">Other current liabilities</field>
+                                <field name="code">rw_current_liabilities_e</field>
+                                <field name="foldable" eval="True"/>
+                                <field name="groupby">account_id</field>
+                                <field name="domain_formula">-sum([('account_id.l10n_rw_report_mapping', '=', 'other_current_liabilities')])</field>
+                            </record>
+
+                        </field>
+                    </record>
+                    <record id="l10n_rw_balance_sheet_current_liabilities_total" model="account.report.line">
+                        <field name="name">Total Current Liabilities</field>
+                        <field name="code">rw_current_liabilities_total</field>
+                        <field name="aggregation_formula">rw_current_liabilities_a.balance +
+                                    rw_current_liabilities_b.balance + rw_current_liabilities_c.balance +
+                                    rw_current_liabilities_d.balance + rw_current_liabilities_e.balance
+                        </field>
+                    </record>
+                    <record id="l10n_rw_balance_sheet_liabilities_total" model="account.report.line">
+                        <field name="name">Total Liabilities</field>
+                        <field name="code">rw_liabilities_total</field>
+                        <field name="aggregation_formula">rw_current_liabilities_total.balance +
+                            rw_non_current_liabilities_total.balance + rw_equity_total.balance
+                        </field>
+                    </record>
+                </field>
+            </record>
+        </field>
+    </record>
+</odoo>

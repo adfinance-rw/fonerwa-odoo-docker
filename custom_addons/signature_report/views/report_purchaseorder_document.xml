@@ -1,0 +1,92 @@
+<odoo>
+    <template id="report_purchaseorder_document_inherit_signature" inherit_id="purchase.report_purchaseorder_document">
+        <xpath expr="//t[@t-call='web.external_layout']" position="inside">
+            <t t-if="o.approval_signature_ids">
+                <div style="margin-top: 40px;">
+                    <table style="width: 100%; text-align: center; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <t t-foreach="o.approval_signature_ids" t-as="sig">
+                                    <th style="padding: 5px; border-bottom: 1px solid #ccc;">
+                                        Approved by
+                                        <br/>
+                                        <span t-esc="request.env['hr.employee'].search([('user_id', '=', sig.user_id.id)], limit=1).job_title"/>
+                                    </th>
+                                </t>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <t t-foreach="o.approval_signature_ids" t-as="sig">
+                                    <td style="padding: 10px;">
+                                        <t t-if="sig.signature">
+                                            <img t-att-src="'data:image/png;base64,' + sig.signature.decode('utf-8')"
+                                                 style="max-height:50px;"/>
+                                        </t>
+                                    </td>
+                                </t>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </t>
+        </xpath>
+    </template>
+
+    <template id="report_purchaseorder_document_add_total_incl" inherit_id="purchase.report_purchaseorder_document">
+
+        <!-- Add new column header after subtotal header -->
+        <xpath expr="//thead/tr/th[@name='th_subtotal']" position="after">
+            <th name="th_total_incl" class="text-end">
+                <strong>Total (Incl.)</strong>
+            </th>
+        </xpath>
+
+        <!-- Add new column value after subtotal column -->
+        <xpath expr="//td[.//span[@t-field='line.price_subtotal']]" position="after">
+            <td class="text-end">
+                <t t-if="not line.display_type">
+                    <span t-field="line.price_total"
+                          t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                </t>
+            </td>
+        </xpath>
+
+    </template>
+
+    <template id="report_purchaseorder_document_inherit_validity" inherit_id="purchase.report_purchaseorder_document">
+        <xpath expr="//t[@t-set='address']" position="replace">
+            <t t-set="address">
+                <div style="text-align:right; margin-right: 20px;">
+                    <div t-field="o.partner_id"
+                         t-options='{"widget": "contact", "fields": ["name", "address", "phone", "vat"], "no_marker": True, "phone_icons": True}'/>
+
+                    <div t-if="o.partner_id.valid_from or o.partner_id.valid_until" class="mt-1"
+                         style="margin-top: 2px;">
+                        <strong>Contract Validity:</strong>
+                        <span style="white-space: nowrap;">
+                            <t t-if="o.partner_id.valid_from">
+                                From
+                                <span t-esc="o.partner_id.valid_from"/>
+                            </t>
+                            <t t-if="o.partner_id.valid_until">
+                                to
+                                <span t-esc="o.partner_id.valid_until"/>
+                            </t>
+                        </span>
+                    </div>
+                </div>
+            </t>
+        </xpath>
+    </template>
+
+ <template id="custom_budget_line_po" inherit_id="purchase.report_purchaseorder_document">
+        <xpath expr="//div[@id='informations']/div[div[@t-field='o.user_id']]" position="after">
+            <div class="col">
+                <strong>Budget Line:</strong>
+                <div t-field="o.budget_line"/>
+            </div>
+        </xpath>
+    </template>
+
+</odoo>
