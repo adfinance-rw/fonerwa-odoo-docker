@@ -17,12 +17,7 @@
         'views/report_purchaseorder_document.xml',   # Your user form view inheritance
         'views/partner_validity.xml',
         'views/purchase_budjet_line.xml',
-
-
-    ],
-    'demo': [
-        'demo/demo.xml',
-    ],
+           ],
     'installable': True,
     'application': False,
     'auto_install': False,
