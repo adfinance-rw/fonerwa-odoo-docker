@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Cron job to auto-complete expired objectives -->
+        <record id="ir_cron_auto_complete_expired_objectives" model="ir.cron">
+            <field name="name">Auto Complete Expired Objectives</field>
+            <field name="model_id" ref="hr_appraisal_objectives.model_performance_notification"/>
+            <field name="state">code</field>
+            <field name="code">model.auto_complete_expired_objectives()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="active" eval="True"/>
+            <field name="nextcall" eval="(DateTime.now() + timedelta(days=1)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="priority">5</field>
+        </record>
+
+        <!-- Cron job to auto-complete objectives with high progress -->
+        <record id="ir_cron_auto_complete_high_progress" model="ir.cron">
+            <field name="name">Auto Complete High Progress Objectives</field>
+            <field name="model_id" ref="hr_appraisal_objectives.model_performance_notification"/>
+            <field name="state">code</field>
+            <field name="code">model.auto_complete_with_conditions()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="active" eval="True"/>
+            <field name="nextcall" eval="(DateTime.now() + timedelta(days=1)).strftime('%Y-%m-%d 08:00:00')"/>
+            <field name="priority">5</field>
+        </record>
+
+        <!-- Cron job to send deadline reminders -->
+        <record id="ir_cron_send_deadline_reminders" model="ir.cron">
+            <field name="name">Send Deadline Reminders</field>
+            <field name="model_id" ref="hr_appraisal_objectives.model_performance_notification"/>
+            <field name="state">code</field>
+            <field name="code">model.send_deadline_reminders()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="active" eval="True"/>
+            <field name="nextcall" eval="(DateTime.now() + timedelta(days=1)).strftime('%Y-%m-%d 09:00:00')"/>
+            <field name="priority">5</field>
+        </record>
+
+        <!-- Cron job to send performance alerts -->
+        <record id="ir_cron_send_performance_alerts" model="ir.cron">
+            <field name="name">Send Performance Alerts</field>
+            <field name="model_id" ref="hr_appraisal_objectives.model_performance_notification"/>
+            <field name="state">code</field>
+            <field name="code">model.send_performance_alerts()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="active" eval="True"/>
+            <field name="nextcall" eval="(DateTime.now() + timedelta(days=1)).strftime('%Y-%m-%d 10:00:00')"/>
+            <field name="priority">5</field>
+        </record>
+    </data>
+    <data noupdate="1">
+        <!-- Hourly KPI progress sync from Projects/Timesheets -->
+        <record id="ir_cron_kpi_progress_sync" model="ir.cron">
+            <field name="name">KPI Progress Sync</field>
+            <field name="model_id" ref="hr_appraisal.model_hr_appraisal_goal"/>
+            <field name="state">code</field>
+            <field name="code">model.cron_sync_kpi_progress()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">hours</field>
+            <field name="active" eval="True"/>
+            <field name="nextcall" eval="(DateTime.now() + timedelta(hours=1)).strftime('%Y-%m-%d %H:00:00')"/>
+            <field name="priority">5</field>
+        </record>
+
+        <!-- Daily finalize goals at deadline and create appraisals (run end of day) -->
+        <record id="ir_cron_finalize_and_create_appraisals" model="ir.cron">
+            <field name="name">Finalize Objectives and Create Appraisals</field>
+            <field name="model_id" ref="hr_appraisal.model_hr_appraisal_goal"/>
+            <field name="state">code</field>
+            <field name="code">model.cron_finalize_and_create_appraisals()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="active" eval="True"/>
+            <field name="nextcall" eval="(DateTime.now() + timedelta(days=1)).strftime('%Y-%m-%d 23:59:00')"/>
+            <field name="priority">5</field>
+        </record>
+    </data>
+</odoo>

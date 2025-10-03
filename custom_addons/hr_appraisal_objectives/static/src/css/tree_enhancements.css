@@ -1,0 +1,144 @@
+/* HR Appraisal Objectives - Enhanced List Views */
+
+/* Enhanced List Container */
+.o_list_view {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+/* List Header Styling */
+.o_list_view .o_list_table thead th {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 12px;
+    padding: 12px 8px;
+    border: none;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.o_list_view .o_list_table thead th:hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+}
+
+/* List Row Styling */
+.o_list_view .o_list_table tbody tr {
+    transition: all 0.3s ease;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.o_list_view .o_list_table tbody tr:hover {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Enhanced Cell Styling */
+.o_list_view .o_list_table td {
+    padding: 12px 8px;
+    vertical-align: middle;
+    border: none;
+}
+
+/* Progress Bar in List */
+.tree-progress-bar {
+    width: 100%;
+    height: 8px;
+    background: linear-gradient(90deg, #e9ecef 0%, #f8f9fa 100%);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+.tree-progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.6s ease;
+    position: relative;
+}
+
+.tree-progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    animation: shimmer 2s infinite;
+}
+
+/* Progress colors */
+.tree-progress-low { background: linear-gradient(90deg, #dc3545, #c82333); }
+.tree-progress-medium { background: linear-gradient(90deg, #ffc107, #e0a800); }
+.tree-progress-high { background: linear-gradient(90deg, #28a745, #1e7e34); }
+
+/* Status Badges in List */
+.tree-status-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tree-status-draft { background: linear-gradient(135deg, #6c757d, #495057); color: white; }
+.tree-status-submitted { background: linear-gradient(135deg, #007bff, #0056b3); color: white; }
+.tree-status-approved { background: linear-gradient(135deg, #ffc107, #e0a800); color: #212529; }
+.tree-status-progress { background: linear-gradient(135deg, #17a2b8, #138496); color: white; }
+.tree-status-scored { background: linear-gradient(135deg, #6f42c1, #5a32a3); color: white; }
+.tree-status-final { background: linear-gradient(135deg, #28a745, #1e7e34); color: white; }
+.tree-status-completed { background: linear-gradient(135deg, #28a745, #1e7e34); color: white; }
+.tree-status-active { background: linear-gradient(135deg, #007bff, #0056b3); color: white; }
+.tree-status-cancelled { background: linear-gradient(135deg, #dc3545, #c82333); color: white; }
+
+/* Score Display in Tree */
+.tree-score {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 16px;
+    font-weight: 700;
+    font-size: 12px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.tree-score-excellent { background: linear-gradient(135deg, #28a745, #1e7e34); color: white; }
+.tree-score-good { background: linear-gradient(135deg, #ffc107, #e0a800); color: #212529; }
+.tree-score-average { background: linear-gradient(135deg, #fd7e14, #e55a00); color: white; }
+.tree-score-poor { background: linear-gradient(135deg, #dc3545, #c82333); color: white; }
+
+/* Deadline Indicator in Tree */
+.tree-deadline {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.tree-deadline-urgent {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+    color: white;
+    animation: pulse 2s infinite;
+}
+
+.tree-deadline-warning {
+    background: linear-gradient(135deg, #ffc107, #e0a800);
+    color: #212529;
+}
+
+.tree-deadline-normal {
+    background: linear-gradient(135deg, #28a745, #1e7e34);
+    color: white;
+}

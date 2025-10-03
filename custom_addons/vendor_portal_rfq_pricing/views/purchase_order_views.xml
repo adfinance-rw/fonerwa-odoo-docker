@@ -26,15 +26,15 @@
 
             <!-- Add vendor pricing information in the order lines -->
             <xpath expr="//field[@name='order_line']/list/field[@name='price_unit']" position="after">
-                <field name="x_supplier_price" optional="show" 
+                <field name="x_supplier_price_display" optional="show" 
                        readonly="state not in ['draft', 'sent']"
-                       decoration-info="x_supplier_price > 0"/>
-                <field name="price_difference" optional="hide" readonly="1"
-                       decoration-success="price_difference &lt; 0"
-                       decoration-danger="price_difference &gt; 0"/>
-                <field name="price_difference_percent" optional="hide" readonly="1"
-                       decoration-success="price_difference_percent &lt; 0"
-                       decoration-danger="price_difference_percent &gt; 0"/>
+                       decoration-info="x_supplier_price_display > 0"/>
+                <field name="price_difference_display" optional="hide" readonly="1"
+                       decoration-success="price_difference_display &lt; 0"
+                       decoration-danger="price_difference_display &gt; 0"/>
+                <field name="price_difference_percent_display" optional="hide" readonly="1"
+                       decoration-success="price_difference_percent_display &lt; 0"
+                       decoration-danger="price_difference_percent_display &gt; 0"/>
                 <field name="supplier_price_submitted" invisible="1"/>
             </xpath>
 
@@ -138,15 +138,15 @@
                 <field name="product_qty" readonly="1"/>
                 <field name="product_uom" readonly="1"/>
                 <field name="price_unit" readonly="1"/>
-                <field name="x_supplier_price" 
-                       decoration-info="x_supplier_price > 0"
-                       decoration-muted="not x_supplier_price"/>
-                <field name="price_difference" readonly="1"
-                       decoration-success="price_difference &lt; 0"
-                       decoration-danger="price_difference &gt; 0"/>
-                <field name="price_difference_percent" readonly="1"
-                       decoration-success="price_difference_percent &lt; 0"
-                       decoration-danger="price_difference_percent &gt; 0"/>
+                <field name="x_supplier_price_display" 
+                       decoration-info="x_supplier_price_display > 0"
+                       decoration-muted="not x_supplier_price_display"/>
+                <field name="price_difference_display" readonly="1"
+                       decoration-success="price_difference_display &lt; 0"
+                       decoration-danger="price_difference_display &gt; 0"/>
+                <field name="price_difference_percent_display" readonly="1"
+                       decoration-success="price_difference_percent_display &lt; 0"
+                       decoration-danger="price_difference_percent_display &gt; 0"/>
                 <field name="supplier_price_submitted" readonly="1" widget="boolean_toggle"/>
                 <button name="action_accept_supplier_price" string="Accept" type="object" 
                         icon="fa-check" class="btn-success"

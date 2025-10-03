@@ -1,0 +1,220 @@
+<odoo>
+  <!-- Delete all existing access rules for these models -->
+  <delete model="ir.rule" search="[('model_id.model', '=', 'hr.appraisal.goal')]"/>
+  <delete model="ir.rule" search="[('model_id.model', '=', 'hr.appraisal')]"/>
+  <!-- ========== hr.institutional.objective ========== -->
+  <!-- Employees and Line Managers: Read-only for active objectives -->
+  <record id="rule_institutional_objective_user" model="ir.rule">
+    <field name="name">Institutional Objective: Read Active</field>
+    <field name="model_id" ref="hr_appraisal_objectives.model_hr_institutional_objective"/>
+    <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+    <field name="domain_force">[('state', '!=', 'draft')]</field>
+    <field name="perm_read" eval="1"/>
+    <field name="perm_write" eval="0"/>
+    <field name="perm_create" eval="0"/>
+    <field name="perm_unlink" eval="0"/>
+  </record>
+  <!-- HR Managers: Full access to all objectives -->
+  <record id="rule_institutional_objective_hr_all" model="ir.rule">
+    <field name="name">Institutional Objective: HR All</field>
+    <field name="model_id" ref="hr_appraisal_objectives.model_hr_institutional_objective"/>
+    <field name="groups" eval="[(4, ref('hr_appraisal_objectives.group_hr_appraisal'))]"/>
+    <field name="domain_force">[(1, '=', 1), ('state', '!=', 'draft')]</field>
+    <field name="perm_read" eval="1"/>
+    <field name="perm_write" eval="1"/>
+    <field name="perm_create" eval="1"/>
+    <field name="perm_unlink" eval="1"/>
+  </record>
+  <!-- HR Managers: Creator-only access in draft state -->
+  <record id="rule_institutional_objective_creator_draft" model="ir.rule">
+    <field name="name">Institutional Objective: Creator Draft</field>
+    <field name="model_id" ref="hr_appraisal_objectives.model_hr_institutional_objective"/>
+    <field name="groups" eval="[(4, ref('hr_appraisal_objectives.group_hr_appraisal'))]"/>
+    <field name="domain_force">[('state', '=', 'draft'), ('create_uid', '=', user.id)]</field>
+    <field name="perm_read" eval="1"/>
+    <field name="perm_write" eval="1"/>
+    <field name="perm_create" eval="1"/>
+    <field name="perm_unlink" eval="1"/>
+  </record>
+  <!-- ========== hr.department.objective ========== -->
+  <!-- Employees: Read-only for active objectives in their department -->
+  <record id="rule_department_objective_employee_access" model="ir.rule">
+    <field name="name">Department Objectives: Employee Read Active</field>
+    <field name="model_id" ref="hr_appraisal_objectives.model_hr_department_objective"/>
+    <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+    <field name="domain_force">
+      [('department_id', '=', user.employee_id.department_id.id), ('state', '!=', 'draft')]
+    </field>
+    <field name="perm_read" eval="1"/>
+    <field name="perm_write" eval="0"/>
+    <field name="perm_create" eval="0"/>
+    <field name="perm_unlink" eval="0"/>
+  </record>
+  <!-- All Users: Full access to their own draft department objectives -->
+  <record id="rule_department_objective_creator_draft" model="ir.rule">
+    <field name="name">Department Objectives: Creator Draft</field>
+    <field name="model_id" ref="hr_appraisal_objectives.model_hr_department_objective"/>
+    <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+    <field name="domain_force">[('state', '=', 'draft'), ('create_uid', '=', user.id)]</field>
+    <field name="perm_read" eval="1"/>
+    <field name="perm_write" eval="1"/>
+    <field name="perm_create" eval="1"/>
+    <field name="perm_unlink" eval="1"/>
+  </record>
+  <!-- Line Managers: Full access to their department's objectives in active state -->
+  <record id="rule_department_objective_line_manager" model="ir.rule">
+    <field name="name">Department Objectives: Line Manager Active</field>
+    <field name="model_id" ref="hr_appraisal_objectives.model_hr_department_objective"/>
+    <field name="groups" eval="[(4, ref('hr_appraisal_objectives.group_appraisal_line_manager'))]"/>
+    <field name="domain_force">
+      [('department_id.manager_id.user_id', '=', user.id), ('state', '!=', 'draft')]
+    </field>
+    <field name="perm_read" eval="1"/>
+    <field name="perm_write" eval="1"/>
+    <field name="perm_create" eval="1"/>
+    <field name="perm_unlink" eval="1"/>
+  </record>
+  <!-- HR Managers: Full access to all department objectives in active state -->
+  <record id="rule_department_objective_hr_all" model="ir.rule">
+    <field name="name">Department Objectives: HR All</field>
+    <field name="model_id" ref="hr_appraisal_objectives.model_hr_department_objective"/>
+    <field name="groups" eval="[(4, ref('hr_appraisal_objectives.group_hr_appraisal'))]"/>
+    <field name="domain_force">[(1, '=', 1), ('state', '!=', 'draft')]</field>
+    <field name="perm_read" eval="1"/>
+    <field name="perm_write" eval="1"/>
+    <field name="perm_create" eval="1"/>
+    <field name="perm_unlink" eval="1"/>
+  </record>
+  <!-- ========== hr.appraisal.goal ========== -->
+  <!-- Employees: Read-only for active goals they own -->
+  <record id="rule_appraisal_goal_employee_own" model="ir.rule">
+    <field name="name">Appraisal Goal: Employee Own</field>
+    <field name="model_id" ref="hr_appraisal_objectives.model_hr_appraisal_goal"/>
+    <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+    <field name="domain_force">[('employee_id.user_id', '=', user.id), ('state', '!=', 'draft')]</field>
+    <field name="perm_read" eval="1"/>
+    <field name="perm_write" eval="1"/>
+    <field name="perm_create" eval="0"/>
+    <field name="perm_unlink" eval="0"/>
+  </record>
+  <!-- All Users: Full access to their own draft appraisal goals -->
+  <record id="rule_appraisal_goal_creator_draft" model="ir.rule">
+    <field name="name">Appraisal Goal: Creator Draft</field>
+    <field name="model_id" ref="hr_appraisal_objectives.model_hr_appraisal_goal"/>
+    <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+    <field name="domain_force">[('create_uid', '=', user.id), ('state', '=', 'draft')]</field>
+    <field name="perm_read" eval="1"/>
+    <field name="perm_write" eval="1"/>
+    <field name="perm_create" eval="1"/>
+    <field name="perm_unlink" eval="1"/>
+  </record>
+  <!-- Line Managers: Full access to their department's goals in active state -->
+  <record id="rule_appraisal_goal_line_manager_dept" model="ir.rule">
+    <field name="name">Appraisal Goal: Line Manager Department Active</field>
+    <field name="model_id" ref="hr_appraisal_objectives.model_hr_appraisal_goal"/>
+    <field name="groups" eval="[(4, ref('hr_appraisal_objectives.group_appraisal_line_manager'))]"/>
+    <field name="domain_force">
+      [('employee_id.department_id.manager_id.user_id', '=', user.id), ('state', '!=', 'draft')]
+    </field>
+    <field name="perm_read" eval="1"/>
+    <field name="perm_write" eval="1"/>
+    <field name="perm_create" eval="1"/>
+    <field name="perm_unlink" eval="0"/>
+  </record>
+  <!-- Appraisal Managers: Full access to all goals in active state -->
+  <!-- <record id="rule_appraisal_goal_appraisal_manager_all" model="ir.rule">
+    <field name="name">Appraisal Goal: Appraisal Manager All</field>
+    <field name="model_id" ref="hr_appraisal_objectives.model_hr_appraisal_goal"/>
+    <field name="groups" eval="[(4, ref('hr_appraisal_objectives.group_appraisal_manager'))]"/>
+    <field name="domain_force">[(1, '=', 1), ('state', '!=', 'draft')]</field>
+    <field name="perm_read" eval="1"/>
+    <field name="perm_write" eval="1"/>
+    <field name="perm_create" eval="1"/>
+    <field name="perm_unlink" eval="1"/>
+  </record> -->
+  
+  <!-- Line Managers: Access to rejected draft goals in their department -->
+  <record id="rule_appraisal_goal_line_manager_rejected_drafts" model="ir.rule">
+    <field name="name">Appraisal Goal: Line Manager Rejected Drafts</field>
+    <field name="model_id" ref="hr_appraisal_objectives.model_hr_appraisal_goal"/>
+    <field name="groups" eval="[(4, ref('hr_appraisal_objectives.group_appraisal_line_manager'))]"/>
+    <field name="domain_force">
+      [('state', '=', 'draft'), ('rejected', '=', True), ('employee_id.department_id.manager_id.user_id', '=', user.id)]
+    </field>
+    <field name="perm_read" eval="1"/>
+    <field name="perm_write" eval="1"/>
+    <field name="perm_create" eval="0"/>
+    <field name="perm_unlink" eval="0"/>
+  </record>
+
+  <!-- HR Managers: Access to all rejected draft goals -->
+  <record id="rule_appraisal_goal_hr_rejected_drafts" model="ir.rule">
+    <field name="name">Appraisal Goal: HR Rejected Drafts</field>
+    <field name="model_id" ref="hr_appraisal_objectives.model_hr_appraisal_goal"/>
+    <field name="groups" eval="[(4, ref('hr_appraisal_objectives.group_hr_appraisal'))]"/>
+    <field name="domain_force">[('state', '=', 'draft'), ('rejected', '=', True)]</field>
+    <field name="perm_read" eval="1"/>
+    <field name="perm_write" eval="1"/>
+    <field name="perm_create" eval="0"/>
+    <field name="perm_unlink" eval="0"/>
+  </record>
+
+  <!-- HR Managers: Full access to all goals in active state -->
+  <record id="rule_appraisal_goal_hr_all" model="ir.rule">
+    <field name="name">Appraisal Goal: HR All</field>
+    <field name="model_id" ref="hr_appraisal_objectives.model_hr_appraisal_goal"/>
+    <field name="groups" eval="[(4, ref('hr_appraisal_objectives.group_hr_appraisal'))]"/>
+    <field name="domain_force">[(1, '=', 1), ('state', '!=', 'draft')]</field>
+    <field name="perm_read" eval="1"/>
+    <field name="perm_write" eval="1"/>
+    <field name="perm_create" eval="1"/>
+    <field name="perm_unlink" eval="1"/>
+  </record>
+  <!-- ========== hr.appraisal ========== -->
+  <!-- Regular Users: Can only see their own appraisals (MOST RESTRICTIVE) -->
+  <record id="rule_hr_appraisal_user_own" model="ir.rule">
+    <field name="name">HR Appraisal: User Own Only</field>
+    <field name="model_id" ref="hr_appraisal_objectives.model_hr_appraisal"/>
+    <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+    <field name="domain_force">[('employee_id.user_id', '=', user.id)]</field>
+    <field name="perm_read" eval="1"/>
+    <field name="perm_write" eval="1"/>
+    <field name="perm_create" eval="0"/>
+    <field name="perm_unlink" eval="0"/>
+  </record>
+
+  <record id="rule_hr_appraisal_line_manager_own" model="ir.rule">
+    <field name="name">HR Appraisal: Line Manager Own Only</field>
+    <field name="model_id" ref="hr_appraisal_objectives.model_hr_appraisal"/>
+    <field name="groups" eval="[(4, ref('hr_appraisal_objectives.group_appraisal_line_manager'))]"/>
+    <field name="domain_force">[('employee_id.department_id.manager_id.user_id', '=', user.id)]</field>
+    <field name="perm_read" eval="1"/>
+    <field name="perm_write" eval="1"/>
+    <field name="perm_create" eval="1"/>
+    <field name="perm_unlink" eval="0"/>
+  </record>
+  
+  <!-- Appraisal Managers: Can see all appraisals (OVERRIDE for specific group) -->
+  <!-- <record id="rule_hr_appraisal_manager_all" model="ir.rule">
+    <field name="name">HR Appraisal: Appraisal Manager All</field>
+    <field name="model_id" ref="hr_appraisal_objectives.model_hr_appraisal"/>
+    <field name="groups" eval="[(4, ref('hr_appraisal_objectives.group_appraisal_manager'))]"/>
+    <field name="domain_force">[(1, '=', 1)]</field>
+    <field name="perm_read" eval="1"/>
+    <field name="perm_write" eval="1"/>
+    <field name="perm_create" eval="1"/>
+    <field name="perm_unlink" eval="1"/>
+  </record> -->
+  
+  <!-- HR Managers: Can see all appraisals (OVERRIDE for HR group) -->
+  <record id="rule_hr_appraisal_hr_all" model="ir.rule">
+    <field name="name">HR Appraisal: HR Manager All</field>
+    <field name="model_id" ref="hr_appraisal_objectives.model_hr_appraisal"/>
+    <field name="groups" eval="[(4, ref('hr_appraisal_objectives.group_hr_appraisal'))]"/>
+    <field name="domain_force">[(1, '=', 1)]</field>
+    <field name="perm_read" eval="1"/>
+    <field name="perm_write" eval="1"/>
+    <field name="perm_create" eval="1"/>
+    <field name="perm_unlink" eval="1"/>
+  </record>
+</odoo>

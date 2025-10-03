@@ -1,0 +1,532 @@
+/*
+ * Rwanda Green Fund - Backend Branding Styles
+ * 
+ * Official RGF Brand Colors:
+ * - Rich Black: #013f41 (Primary - 60%)
+ * - Garden Glow: #7faf81 (Secondary - 20%)
+ * - Bleached Jade: #e0e5d1 (Accent - 20%)
+ */
+
+:root {
+    /* Primary Brand Colors */
+    --rgf-rich-black: #013f41;
+    --rgf-garden-glow: #7faf81;
+    --rgf-bleached-jade: #e0e5d1;
+    
+    /* Supporting Colors */
+    --rgf-black: #000000;
+    --rgf-black-box: #102c2d;
+    --rgf-mourn-snow: #e9ebeb;
+    --rgf-cambridge-blue: #a4c4ac;
+    --rgf-sagebrush: #947352;
+    --rgf-tetsu-iron: #465765;
+    --rgf-birch-beige: #dac3a2;
+    
+    /* Odoo Variable Overrides */
+    --o-brand-odoo: var(--rgf-rich-black);
+    --o-brand-primary: var(--rgf-rich-black);
+    --o-brand-secondary: var(--rgf-garden-glow);
+    --o-brand-lightsecondary: var(--rgf-bleached-jade);
+    
+    /* Bootstrap Override Variables */
+    --primary: var(--rgf-rich-black);
+    --secondary: var(--rgf-garden-glow);
+    --success: var(--rgf-garden-glow);
+    --info: var(--rgf-cambridge-blue);
+    --warning: var(--rgf-sagebrush);
+    --danger: #d9534f;
+    --light: var(--rgf-bleached-jade);
+    --dark: var(--rgf-black-box);
+}
+
+/* ========================================
+   Navigation Bar & Top Menu
+   ======================================== */
+
+.o_main_navbar {
+    background-color: var(--rgf-rich-black) !important;
+    border-bottom: 3px solid var(--rgf-garden-glow) !important;
+}
+
+.o_main_navbar .o_menu_brand {
+    color: var(--rgf-bleached-jade) !important;
+}
+
+/* Navigation menu items - keep them subtle */
+.o_main_navbar .o_menu_sections button,
+.o_main_navbar .dropdown-toggle,
+.o_main_navbar a {
+    color: var(--rgf-bleached-jade) !important;
+    background-color: transparent !important;
+}
+
+/* Hover state - subtle highlight */
+.o_main_navbar .o_menu_sections button:hover,
+.o_main_navbar .dropdown-toggle:hover,
+.o_main_navbar a:hover {
+    background-color: rgba(127, 175, 129, 0.15) !important;
+    color: white !important;
+}
+
+/* Active/selected menu item - show with bottom border instead of background */
+.o_main_navbar .o_menu_sections button.active,
+.o_main_navbar .o_menu_sections .show > button {
+    background-color: transparent !important;
+    color: white !important;
+    border-bottom: 3px solid var(--rgf-garden-glow) !important;
+}
+
+/* App Switcher */
+.o_menu_sections .dropdown-menu {
+    background-color: var(--rgf-rich-black) !important;
+}
+
+.o_menu_sections .dropdown-item {
+    color: var(--rgf-bleached-jade) !important;
+}
+
+.o_menu_sections .dropdown-item:hover {
+    background-color: var(--rgf-garden-glow) !important;
+    color: white !important;
+}
+
+/* ========================================
+   Sidebar / Menu
+   ======================================== */
+
+.o_action_manager .o_menu_brand {
+    background-color: var(--rgf-rich-black) !important;
+    color: var(--rgf-bleached-jade) !important;
+}
+
+.o_menu_systray .dropdown-menu,
+.o_main .dropdown-menu {
+    border-color: var(--rgf-garden-glow) !important;
+}
+
+/* ========================================
+   Buttons
+   ======================================== */
+
+.btn-primary {
+    background-color: var(--rgf-rich-black) !important;
+    border-color: var(--rgf-rich-black) !important;
+    color: white !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+    background-color: var(--rgf-black-box) !important;
+    border-color: var(--rgf-garden-glow) !important;
+    box-shadow: 0 0 0 0.2rem rgba(127, 175, 129, 0.5) !important;
+}
+
+.btn-secondary {
+    background-color: var(--rgf-garden-glow) !important;
+    border-color: var(--rgf-garden-glow) !important;
+    color: white !important;
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus,
+.btn-secondary:active {
+    background-color: #6a9c70 !important;
+    border-color: #5f8e64 !important;
+}
+
+.btn-success {
+    background-color: var(--rgf-garden-glow) !important;
+    border-color: var(--rgf-garden-glow) !important;
+}
+
+.btn-info {
+    background-color: var(--rgf-cambridge-blue) !important;
+    border-color: var(--rgf-cambridge-blue) !important;
+}
+
+.btn-light {
+    background-color: var(--rgf-bleached-jade) !important;
+    border-color: var(--rgf-bleached-jade) !important;
+    color: var(--rgf-rich-black) !important;
+}
+
+/* ========================================
+   Links & Anchors
+   ======================================== */
+
+a {
+    color: var(--rgf-rich-black) !important;
+}
+
+a:hover {
+    color: var(--rgf-garden-glow) !important;
+}
+
+.o_form_view a:not(.btn),
+.o_field_widget a:not(.btn) {
+    color: var(--rgf-rich-black) !important;
+}
+
+.o_form_view a:not(.btn):hover,
+.o_field_widget a:not(.btn):hover {
+    color: var(--rgf-garden-glow) !important;
+}
+
+/* ========================================
+   Form Views
+   ======================================== */
+
+.o_form_view .o_form_statusbar {
+    background-color: var(--rgf-bleached-jade) !important;
+}
+
+.o_form_statusbar > .o_statusbar_status > .o_arrow_button:not(.disabled) {
+    color: var(--rgf-rich-black) !important;
+}
+
+.o_form_statusbar > .o_statusbar_status > .o_arrow_button.btn-primary {
+    background-color: var(--rgf-garden-glow) !important;
+    color: white !important;
+}
+
+.o_form_statusbar > .o_statusbar_status > .o_arrow_button:hover {
+    background-color: var(--rgf-cambridge-blue) !important;
+    color: white !important;
+}
+
+/* Form Sheet */
+.o_form_sheet {
+    border: 1px solid var(--rgf-bleached-jade) !important;
+}
+
+.o_form_sheet_bg {
+    background-color: white !important;
+}
+
+/* Notebook Tabs */
+.o_notebook .nav-tabs .nav-link.active {
+    border-bottom-color: var(--rgf-garden-glow) !important;
+    color: var(--rgf-rich-black) !important;
+}
+
+.o_notebook .nav-tabs .nav-link:hover {
+    border-bottom-color: var(--rgf-cambridge-blue) !important;
+}
+
+/* ========================================
+   List Views / Tables
+   ======================================== */
+
+.o_list_table thead {
+    background-color: var(--rgf-bleached-jade) !important;
+    color: var(--rgf-rich-black) !important;
+}
+
+.o_list_table tbody tr:hover {
+    background-color: rgba(127, 175, 129, 0.1) !important;
+}
+
+.o_list_table tbody tr.o_data_row.o_selected_row {
+    background-color: rgba(127, 175, 129, 0.2) !important;
+}
+
+.o_list_table .o_list_record_selector input[type="checkbox"]:checked {
+    background-color: var(--rgf-garden-glow) !important;
+    border-color: var(--rgf-garden-glow) !important;
+}
+
+/* ========================================
+   Kanban Views
+   ======================================== */
+
+.o_kanban_view .o_kanban_record {
+    border: 1px solid var(--rgf-bleached-jade) !important;
+}
+
+.o_kanban_view .o_kanban_record:hover {
+    box-shadow: 0 0 10px rgba(127, 175, 129, 0.3) !important;
+}
+
+.o_kanban_view .oe_kanban_color_0 {
+    background-color: var(--rgf-bleached-jade) !important;
+}
+
+.o_kanban_view .oe_kanban_color_1 {
+    background-color: var(--rgf-cambridge-blue) !important;
+}
+
+.o_kanban_view .oe_kanban_color_2 {
+    background-color: var(--rgf-garden-glow) !important;
+}
+
+.o_kanban_view .oe_kanban_color_3 {
+    background-color: var(--rgf-birch-beige) !important;
+}
+
+/* ========================================
+   Search Panel
+   ======================================== */
+
+.o_search_panel {
+    background-color: var(--rgf-mourn-snow) !important;
+    border-right: 1px solid var(--rgf-bleached-jade) !important;
+}
+
+.o_search_panel .o_search_panel_category_value header.active {
+    background-color: var(--rgf-garden-glow) !important;
+    color: white !important;
+}
+
+.o_search_panel .o_search_panel_field_icon,
+.o_search_panel .o_search_panel_section_icon {
+    color: var(--rgf-rich-black) !important;
+}
+
+/* ========================================
+   Control Panel & Search Bar
+   ======================================== */
+
+.o_control_panel {
+    background-color: white !important;
+    border-bottom: 1px solid var(--rgf-bleached-jade) !important;
+}
+
+.o_searchview .o_searchview_input {
+    border-color: var(--rgf-bleached-jade) !important;
+}
+
+.o_searchview .o_searchview_input:focus {
+    border-color: var(--rgf-garden-glow) !important;
+    box-shadow: 0 0 0 0.2rem rgba(127, 175, 129, 0.25) !important;
+}
+
+.o_searchview_facet {
+    background-color: var(--rgf-bleached-jade) !important;
+    color: var(--rgf-rich-black) !important;
+}
+
+.o_searchview_facet .o_facet_remove {
+    color: var(--rgf-rich-black) !important;
+}
+
+/* ========================================
+   Badges & Labels
+   ======================================== */
+
+.badge-primary {
+    background-color: var(--rgf-rich-black) !important;
+}
+
+.badge-secondary {
+    background-color: var(--rgf-garden-glow) !important;
+}
+
+.badge-success {
+    background-color: var(--rgf-garden-glow) !important;
+}
+
+.badge-info {
+    background-color: var(--rgf-cambridge-blue) !important;
+}
+
+.o_tag {
+    background-color: var(--rgf-bleached-jade) !important;
+    color: var(--rgf-rich-black) !important;
+}
+
+.o_tag.o_tag_color_1 {
+    background-color: var(--rgf-garden-glow) !important;
+    color: white !important;
+}
+
+/* ========================================
+   Progress Bars
+   ======================================== */
+
+.progress-bar {
+    background-color: var(--rgf-garden-glow) !important;
+}
+
+.progress-bar-success {
+    background-color: var(--rgf-garden-glow) !important;
+}
+
+.progress-bar-info {
+    background-color: var(--rgf-cambridge-blue) !important;
+}
+
+/* ========================================
+   Modals & Dialogs
+   ======================================== */
+
+.modal-header {
+    background-color: var(--rgf-rich-black) !important;
+    color: white !important;
+}
+
+.modal-header .btn-close {
+    filter: invert(1) !important;
+}
+
+.modal-footer {
+    border-top-color: var(--rgf-bleached-jade) !important;
+}
+
+/* ========================================
+   Alerts & Notifications
+   ======================================== */
+
+.alert-success {
+    background-color: rgba(127, 175, 129, 0.2) !important;
+    border-color: var(--rgf-garden-glow) !important;
+    color: var(--rgf-black-box) !important;
+}
+
+.alert-info {
+    background-color: rgba(164, 196, 172, 0.2) !important;
+    border-color: var(--rgf-cambridge-blue) !important;
+    color: var(--rgf-black-box) !important;
+}
+
+.alert-warning {
+    background-color: rgba(148, 115, 82, 0.2) !important;
+    border-color: var(--rgf-sagebrush) !important;
+    color: var(--rgf-black) !important;
+}
+
+/* ========================================
+   Form Inputs & Fields
+   ======================================== */
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--rgf-garden-glow) !important;
+    box-shadow: 0 0 0 0.2rem rgba(127, 175, 129, 0.25) !important;
+}
+
+.form-check-input:checked {
+    background-color: var(--rgf-garden-glow) !important;
+    border-color: var(--rgf-garden-glow) !important;
+}
+
+/* ========================================
+   Pagination
+   ======================================== */
+
+.o_pager .o_pager_value {
+    color: var(--rgf-rich-black) !important;
+}
+
+.page-link {
+    color: var(--rgf-rich-black) !important;
+}
+
+.page-link:hover {
+    color: var(--rgf-garden-glow) !important;
+    background-color: var(--rgf-bleached-jade) !important;
+    border-color: var(--rgf-garden-glow) !important;
+}
+
+.page-item.active .page-link {
+    background-color: var(--rgf-garden-glow) !important;
+    border-color: var(--rgf-garden-glow) !important;
+}
+
+/* ========================================
+   Dashboard & Graph Colors
+   ======================================== */
+
+.o_kanban_dashboard .o_kanban_card_header {
+    background-color: var(--rgf-rich-black) !important;
+    color: white !important;
+}
+
+.o_dashboard .o_graph_svg_container .nv-legend .nv-series {
+    fill: var(--rgf-rich-black) !important;
+}
+
+/* Custom Dashboard Colors */
+.o_dashboard_action .o_primary_color {
+    color: var(--rgf-garden-glow) !important;
+}
+
+/* ========================================
+   Chatter & Mail
+   ======================================== */
+
+.o_ChatterTopbar {
+    background-color: var(--rgf-bleached-jade) !important;
+}
+
+.o_Message {
+    border-left: 2px solid var(--rgf-garden-glow) !important;
+}
+
+.o_MessageAuthorPrefix {
+    color: var(--rgf-rich-black) !important;
+}
+
+/* ========================================
+   Calendar View
+   ======================================== */
+
+.fc-event,
+.fc-event-dot {
+    background-color: var(--rgf-garden-glow) !important;
+    border-color: var(--rgf-garden-glow) !important;
+}
+
+.fc-daygrid-day.fc-day-today {
+    background-color: rgba(127, 175, 129, 0.1) !important;
+}
+
+.fc-button-primary {
+    background-color: var(--rgf-rich-black) !important;
+    border-color: var(--rgf-rich-black) !important;
+}
+
+.fc-button-primary:hover {
+    background-color: var(--rgf-garden-glow) !important;
+    border-color: var(--rgf-garden-glow) !important;
+}
+
+/* ========================================
+   Miscellaneous
+   ======================================== */
+
+/* Dropdown Menus */
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background-color: var(--rgf-bleached-jade) !important;
+    color: var(--rgf-rich-black) !important;
+}
+
+/* Tooltips */
+.tooltip-inner {
+    background-color: var(--rgf-rich-black) !important;
+}
+
+.tooltip .arrow::before {
+    border-top-color: var(--rgf-rich-black) !important;
+}
+
+/* Loading Spinner */
+.o_loading {
+    color: var(--rgf-garden-glow) !important;
+}
+
+/* Breadcrumbs */
+.breadcrumb-item.active {
+    color: var(--rgf-garden-glow) !important;
+}
+
+/* Scrollbar (WebKit browsers) */
+::-webkit-scrollbar-thumb {
+    background-color: var(--rgf-cambridge-blue) !important;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: var(--rgf-garden-glow) !important;
+}
+

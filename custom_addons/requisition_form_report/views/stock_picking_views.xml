@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Add Requisition Form report to Internal Transfer form view -->
+        <record id="view_picking_form_requisition_form" model="ir.ui.view">
+            <field name="name">stock.picking.form.requisition.form</field>
+            <field name="model">stock.picking</field>
+            <field name="inherit_id" ref="stock.view_picking_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//header" position="inside">
+                    <button name="%(action_requisition_form_report)d" 
+                            string="Requisition Form" 
+                            type="action" 
+                            class="btn-primary"
+                            groups="stock.group_stock_user"/>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Add Requisition Form report to Internal Transfer kanban view -->
+        <record id="view_picking_kanban_requisition_form" model="ir.ui.view">
+            <field name="name">stock.picking.kanban.requisition.form</field>
+            <field name="model">stock.picking</field>
+            <field name="inherit_id" ref="stock.stock_picking_kanban"/>
+            <field name="arch" type="xml">
+                <xpath expr="//templates/t[@t-name='card']" position="inside">
+                    <div class="d-flex justify-content-end mt-2">
+                        <button name="%(action_requisition_form_report)d" 
+                                string="Requisition Form" 
+                                type="action" 
+                                class="btn btn-sm btn-outline-primary"
+                                groups="stock.group_stock_user"/>
+                    </div>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Note: Search view inheritance removed for Odoo 18 compatibility -->
+    </data>
+</odoo>

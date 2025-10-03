@@ -1,0 +1,26 @@
+<odoo>
+  <!-- Inherit timesheet line form to restrict tasks to employee KPI tasks -->
+  <record id="view_account_analytic_line_form_inherit_kpi" model="ir.ui.view">
+    <field name="name">account.analytic.line.form.kpi.limit</field>
+    <field name="model">account.analytic.line</field>
+    <field name="inherit_id" ref="hr_timesheet.hr_timesheet_line_form"/>
+    <field name="arch" type="xml">
+      <xpath expr="//field[@name='task_id']" position="attributes">
+        <attribute name="domain">[("user_ids", "in", [uid])]</attribute>
+      </xpath>
+    </field>
+  </record>
+
+  <!-- Inherit timesheet line list (grid inline editor) to restrict task list -->
+  <record id="view_account_analytic_line_list_inherit_kpi" model="ir.ui.view">
+    <field name="name">account.analytic.line.list.kpi.limit</field>
+    <field name="model">account.analytic.line</field>
+    <field name="inherit_id" ref="hr_timesheet.hr_timesheet_line_tree"/>
+    <field name="arch" type="xml">
+      <xpath expr="//field[@name='task_id']" position="attributes">
+        <attribute name="domain">[("user_ids", "in", [uid])]</attribute>
+      </xpath>
+    </field>
+  </record>
+</odoo>
+

@@ -1,0 +1,23 @@
+<odoo>
+    <!-- Institutional Objective Sequence -->
+    <record id="seq_hr_institutional_objective" model="ir.sequence">
+        <field name="name">Institutional Objective</field>
+        <field name="code">hr.institutional.objective</field>
+        <field name="prefix">IOB/%(year)s/</field>
+        <field name="padding">4</field>
+    </record>
+    <!-- Department Objective Sequence -->
+    <record id="seq_hr_department_objective" model="ir.sequence">
+        <field name="name">Department Objective</field>
+        <field name="code">hr.department.objective</field>
+        <field name="prefix">DOB/%(year)s/</field>
+        <field name="padding">4</field>
+    </record>
+    <!-- Individual (Appraisal Goal) Objective Sequence -->
+    <record id="seq_hr_appraisal_goal" model="ir.sequence">
+        <field name="name">Appraisal Goal</field>
+        <field name="code">hr.appraisal.goal</field>
+        <field name="prefix">AOB/%(year)s/</field>
+        <field name="padding">4</field>
+    </record>
+</odoo>

@@ -1,0 +1,401 @@
+/*
+ * Rwanda Green Fund - Frontend/Portal Branding Styles
+ * 
+ * Official RGF Brand Colors:
+ * - Rich Black: #013f41 (Primary - 60%)
+ * - Garden Glow: #7faf81 (Secondary - 20%)
+ * - Bleached Jade: #e0e5d1 (Accent - 20%)
+ */
+
+:root {
+    /* Primary Brand Colors */
+    --rgf-rich-black: #013f41;
+    --rgf-garden-glow: #7faf81;
+    --rgf-bleached-jade: #e0e5d1;
+    
+    /* Supporting Colors */
+    --rgf-black: #000000;
+    --rgf-black-box: #102c2d;
+    --rgf-mourn-snow: #e9ebeb;
+    --rgf-cambridge-blue: #a4c4ac;
+    --rgf-sagebrush: #947352;
+    --rgf-tetsu-iron: #465765;
+    --rgf-birch-beige: #dac3a2;
+}
+
+/* ========================================
+   Website Header & Navigation
+   ======================================== */
+
+#wrapwrap header,
+header.o_navbar {
+    background-color: var(--rgf-rich-black) !important;
+}
+
+.navbar-light .navbar-nav .nav-link {
+    color: var(--rgf-bleached-jade) !important;
+}
+
+.navbar-light .navbar-nav .nav-link:hover,
+.navbar-light .navbar-nav .nav-link:focus {
+    color: white !important;
+    background-color: rgba(127, 175, 129, 0.2) !important;
+}
+
+.navbar-light .navbar-nav .active > .nav-link,
+.navbar-light .navbar-nav .nav-link.active {
+    color: white !important;
+    background-color: var(--rgf-garden-glow) !important;
+}
+
+/* ========================================
+   Portal Layout
+   ======================================== */
+
+.o_portal_wrap {
+    background-color: var(--rgf-mourn-snow) !important;
+}
+
+.o_portal_sidebar {
+    background-color: white !important;
+    border-right: 1px solid var(--rgf-bleached-jade) !important;
+}
+
+.o_portal_sidebar .list-group-item.active {
+    background-color: var(--rgf-garden-glow) !important;
+    border-color: var(--rgf-garden-glow) !important;
+    color: white !important;
+}
+
+.o_portal_sidebar .list-group-item:hover {
+    background-color: var(--rgf-bleached-jade) !important;
+    color: var(--rgf-rich-black) !important;
+}
+
+/* ========================================
+   Portal Content
+   ======================================== */
+
+.o_portal_content {
+    background-color: white !important;
+}
+
+.o_portal h2,
+.o_portal h3 {
+    color: var(--rgf-rich-black) !important;
+    border-bottom: 2px solid var(--rgf-garden-glow) !important;
+    padding-bottom: 10px !important;
+}
+
+/* ========================================
+   Buttons
+   ======================================== */
+
+.btn-primary {
+    background-color: var(--rgf-rich-black) !important;
+    border-color: var(--rgf-rich-black) !important;
+    color: white !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+    background-color: var(--rgf-black-box) !important;
+    border-color: var(--rgf-garden-glow) !important;
+}
+
+.btn-secondary {
+    background-color: var(--rgf-garden-glow) !important;
+    border-color: var(--rgf-garden-glow) !important;
+    color: white !important;
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus {
+    background-color: #6a9c70 !important;
+    border-color: #5f8e64 !important;
+}
+
+.btn-success {
+    background-color: var(--rgf-garden-glow) !important;
+    border-color: var(--rgf-garden-glow) !important;
+}
+
+.btn-info {
+    background-color: var(--rgf-cambridge-blue) !important;
+    border-color: var(--rgf-cambridge-blue) !important;
+}
+
+.btn-outline-primary {
+    color: var(--rgf-rich-black) !important;
+    border-color: var(--rgf-rich-black) !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--rgf-rich-black) !important;
+    color: white !important;
+}
+
+/* ========================================
+   Links
+   ======================================== */
+
+a {
+    color: var(--rgf-rich-black) !important;
+}
+
+a:hover {
+    color: var(--rgf-garden-glow) !important;
+}
+
+/* ========================================
+   Cards & Panels
+   ======================================== */
+
+.card {
+    border-color: var(--rgf-bleached-jade) !important;
+}
+
+.card-header {
+    background-color: var(--rgf-bleached-jade) !important;
+    color: var(--rgf-rich-black) !important;
+    border-bottom-color: var(--rgf-garden-glow) !important;
+}
+
+.card-header.bg-primary {
+    background-color: var(--rgf-rich-black) !important;
+    color: white !important;
+}
+
+/* ========================================
+   Tables
+   ======================================== */
+
+.table thead {
+    background-color: var(--rgf-bleached-jade) !important;
+    color: var(--rgf-rich-black) !important;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(224, 229, 209, 0.3) !important;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(127, 175, 129, 0.1) !important;
+}
+
+/* ========================================
+   Forms
+   ======================================== */
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--rgf-garden-glow) !important;
+    box-shadow: 0 0 0 0.2rem rgba(127, 175, 129, 0.25) !important;
+}
+
+.form-check-input:checked {
+    background-color: var(--rgf-garden-glow) !important;
+    border-color: var(--rgf-garden-glow) !important;
+}
+
+/* ========================================
+   Alerts
+   ======================================== */
+
+.alert-success {
+    background-color: rgba(127, 175, 129, 0.2) !important;
+    border-color: var(--rgf-garden-glow) !important;
+    color: var(--rgf-black-box) !important;
+}
+
+.alert-info {
+    background-color: rgba(164, 196, 172, 0.2) !important;
+    border-color: var(--rgf-cambridge-blue) !important;
+    color: var(--rgf-black-box) !important;
+}
+
+.alert-warning {
+    background-color: rgba(148, 115, 82, 0.2) !important;
+    border-color: var(--rgf-sagebrush) !important;
+    color: var(--rgf-black) !important;
+}
+
+/* ========================================
+   Badges
+   ======================================== */
+
+.badge-primary {
+    background-color: var(--rgf-rich-black) !important;
+}
+
+.badge-secondary {
+    background-color: var(--rgf-garden-glow) !important;
+}
+
+.badge-success {
+    background-color: var(--rgf-garden-glow) !important;
+}
+
+.badge-info {
+    background-color: var(--rgf-cambridge-blue) !important;
+}
+
+/* ========================================
+   Progress Bars
+   ======================================== */
+
+.progress-bar {
+    background-color: var(--rgf-garden-glow) !important;
+}
+
+/* ========================================
+   Pagination
+   ======================================== */
+
+.page-link {
+    color: var(--rgf-rich-black) !important;
+}
+
+.page-link:hover {
+    color: var(--rgf-garden-glow) !important;
+    background-color: var(--rgf-bleached-jade) !important;
+    border-color: var(--rgf-garden-glow) !important;
+}
+
+.page-item.active .page-link {
+    background-color: var(--rgf-garden-glow) !important;
+    border-color: var(--rgf-garden-glow) !important;
+}
+
+/* ========================================
+   Modal Dialogs
+   ======================================== */
+
+.modal-header {
+    background-color: var(--rgf-rich-black) !important;
+    color: white !important;
+}
+
+.modal-header .btn-close {
+    filter: invert(1) !important;
+}
+
+/* ========================================
+   Dropdown Menus
+   ======================================== */
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background-color: var(--rgf-bleached-jade) !important;
+    color: var(--rgf-rich-black) !important;
+}
+
+.dropdown-item.active {
+    background-color: var(--rgf-garden-glow) !important;
+}
+
+/* ========================================
+   Breadcrumbs
+   ======================================== */
+
+.breadcrumb-item.active {
+    color: var(--rgf-garden-glow) !important;
+}
+
+.breadcrumb-item a {
+    color: var(--rgf-rich-black) !important;
+}
+
+.breadcrumb-item a:hover {
+    color: var(--rgf-garden-glow) !important;
+}
+
+/* ========================================
+   Footer
+   ======================================== */
+
+footer {
+    background-color: var(--rgf-rich-black) !important;
+    color: var(--rgf-bleached-jade) !important;
+    border-top: 3px solid var(--rgf-garden-glow) !important;
+}
+
+footer a {
+    color: var(--rgf-bleached-jade) !important;
+}
+
+footer a:hover {
+    color: white !important;
+}
+
+/* ========================================
+   Portal - Specific Components
+   ======================================== */
+
+/* My Account Page */
+.o_portal_my_home .o_portal_docs {
+    border: 1px solid var(--rgf-bleached-jade) !important;
+}
+
+.o_portal_my_home .o_portal_docs:hover {
+    box-shadow: 0 0 10px rgba(127, 175, 129, 0.3) !important;
+}
+
+/* Document Preview */
+.o_portal_chatter {
+    border-top: 2px solid var(--rgf-garden-glow) !important;
+}
+
+/* ========================================
+   Custom Scrollbar (WebKit)
+   ======================================== */
+
+::-webkit-scrollbar-thumb {
+    background-color: var(--rgf-cambridge-blue) !important;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: var(--rgf-garden-glow) !important;
+}
+
+/* ========================================
+   Website Builder Elements
+   ======================================== */
+
+/* Snippets */
+.s_btn_primary {
+    background-color: var(--rgf-rich-black) !important;
+    border-color: var(--rgf-rich-black) !important;
+}
+
+.s_btn_secondary {
+    background-color: var(--rgf-garden-glow) !important;
+    border-color: var(--rgf-garden-glow) !important;
+}
+
+/* Call to Action */
+.s_call_to_action {
+    background-color: var(--rgf-bleached-jade) !important;
+}
+
+/* ========================================
+   Accessibility Improvements
+   ======================================== */
+
+/* Focus States */
+*:focus {
+    outline-color: var(--rgf-garden-glow) !important;
+}
+
+/* High Contrast Links */
+.o_portal_content a,
+.card-body a {
+    text-decoration: underline !important;
+}
+
+.o_portal_content a:hover,
+.card-body a:hover {
+    text-decoration: none !important;
+}
+

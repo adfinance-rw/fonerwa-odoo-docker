@@ -1,0 +1,523 @@
+<odoo>
+    <record id="view_hr_appraisal_form_inherit_objectives" model="ir.ui.view">
+      <field name="name">hr.appraisal.form.inherit.objectives</field>
+      <field name="model">hr.appraisal</field>
+      <field name="inherit_id" ref="hr_appraisal.view_hr_appraisal_form"/>
+      <field name="arch" type="xml">
+          <!-- Add workflow buttons to header -->
+          <xpath expr="//header" position="replace">
+              <header>
+                  <button name="action_submit_self_assessment" type="object" string="Submit Feedback" 
+                          class="btn-primary" invisible="state != 'new' or employee_user_id != current_uid_int"/>
+                  
+                  <button name="action_submit_manager_assessment" type="object" string="Submit Feedback" 
+                          class="btn-primary" invisible="state != 'self_scored' or not is_manager" groups="hr_appraisal_objectives.group_appraisal_line_manager,hr_appraisal_objectives.group_hr_appraisal"/>
+                  
+                  <button name="action_complete_appraisal" type="object" string="Complete Appraisal" 
+                          class="btn-success" invisible="state != 'manager_scored'" groups="hr_appraisal_objectives.group_hr_appraisal"/>
+                  
+                  <button name="action_cancel_appraisal" type="object" string="Cancel" 
+                          class="btn-secondary" invisible="state in ['done', 'cancel']" groups="hr_appraisal_objectives.group_hr_appraisal"/>
+                  
+                  <button name="action_reset_to_pending" type="object" string="Reset to Pending" 
+                          class="btn-warning" invisible="state not in ['self_scored', 'manager_scored']" groups="hr_appraisal_objectives.group_hr_appraisal"/>
+                  
+                  <button name="action_hr_revert_to_draft" type="object" string="Revert to Draft" 
+                          class="btn-warning" invisible="state in ['new', 'cancel']" groups="hr_appraisal_objectives.group_hr_appraisal"/>
+                  
+              </header>
+          </xpath>
+          
+          <!-- Add institutional objective field after department -->
+          <xpath expr="//field[@name='department_id']" position="after">
+              <field name="institutional_objective_id" placeholder="Institutional Objective"/>
+              <field name="fiscal_year_id" readonly="1"/>
+              <!-- Hidden helper fields for access control -->
+              <field name="employee_user_id" invisible="1"/>
+              <field name="is_manager" invisible="1"/>
+              <field name="is_hr_user" invisible="1"/>
+              <field name="current_uid_int" invisible="1"/>
+          </xpath>
+          <xpath expr="//sheet/group" position="after">
+            <group>                
+                <!-- HR Change History -->
+                <group string="HR Change History" groups="hr_appraisal_objectives.group_hr_appraisal" 
+                       invisible="not hr_change_date">
+                  <field name="hr_change_reason" string="Reason for Last Change" readonly="1"/>
+                  <field name="hr_change_date" string="Last Changed Date" readonly="1"/>
+                </group>
+            </group>
+          </xpath>
+
+          <xpath expr="//sheet" position="after">
+            <div class="o-aside col-3">
+              <div class="card">
+                <div class="card-header text-white d-flex align-items-center">
+                  <i class="fa fa-bar-chart me-2" aria-hidden="true"></i>
+                  <h5 class="mb-0">Individual Objectives</h5>
+                </div>
+                <div class="card-body p-0">
+                  <field name="employee_goal_ids" invisible="state == 'done'" readonly="state in ['done', 'cancel'] or (state in ['manager_scored', 'hr_scored'] and employee_user_id != current_uid_int)">
+                    <list>
+                      <field name="name" string="Objective" class="font-weight-medium"/>
+                      <field name="kpi_total_weight" string="Weight" class="text-end badge badge-pill badge-info"/>
+                      <!-- <field name="state" widget="badge"/> -->
+                      <field name="final_score" string="Score" widget="float"/>
+                    </list>
+                  </field>
+                  <field name="employee_goal_ids" readonly="1" invisible="state != 'done'">
+                    <list string="Objectives Summary"
+                          decoration-success="final_score &gt;= 86"
+                          decoration-info="final_score &gt;= 76 and final_score &lt; 86"
+                          decoration-primary="final_score &gt;= 66 and final_score &lt; 76"
+                          decoration-warning="final_score &gt;= 51 and final_score &lt; 66"
+                          decoration-danger="final_score &gt; 0 and final_score &lt; 51">
+                      <field name="name" string="Objective"/>
+                      <field name="kpi_total_weight" string="Weight"/>
+                      <field name="final_score" string="Score"/>
+                      <field name="rating_scale_id" string="Rating"/>
+                    </list>
+                  </field>
+                </div>
+                <div class="card-footer bg-light text-muted small" invisible="not employee_goal_ids">
+                  <i class="fa fa-info-circle me-1"></i>
+                  <span class="float-end fw-bold">Total Weight: <field name="employee_goal_total_weight" readonly="1" class="badge badge-primary"/></span>
+                  <span class="float-end fw-bold" invisible="state != 'done'">Score: <field name="final_overall_score" readonly="1" class="badge badge-primary"/></span>
+                  <span class="float-end fw-bold" invisible="state != 'done' or not assessment_note">Scale: <field name="assessment_note" widget="badge" readonly="1"
+                              decoration-success="final_overall_score &gt;= 86"
+                              decoration-info="final_overall_score &gt;= 76 and final_overall_score &lt; 86"
+                              decoration-primary="final_overall_score &gt;= 66 and final_overall_score &lt; 76"
+                              decoration-warning="final_overall_score &gt;= 51 and final_overall_score &lt; 66"
+                              decoration-danger="final_overall_score &gt; 0 and final_overall_score &lt; 51"/></span>
+                </div>
+              </div>
+            </div>
+          </xpath>
+          
+          <!-- Replace the existing Individual Objectives page and add Overall Assessment
+          <xpath expr="//page[@name='appraisal']" position="before">              
+              <!-/- Detailed Assessment Review Page -/->
+              <page string="Assessment History" name="assessment_history" invisible="state in ['new', 'pending']">
+                  <div class="alert alert-info" role="alert">
+                      <strong>Assessment Progress:</strong> This page shows the complete assessment history and current status.
+                  </div>
+                  <div class="row">
+                      <!-/- Employee's self assessment summary -/->
+                      <div class="col-md-4" invisible="state in ['new', 'pending']">
+                          <group string="Employee Self Assessment" class="mb-4">
+                              <field name="employee_feedback_published" string="Feedback Status" readonly="1" widget="boolean"/>
+                              <div class="badge badge-success" invisible="state not in ['self_scored', 'manager_scored', 'hr_scored', 'done']">
+                                  ✓ Self Assessment Complete
+                              </div>
+                              <div class="text-muted small">
+                                  Employee feedback completed in Appraisal tab
+                              </div>
+                          </group>
+                      </div>
+                      
+                      <!-/- Manager assessment -/->
+                      <div class="col-md-4" invisible="state in ['new', 'pending', 'self_scored']">
+                          <group string="Manager Assessment" class="mb-4">
+                              <field name="manager_feedback_published" string="Assessment Status" readonly="1" widget="boolean"/>
+                              <div class="badge badge-success" invisible="state not in ['manager_scored', 'hr_scored', 'done']">
+                                  ✓ Manager Assessment Complete
+                              </div>
+                              <div class="badge badge-warning" invisible="state != 'self_scored'">
+                                  ⏳ Waiting for Manager Assessment
+                              </div>
+                              <div class="text-muted small">
+                                  Manager feedback completed in Appraisal tab
+                              </div>
+                          </group>
+                      </div>
+                      
+                      <!-/- HR assessment -/->
+                      <div class="col-md-4" invisible="state not in ['hr_scored', 'done']">
+                          <group string="HR Review" class="mb-4">
+                              <div class="badge badge-success" invisible="state not in ['hr_scored', 'done']">
+                                  ✓ HR Assessment Complete
+                              </div>
+                              <div class="badge badge-warning" invisible="state != 'manager_scored'">
+                                  ⏳ Waiting for HR Assessment
+                              </div>
+                              <div class="text-muted small">
+                                  HR notes available in Private Note tab
+                              </div>
+                          </group>
+                      </div>
+                  </div>
+                  
+                  <!-/- Final Summary -/->
+                  <div class="row" invisible="state != 'done'">
+                      <div class="col-12">
+                          <div class="alert alert-success" role="alert">
+                              <h4><i class="fa fa-check-circle"></i> Appraisal Complete</h4>
+                              <p>All assessments have been completed. The final appraisal scores are available above.</p>
+                          </div>
+                      </div>
+                  </div>
+              </page>
+          </xpath> -->
+      </field>
+  </record>
+
+  <!-- Override base Odoo appraisal view to allow manager feedback editing after self assessment -->
+  <record id="view_hr_appraisal_form_manager_feedback_access" model="ir.ui.view">
+    <field name="name">hr.appraisal.form.manager.feedback.access</field>
+    <field name="model">hr.appraisal</field>
+    <field name="inherit_id" ref="hr_appraisal.view_hr_appraisal_form"/>
+    <field name="arch" type="xml">
+      <!-- Update manager feedback readonly condition to allow editing during self_scored state -->
+      <xpath expr="//field[@name='accessible_manager_feedback']" position="attributes">
+        <attribute name="readonly">not can_see_manager_publish or state not in ['new', 'pending', 'self_scored']</attribute>
+      </xpath>
+    </field>
+  </record>
+
+  <!-- Configuration Views -->
+  <record id="view_hr_appraisal_config_form" model="ir.ui.view">
+    <field name="name">hr.appraisal.config.form</field>
+    <field name="model">hr.appraisal.config</field>
+    <field name="arch" type="xml">
+      <form string="HR Appraisal Configuration">
+        <sheet>
+          <group>
+            <group string="Auto-Completion Settings">
+              <field name="auto_complete_enabled"/>
+              <field name="auto_complete_delay_days"/>
+              <field name="min_progress_for_auto_complete"/>
+            </group>
+            <group string="Notification Settings">
+              <field name="send_completion_notifications"/>
+              <field name="send_reminder_notifications"/>
+              <field name="reminder_days_before"/>
+            </group>
+          </group>
+          <group>
+            <group string="Performance Alert Settings">
+              <field name="low_progress_threshold"/>
+              <field name="alert_days_before_deadline"/>
+            </group>
+            <group string="Cron Job Settings">
+              <field name="cron_frequency_hours"/>
+            </group>
+          </group>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <record id="view_hr_appraisal_config_list" model="ir.ui.view">
+    <field name="name">hr.appraisal.config.list</field>
+    <field name="model">hr.appraisal.config</field>
+    <field name="arch" type="xml">
+      <list string="HR Appraisal Configuration">
+        <field name="company_id"/>
+        <field name="auto_complete_enabled"/>
+        <field name="auto_complete_delay_days"/>
+        <field name="min_progress_for_auto_complete"/>
+        <field name="send_completion_notifications"/>
+        <field name="send_reminder_notifications"/>
+      </list>
+    </field>
+  </record>
+
+  <record id="action_hr_appraisal_config" model="ir.actions.act_window">
+    <field name="name">HR Appraisal Configuration</field>
+    <field name="res_model">hr.appraisal.config</field>
+    <field name="view_mode">list,form</field>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">
+        No configuration found.
+      </p>
+      <p>
+        Create a configuration to customize auto-completion and notification settings.
+      </p>
+    </field>
+  </record>
+
+  <!-- Inherit and update the search view for new states -->
+  <record id="hr_appraisal_search_inherit" model="ir.ui.view">
+    <field name="name">hr.appraisal.search.inherit</field>
+    <field name="model">hr.appraisal</field>
+    <field name="inherit_id" ref="hr_appraisal.hr_appraisal_search"/>
+    <field name="arch" type="xml">
+      <!-- Update the To Do filter to include new pending states -->
+      <xpath expr="//filter[@name='todo_appraisals']" position="replace">
+        <filter string="To Do" name="todo_appraisals" 
+                domain="[('state', 'in', ['new', 'pending', 'self_scored', 'manager_scored', 'hr_scored'])]"/>
+      </xpath>
+      
+      <!-- Add new specific state filters after the existing Done filter -->
+      <xpath expr="//filter[@name='filter_done']" position="after">
+        <separator/>
+        <filter string="New" name="filter_new" domain="[('state', '=', 'new')]"/>
+        <filter string="Pending" name="filter_pending" domain="[('state', '=', 'pending')]"/>
+        <filter string="Self Assessment Done" name="filter_self_scored" domain="[('state', '=', 'self_scored')]"/>
+        <filter string="Manager Assessment Done" name="filter_manager_scored" domain="[('state', '=', 'manager_scored')]"/>
+        <filter string="HR Assessment Done" name="filter_hr_scored" domain="[('state', '=', 'hr_scored')]"/>
+        <filter string="Done" name="filter_done_new" domain="[('state', '=', 'done')]"/>
+        <filter string="Cancelled" name="filter_cancelled" domain="[('state', '=', 'cancel')]"/>
+      </xpath>
+      
+      <!-- Update the searchpanel state field to show all states -->
+      <xpath expr="//searchpanel/field[@name='state']" position="attributes">
+        <attribute name="enable_counters">1</attribute>
+      </xpath>
+      
+      <!-- Add fiscal year and employee grouping filters -->
+      <xpath expr="//filter[@name='filter_cancelled']" position="after">
+        <separator/>
+        <filter string="Current Fiscal Year" name="filter_current_fy" domain="[('is_current_fy', '=', True)]"/>
+        <filter string="Recent Fiscal Year" name="filter_recent_years" domain="[('fiscal_year_id.date_to', '&gt;=', (context_today() - relativedelta(years=2)).strftime('%Y-%m-%d'))]"/>
+        <separator/>
+      </xpath>
+      
+      <!-- Add employee grouping -->
+      <xpath expr="//group[@expand='0']" position="inside">
+        <filter string="Fiscal Year" name="groupby_fiscal_year" context="{'group_by': 'fiscal_year_id'}"/>
+      </xpath>
+    </field>
+  </record>
+
+  <!-- Inherit and update the list view for better state display -->
+  <record id="hr_appraisal_list_inherit" model="ir.ui.view">
+    <field name="name">hr.appraisal.list.inherit</field>
+    <field name="model">hr.appraisal</field>
+    <field name="inherit_id" ref="hr_appraisal.view_hr_appraisal_tree"/>
+    <field name="arch" type="xml">
+      <!-- Update state field with new decorations for new states -->
+      <xpath expr="//field[@name='state']" position="attributes">
+        <attribute name="decoration-muted">state == 'new'</attribute>
+        <attribute name="decoration-warning">state == 'pending'</attribute>
+        <attribute name="decoration-info">state in ['self_scored', 'manager_scored', 'hr_scored']</attribute>
+        <attribute name="decoration-success">state == 'done'</attribute>
+        <attribute name="decoration-danger">state == 'cancel'</attribute>
+      </xpath>
+      
+      <!-- Add average overall score field to list view when done -->
+      <xpath expr="//field[@name='state']" position="after">
+        <field name="final_overall_score" string="Overall Score" 
+               invisible="state != 'done'" optional="show"
+               decoration-success="final_overall_score >= 86"
+               decoration-info="final_overall_score >= 76 and final_overall_score &lt; 86"
+               decoration-muted="final_overall_score >= 66 and final_overall_score &lt; 76"
+               decoration-warning="final_overall_score >= 51 and final_overall_score &lt; 66"
+               decoration-danger="final_overall_score &gt; 0 and final_overall_score &lt; 51"/>
+      </xpath>
+    </field>
+  </record>
+
+  <!-- Inherit and enhance the appraisal kanban view -->
+  <record id="hr_appraisal_kanban_inherit" model="ir.ui.view">
+    <field name="name">hr.appraisal.kanban.inherit</field>
+    <field name="model">hr.appraisal</field>
+    <field name="inherit_id" ref="hr_appraisal.hr_appraisal_kanban"/>
+    <field name="arch" type="xml">
+      <!-- Add fields needed for enhanced kanban -->
+      <xpath expr="//field[@name='waiting_feedback']" position="after">
+        <field name="final_overall_score"/>
+        <field name="fiscal_year_id"/>
+        <field name="rating_scale_id"/>
+        <field name="employee_user_id"/>
+        <field name="is_manager"/>
+        <field name="is_hr_user"/>
+      </xpath>
+      
+      <!-- Add fiscal year and score info after department -->
+      <xpath expr="//field[@name='department_id']" position="after">
+        <div class="mb-1">
+          <i class="fa fa-calendar-o"/> <field name="fiscal_year_id"/>
+          <t t-if="record.final_overall_score.raw_value > 0 and record.state.raw_value == 'done'">
+            • <span t-att-class="'badge ' + (record.final_overall_score.raw_value >= 86 ? 'text-bg-success' : record.final_overall_score.raw_value >= 76 ? 'text-bg-info' : record.final_overall_score.raw_value >= 66 ? 'text-bg-secondary' : record.final_overall_score.raw_value >= 51 ? 'text-bg-warning' : 'text-bg-danger')">
+              <t t-esc="Math.round(record.final_overall_score.raw_value)"/>%
+            </span>
+          </t>
+          <t t-if="record.rating_scale_id.raw_value and record.state.raw_value == 'done'">
+            • <field name="rating_scale_id" class="badge text-bg-light"/>
+          </t>
+        </div>
+      </xpath>
+      
+      <!-- Add employee action buttons before footer -->
+      <xpath expr="//footer[@class='pt-0']" position="before">
+        <div class="mt-2" t-if="record.employee_user_id.raw_value == uid">
+          <div class="d-flex gap-1">
+            <button type="object" name="action_view_my_evaluation" 
+                    class="btn btn-sm btn-primary flex-fill"
+                    t-if="record.state.raw_value === 'done'">
+              My Evaluation
+            </button>
+            <button type="object" name="action_view_objectives" 
+                    class="btn btn-sm btn-outline-primary flex-fill">
+              Objectives
+            </button>
+          </div>
+        </div>
+      </xpath>
+    </field>
+  </record>
+
+  <!-- Override the main appraisal action with role-based context and fiscal year filtering -->
+  <record model="ir.actions.act_window" id="hr_appraisal.open_view_hr_appraisal_tree">
+    <field name="name">Appraisals</field>
+    <field name="res_model">hr.appraisal</field>
+    <field name="view_mode">kanban,list,form</field>
+    <field name="context">{
+        'search_default_filter_current_fy': 1,
+    }</field>
+  </record>
+
+  <!-- Button action to open existing appraisals for selected employee with current FY filter -->
+  <record id="action_open_appraisals_for_employee" model="ir.actions.server">
+    <field name="name">Open Appraisals For Employee</field>
+    <field name="state">code</field>
+    <field name="model_id" ref="hr.model_hr_employee"/>
+    <field name="code"><![CDATA[
+employee = env['hr.employee'].browse(env.context.get('active_id'))
+action = env.ref('hr_appraisal.open_view_hr_appraisal_tree').sudo().read()[0]
+action['domain'] = [('employee_id', '=', employee.id)]
+ctx = action.get('context')
+if isinstance(ctx, str):
+    try:
+        ctx = safe_eval(ctx, {})
+    except Exception:
+        ctx = {}
+if not isinstance(ctx, dict):
+    ctx = {}
+ctx['search_default_filter_current_fy'] = 1
+action['context'] = ctx
+action
+    ]]></field>
+  </record>
+
+  <!-- Level 1: Employee Overview Kanban (for HR & Line Managers) -->
+  <record id="view_employee_appraisal_overview_kanban" model="ir.ui.view">
+    <field name="name">hr.employee.appraisal.overview.kanban</field>
+    <field name="model">hr.employee</field>
+    <field name="groups_id" eval="[(4, ref('hr_appraisal_objectives.group_hr_appraisal')), (4, ref('hr_appraisal_objectives.group_appraisal_line_manager'))]"/>
+    <field name="arch" type="xml">
+      <kanban quick_create="false" default_group_by="department_id" class="o_hr_employee_overview_kanban">
+        <field name="name"/>
+        <field name="work_email"/>
+        <field name="department_id"/>
+        <field name="job_id"/>
+        <field name="avatar_128"/>
+        <templates>
+          <t t-name="card">
+            <a type="action" class="o_kanban_record text-decoration-none" name="%(hr_appraisal_objectives.action_open_appraisals_for_employee)d" t-attf-title="Open appraisals for #{record.name.value}">
+              <div class="d-flex align-items-center p-2">
+                <div class="me-3">
+                  <img t-att-src="'/web/image/hr.employee/' + record.id.raw_value + '/avatar_128'" alt="avatar" class="rounded-circle" style="width:48px;height:48px;object-fit:cover;"/>
+                </div>
+                <div class="flex-grow-1">
+                  <div class="fw-bold lh-sm"><field name="name"/></div>
+                  <div class="text-muted small">
+                    <t t-if="record.job_id.value"><field name="job_id"/></t>
+                    <t t-if="record.department_id.value"> • <field name="department_id"/></t>
+                    <t t-if="record.work_email.value"> • <t t-esc="record.work_email.value"/></t>
+                  </div>
+                </div>
+                <div class="ms-2 text-muted">
+                  <i class="fa fa-chevron-right" title="Open"/>
+                </div>
+              </div>
+            </a>
+          </t>
+        </templates>
+      </kanban>
+    </field>
+  </record>
+
+  <!-- HR Employee Overview Action - shows all employees grouped by department -->
+  <record id="action_employee_appraisal_overview_hr" model="ir.actions.act_window">
+    <field name="name">Employee Appraisal Overview</field>
+    <field name="res_model">hr.employee</field>
+    <field name="view_mode">kanban,list</field>
+    <field name="view_id" ref="view_employee_appraisal_overview_kanban"/>
+    <field name="context">{'default_group_by': 'department_id'}</field>
+    <field name="domain">[]</field>
+    <field name="groups_id" eval="[(4, ref('hr_appraisal_objectives.group_hr_appraisal'))]"/>
+  </record>
+
+  <!-- Line Manager Employee Overview Server Action - dynamically sets domain to prevent glitches -->
+  <record id="action_employee_appraisal_overview_lm" model="ir.actions.server">
+    <field name="name">My Team Appraisal Overview</field>
+    <field name="state">code</field>
+    <field name="model_id" ref="hr.model_hr_employee"/>
+    <field name="groups_id" eval="[(4, ref('hr_appraisal_objectives.group_appraisal_line_manager'))]"/>
+    <field name="code"><![CDATA[
+user = env.user
+# Create action for line manager's team with strict access control
+action = {
+    'name': 'My Team Appraisal Overview',
+    'res_model': 'hr.employee',
+    'type': 'ir.actions.act_window',
+    'view_mode': 'kanban,list',
+    'views': [(env.ref('hr_appraisal_objectives.view_employee_appraisal_overview_kanban').id, 'kanban'), (False, 'list')],
+    'context': {'group_by': False},
+    'domain': ['|', ('department_id.manager_id.user_id', '=', user.id), ('parent_id.user_id', '=', user.id)],
+    'target': 'current',
+}
+action
+    ]]></field>
+  </record>
+
+  <!-- Entry-point: route users to appropriate views based on their role -->
+  <record id="action_open_appraisals_entrypoint" model="ir.actions.server">
+    <field name="name">Appraisals</field>
+    <field name="state">code</field>
+    <field name="model_id" ref="hr_appraisal.model_hr_appraisal"/>
+    <field name="code"><![CDATA[
+user = env.user
+action = False
+
+if user.has_group('hr_appraisal_objectives.group_hr_appraisal'):
+    # HR users see all employees grouped by department
+    action = env.ref('hr_appraisal_objectives.action_employee_appraisal_overview_hr').sudo().read()[0]
+elif user.has_group('hr_appraisal_objectives.group_appraisal_line_manager'):
+    # Line Managers use server action that dynamically sets domain
+    action = env.ref('hr_appraisal_objectives.action_employee_appraisal_overview_lm').run()
+    if not action:
+        # Fallback if server action fails
+        action = {
+            'name': 'My Team Appraisal Overview',
+            'res_model': 'hr.employee',
+            'type': 'ir.actions.act_window',
+            'view_mode': 'kanban,list',
+            'views': [(env.ref('hr_appraisal_objectives.view_employee_appraisal_overview_kanban').id, 'kanban'), (False, 'list')],
+            'context': {'group_by': False},
+            'domain': ['|', ('department_id.manager_id.user_id', '=', user.id), ('parent_id.user_id', '=', user.id)],
+            'target': 'current',
+        }
+else:
+    # Regular employees see appraisals directly with current FY filter
+    action = env.ref('hr_appraisal.open_view_hr_appraisal_tree').sudo().read()[0]
+    # Context can be a string; ensure it's a dict before update
+    ctx = action.get('context')
+    if isinstance(ctx, str):
+        try:
+            ctx = safe_eval(ctx, {})
+        except Exception:
+            ctx = {}
+    if not isinstance(ctx, dict):
+        ctx = {}
+    ctx.setdefault('search_default_filter_current_fy', 1)
+    action['context'] = ctx
+
+action
+    ]]></field>
+  </record>
+
+  <!-- Wire the Appraisals menu (list entry) to the entry-point (keeps single menu) -->
+  <record id="hr_appraisal.menu_open_view_hr_appraisal_tree" model="ir.ui.menu">
+    <field name="action" ref="action_open_appraisals_entrypoint"/>
+  </record>
+
+  <menuitem id="menu_hr_appraisal_config"
+            name="Settings"
+            parent="hr_appraisal.menu_hr_appraisal_configuration"
+            action="action_hr_appraisal_config"
+            groups="hr_appraisal_objectives.group_hr_appraisal"
+            sequence="0"/>
+</odoo>

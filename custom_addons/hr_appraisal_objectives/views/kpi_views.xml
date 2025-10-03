@@ -1,0 +1,97 @@
+<odoo>
+    <record id="view_hr_appraisal_goal_kpi_form" model="ir.ui.view">
+        <field name='name'>hr.appraisal.goal.kpi.form</field>
+        <field name='model'>hr.appraisal.goal.kpi</field>
+        <field name='arch' type='xml'>
+            <form>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="kpi" string="Key Performance Indicator"/>
+                        <h1>
+                            <field name='kpi' placeholder="e.g. Customer Satisfaction Score" 
+                                readonly="appraisal_goal_id.state in ['first_approved', 'progress', 'self_scored', 'scored', 'final']" required="1"/>
+                        </h1>
+                    </div>
+                    <group string="KPI Details">
+                        <group>
+                            <field name='target' 
+                                readonly="appraisal_goal_id.state in ['first_approved', 'progress', 'self_scored', 'scored', 'final']" required="1"/>
+                            <field name='measurement_method' 
+                                readonly="appraisal_goal_id.state in ['first_approved', 'progress', 'self_scored', 'scored', 'final']" required="1"/>
+                        </group>
+                        <group>
+                            <field name='weight' 
+                                readonly="appraisal_goal_id.state in ['first_approved', 'progress', 'self_scored', 'scored', 'final']" required="1"/>
+                            <!-- <field name='progress_percentage' readonly='1' widget="progressbar"/> -->
+                        </group>
+                    </group>
+                    <group string="Project Integration" invisible="1">
+                        <group>
+                            <field name='project_id'/>
+                            <field name='progress_method'/>
+                            <field name='planned_hours'/>
+                        </group>
+                        <group>
+                            <field name='task_ids' widget='many2many_tags'/>
+                            <field name='auto_progress'/>
+                            <field name='manual_progress' invisible="progress_method != 'manual'"/>
+                        </group>
+                        <div class="col-12 mt-3">
+                            <button name="action_open_task_timesheets" type="object" 
+                                    string="View Task Timesheets" 
+                                    class="btn btn-secondary" 
+                                    icon="fa-clock-o"
+                                    invisible="not task_ids"/>
+                        </div>
+                    </group>
+                    <notebook>
+                        <page string="Description" name="description">
+                            <field name='description' 
+                                placeholder="Describe how this KPI will be measured and what constitutes success..."
+                                readonly="appraisal_goal_id.state in ['first_approved', 'progress', 'self_scored', 'scored', 'final']" required="1"/>
+                        </page>
+                        <!-- <page string="Progress Tracking" name="progress" invisible="not project_id">
+                            <group>
+                                <field name='progress_method' readonly="1"/>
+                                <field name='auto_progress' readonly="1"/>
+                                <field name='progress_percentage' readonly="1" widget="progressbar"/>
+                            </group>
+                            <separator string="Related Tasks"/>
+                            <field name='task_ids' readonly="1">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="stage_id"/>
+                                    <field name="planned_hours"/>
+                                    <field name="effective_hours"/>
+                                    <field name="remaining_hours"/>
+                                    <field name="progress" widget="progressbar"/>
+                                </list>
+                            </field>
+                        </page> -->
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="view_hr_common_objective_kpi_form" model="ir.ui.view">
+        <field name='name'>hr.common.objective.kpi.form</field>
+        <field name='model'>hr.common.objective.kpi</field>
+        <field name='arch' type='xml'>
+            <form>
+                <group>
+                    <field name='kpi'/>
+                    <field name='target'/>
+                </group>
+                <group>
+                    <field name='measurement_method'/>
+                    <field name='weight'/>
+                </group>
+                <notebook>
+                    <page string="Description" name="description">
+                        <field name='description'/>
+                    </page>
+                </notebook>
+            </form>
+        </field>
+    </record>
+</odoo>

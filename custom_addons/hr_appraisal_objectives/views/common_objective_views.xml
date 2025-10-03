@@ -1,0 +1,120 @@
+<odoo>
+  <!-- Server action to publish only selected draft objectives -->
+  <record id="action_publish_selected_individual_drafts" model="ir.actions.server">
+    <field name="name">Publish Objectives</field>
+    <field name="model_id" ref="model_hr_common_objective"/>
+    <field name="binding_model_id" ref="model_hr_common_objective"/>
+    <field name="binding_type">action</field>
+    <field name="binding_view_types">list,kanban</field>
+    <field name="state">code</field>
+    <field name="code"><![CDATA[
+records = env['hr.common.objective'].browse(env.context.get('active_ids', []))
+current_uid = env.uid
+drafts = records.filtered(lambda r: r.create_uid.id == current_uid)
+missing_kpi = drafts.filtered(lambda r: not r.kpi_template_ids)
+to_publish = drafts - missing_kpi
+for rec in to_publish:
+    rec.action_publish_objectives()
+published_count = len(to_publish)
+skipped_nondraft_or_not_mine = len(records) - len(drafts)
+skipped_no_kpi = len(missing_kpi)
+parts = []
+if published_count:
+    parts.append(f"Published {published_count}")
+if skipped_no_kpi:
+    parts.append(f"Skipped {skipped_no_kpi} without KPIs")
+if skipped_nondraft_or_not_mine:
+    parts.append(f"Skipped {skipped_nondraft_or_not_mine} not draft or not yours")
+message = ", ".join(parts) if parts else "Nothing to publish from selection."
+action = {
+    'type': 'ir.actions.client',
+    'tag': 'display_notification',
+    'params': {
+        'message': message,
+        'type': 'success' if published_count else 'warning',
+        'sticky': False,
+    },
+}
+    ]]></field>
+    <field name="groups_id" eval="[(4, ref('base.group_user'))]"/>
+  </record>
+
+  <record id="view_common_objective_form" model="ir.ui.view">
+    <field name="name">hr.common.objective.form</field>
+    <field name="model">hr.common.objective</field>
+    <field name="arch" type="xml">
+      <form string="Common Objective">
+        <sheet>
+          <div class="oe_button_box" name="button_box">
+            <button name="action_publish_objectives" type="object" string="Publish to Employees" class="oe_stat_button btn-primary" icon="fa-send" groups="hr_appraisal_objectives.group_hr_appraisal"/>
+          </div>
+          <div class="oe_title">
+            <label for="name" string="Individual Objective"/>
+            <h1>
+              <field name="name" placeholder="e.g. Present yourself to your new team"/>
+            </h1>
+          </div>
+          <div class="row">
+            <div class="col-lg-6">
+              <group string="Objective Details">
+                <field name="institutional_objective_id" widget="many2one_autocomplete" 
+                    domain="[('state', '=', 'active')]"/>
+                <field name="tag_ids" widget="many2many_tags"/>
+                <field name="target_employee_ids" widget="many2many_tags"/>
+              </group>
+            </div>
+            <div class="col-lg-6">
+              <group string="Timeline">
+                <field name="start_date"/>
+                <field name="end_date"/>
+              </group>
+            </div>
+          </div>
+          <notebook>
+            <page string="KPIs">
+              <field name="kpi_template_ids">
+                <list>
+                  <field name="kpi"/>
+                  <field name="description"/>
+                  <field name="target"/>
+                  <field name="measurement_method"/>
+                  <field name="weight"/>
+                </list>
+              </field>
+            </page>
+          </notebook>
+        </sheet>
+        <chatter/>
+      </form>
+    </field>
+  </record>
+
+  <record id="view_common_objective_list" model="ir.ui.view">
+    <field name="name">hr.common.objective.list</field>
+    <field name="model">hr.common.objective</field>
+    <field name="arch" type="xml">
+      <list>
+        <header>
+          <button string="Publish" type="action"
+                  name="%(hr_appraisal_objectives.action_publish_selected_individual_drafts)d"
+                  class="btn-primary"
+                  groups="hr_appraisal_objectives.group_hr_appraisal"/>
+        </header>
+        <field name="name"/>
+        <field name="start_date"/>
+        <field name="end_date"/>
+      </list>
+    </field>
+  </record>
+
+  <record id="action_common_objectives" model="ir.actions.act_window">
+    <field name="name">Common Objectives</field>
+    <field name="res_model">hr.common.objective</field>
+    <field name="view_mode">list,form</field>
+    <field name="context">{"search_default_active": 1}</field>
+  </record>
+
+  <menuitem id="menu_common_objectives" name="Common Objectives" parent="hr_appraisal.menu_hr_appraisal_configuration" action="action_common_objectives" groups="hr_appraisal_objectives.group_hr_appraisal" sequence="50"/>
+</odoo>
+
+
