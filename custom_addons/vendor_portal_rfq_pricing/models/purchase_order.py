@@ -103,6 +103,11 @@ class PurchaseOrderLine(models.Model):
         digits='Product Price',
         help="Price submitted by the supplier through the portal"
     )
+    x_supplier_price_display = fields.Float(
+        string='Supplier Price',
+        compute='_compute_x_supplier_price_display',
+        help="Display price - returns zero if after deadline"
+    )
     supplier_price_submitted = fields.Boolean(
         string='Price Submitted',
         default=False,
@@ -119,22 +124,67 @@ class PurchaseOrderLine(models.Model):
         compute='_compute_price_difference',
         help="Percentage difference between supplier price and current unit price"
     )
+    price_difference_display = fields.Float(
+        string='Price Difference',
+        compute='_compute_price_difference_display',
+        digits='Product Price',
+        help="Display price difference - returns zero if after deadline"
+    )
+    price_difference_percent_display = fields.Float(
+        string='Price Difference %',
+        compute='_compute_price_difference_display',
+        help="Display price difference percentage - returns zero if after deadline"
+    )
 
-    @api.depends('x_supplier_price', 'price_unit')
+    @api.depends('x_supplier_price', 'order_id.date_order')
+    def _compute_x_supplier_price_display(self):
+        """Compute display supplier price - returns zero if after deadline"""
+        now = fields.Datetime.now()
+        for line in self:
+            if line.order_id.date_order and now <= line.order_id.date_order:
+                # After deadline - return zero
+                line.x_supplier_price_display = 0.0
+            else:
+                # Before deadline or no date_order - return actual price
+                line.x_supplier_price_display = line.x_supplier_price
+
+    @api.depends('price_difference', 'price_difference_percent', 'order_id.date_order')
+    def _compute_price_difference_display(self):
+        """Compute display price difference - returns zero if after deadline"""
+        now = fields.Datetime.now()
+        for line in self:
+            if line.order_id.date_order and now <= line.order_id.date_order:
+                # After deadline - return zero
+                line.price_difference_display = 0.0
+                line.price_difference_percent_display = 0.0
+            else:
+                # Before deadline or no date_order - return actual values
+                line.price_difference_display = line.price_difference
+                line.price_difference_percent_display = line.price_difference_percent
+
+    @api.depends('x_supplier_price', 'price_unit', 'order_id.date_order')
     def _compute_price_difference(self):
         """Compute price difference between supplier price and unit price"""
+        now = fields.Datetime.now()
         for line in self:
-            if line.x_supplier_price and line.price_unit:
-                line.price_difference = line.x_supplier_price - line.price_unit
-                if line.price_unit != 0:
-                    line.price_difference_percent = (
-                        (line.x_supplier_price - line.price_unit) / line.price_unit
-                    ) * 100
-                else:
-                    line.price_difference_percent = 0.0
-            else:
+            # Check if before deadline - show zero if before deadline
+            if line.order_id.date_order and now <= line.order_id.date_order:
+                # Before deadline - return zero
                 line.price_difference = 0.0
                 line.price_difference_percent = 0.0
+            else:
+                # After deadline or no date_order - compute actual values
+                if line.x_supplier_price and line.price_unit:
+                    line.price_difference = line.x_supplier_price - line.price_unit
+                    if line.price_unit != 0:
+                        line.price_difference_percent = (
+                            (line.x_supplier_price - line.price_unit) / line.price_unit
+                        ) * 100
+                    else:
+                        line.price_difference_percent = 0.0
+                else:
+                    line.price_difference = 0.0
+                    line.price_difference_percent = 0.0
 
     @api.model_create_multi
     def create(self, vals_list):

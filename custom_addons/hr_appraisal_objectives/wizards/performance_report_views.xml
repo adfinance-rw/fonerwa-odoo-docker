@@ -1,0 +1,9 @@
+<odoo>
+  <!-- Open the same analysis as the built-in appraisal analysis screen -->
+  <menuitem id="menu_performance_report"
+            name="Performance Analysis"
+            parent="hr_appraisal.menu_hr_appraisal_report"
+            action="hr_appraisal.action_appraisal_report_all"
+            groups="hr_appraisal_objectives.group_hr_appraisal"
+            sequence="2"/>
+</odoo>

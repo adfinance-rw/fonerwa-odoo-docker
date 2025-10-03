@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Purchase Order Form View - Add Tender Award Section -->
+        <record id="purchase_order_form_tender_award" model="ir.ui.view">
+            <field name="name">purchase.order.form.tender.award</field>
+            <field name="model">purchase.order</field>
+            <field name="inherit_id" ref="purchase.purchase_order_form"/>
+            <field name="arch" type="xml">
+                <!-- Add Tender Award section after the main form -->
+                <xpath expr="//field[@name='order_line']" position="after">
+                    <notebook>
+                        <page string="Tender Award">
+                            <div invisible="purchase_group_id" class="alert alert-warning" role="alert">
+                                <strong>Note:</strong> This Purchase Order is not part of a tender process. 
+                                <br/>
+                                <button name="action_create_tender_group" 
+                                        type="object" 
+                                        class="btn btn-primary btn-sm"
+                                        string="Create Tender Group"
+                                        style="margin-top: 10px;"/>
+                                <br/>
+                                <small>After creating a tender group, you can add alternative RFQs to compare vendors.</small>
+                            </div>
+                            
+                            <div invisible="not purchase_group_id" class="alert alert-success" role="alert">
+                                <strong>Success!</strong> Tender group created successfully. You can now add alternative RFQs to this tender.
+                            </div>
+                            
+                            <group invisible="not purchase_group_id">
+                                <group>
+                                    <field name="tender_description" widget="text" placeholder="Enter description of the tender/procurement project..."/>
+                                    <field name="legal_reference" widget="text" placeholder="Legal reference for the tender award process"/>
+                                </group>
+                                <group>
+                                    <field name="tender_award_generated" readonly="1"/>
+                                    <field name="tender_award_date" readonly="1"/>
+                                </group>
+                            </group>
+                            
+                            <group string="Approval Chain" invisible="not purchase_group_id">
+                                <group>
+                                    <field name="prepared_by"/>
+                                    <field name="first_approval"/>
+                                </group>
+                                <group>
+                                    <field name="final_approval"/>
+                                </group>
+                            </group>
+                            
+                            <group string="Tender Award Recommendation" invisible="not purchase_group_id">
+                                <field name="tender_award_recommendation" widget="text" 
+                                       placeholder="Enter formal recommendation and justification for the tender award decision..."/>
+                            </group>
+                            
+                            <group string="Tender Participants" invisible="tender_participants_count == 0">
+                                <field name="tender_participants_count" readonly="1"/>
+                                <field name="tender_participants" widget="many2many_tags" readonly="1"/>
+                            </group>
+                            
+                            <div class="oe_button_box" name="button_box" invisible="not purchase_group_id">
+                                <button name="action_generate_tender_award_report" 
+                                        type="object" 
+                                        class="oe_highlight"
+                                        string="Generate Tender Award Report"
+                                        invisible="tender_award_generated"/>
+                                <button name="action_generate_tender_award_report" 
+                                        type="object" 
+                                        class="oe_stat_button"
+                                        icon="fa-file-pdf-o"
+                                        string="Regenerate Report"
+                                        invisible="not tender_award_generated"/>
+                            </div>
+                        </page>
+                    </notebook>
+                </xpath>
+            </field>
+        </record>
+
+
+
+    </data>
+</odoo>

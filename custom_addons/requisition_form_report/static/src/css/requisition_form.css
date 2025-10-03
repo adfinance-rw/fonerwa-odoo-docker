@@ -1,0 +1,79 @@
+/* Requisition Form Report Styling */
+
+.requisition-form {
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.requisition-form h2 {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+}
+
+.requisition-form .fw-bold {
+    font-weight: bold !important;
+}
+
+.requisition-form .table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.requisition-form .table th,
+.requisition-form .table td {
+    border: 1px solid #000;
+    padding: 8px;
+    vertical-align: top;
+}
+
+.requisition-form .table th {
+    background-color: #f5f5f5;
+    font-weight: bold;
+    text-align: center;
+}
+
+.requisition-form .table td {
+    text-align: left;
+}
+
+.requisition-form .signature-section {
+    margin-top: 30px;
+}
+
+.requisition-form .signature-box {
+    border-bottom: 1px solid #000;
+    height: 50px;
+    margin-bottom: 10px;
+    padding: 5px 0;
+}
+
+.requisition-form .signature-box strong {
+    font-weight: bold;
+}
+
+.requisition-form .footer {
+    margin-top: 40px;
+    text-align: center;
+    font-size: 10px;
+    color: #666;
+}
+
+/* Print specific styles */
+@media print {
+    .requisition-form {
+        font-size: 11px;
+    }
+    
+    .requisition-form h2 {
+        font-size: 16px;
+    }
+    
+    .requisition-form .table th,
+    .requisition-form .table td {
+        padding: 6px;
+    }
+}

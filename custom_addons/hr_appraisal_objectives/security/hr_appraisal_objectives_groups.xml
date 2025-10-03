@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+        <!-- Create custom category under Human Resources -->
+        <record id="module_category_human_resources_custom" model="ir.module.category">
+            <field name="name">Appraisals</field>
+            <field name="sequence">10</field>
+        </record>    
+        <record id="group_appraisal_line_manager" model="res.groups">
+            <field name="name">Appraisal Line Manager</field>
+            <field name="category_id" ref="module_category_human_resources_custom"/>
+            <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+            <field name="comment">This group is for the department Line Manager to validate objectives.</field>
+        </record>   
+        <record id="group_hr_appraisal" model="res.groups">
+            <field name="name">Appraisal HR</field>
+            <field name="category_id" ref="module_category_human_resources_custom"/>
+            <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+            <field name="comment">This group is for the Human Resource Manager to validate objectives and appraisals.</field>
+        </record>
+        <!-- <record id="group_appraisal_manager" model="res.groups">
+            <field name="name">Appraisal Manager</field>
+            <field name="category_id" ref="module_category_human_resources_custom"/>
+            <field name="implied_ids" eval="[(4, ref('base.group_user')), (4, ref('hr_appraisal_objectives.group_hr_appraisal'))]"/>
+            <field name="comment">This group is for the Appraisal Manager to validate view and edit all appraisals.</field>
+        </record> -->
+    </data>
+</odoo>

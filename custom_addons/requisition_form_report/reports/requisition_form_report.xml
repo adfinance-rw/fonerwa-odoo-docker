@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Report Action -->
+        <record id="action_requisition_form_report" model="ir.actions.report">
+            <field name="name">Requisition Form</field>
+            <field name="model">stock.picking</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">requisition_form_report.requisition_form_template</field>
+            <field name="report_file">requisition_form_report.requisition_form_template</field>
+            <field name="binding_model_id" ref="stock.model_stock_picking"/>
+            <field name="binding_type">report</field>
+            <field name="paperformat_id" ref="base.paperformat_euro"/>
+        </record>
+
+        <!-- Report Template -->
+        <template id="requisition_form_template">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="o">
+                    <t t-call="web.external_layout">
+                        <div class="page requisition-form">
+                            <!-- Header -->
+                            <div class="row">
+                                <div class="col-12 text-center">
+                                    <h2 class="text-uppercase fw-bold">REQUISITIONING FORM</h2>
+                                </div>
+                            </div>
+                            
+                            <!-- Table Header -->
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <table class="table table-bordered">
+                                        <thead>
+                                            <tr>
+                                                <th class="text-center" style="width: 10%;">NO</th>
+                                                <th class="text-center" style="width: 50%;">ITEM (DESCRIPTION)</th>
+                                                <th class="text-center" style="width: 15%;">QUANTITY REQUESTED</th>
+                                                <th class="text-center" style="width: 15%;">QUANTITY RECEIVED</th>
+                                                <th class="text-center" style="width: 10%;">OBSERVATION</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr t-foreach="o.move_ids_without_package" t-as="line">
+                                                <td class="text-center">
+                                                    <span t-esc="line_index + 1"/>
+                                                </td>
+                                                <td>
+                                                    <span t-esc="line.product_id.name"/>
+                                                    <br/>
+                                                    <small t-if="line.product_id.description_sale" t-esc="line.product_id.description_sale"/>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span t-esc="line.product_uom_qty"/>
+                                                    <span t-if="line.product_uom" t-esc="line.product_uom.name"/>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span t-esc="line.product_qty"/>
+                                                    <span t-if="line.product_uom" t-esc="line.product_uom.name"/>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span t-esc="line.description_picking or ''"/>
+                                                </td>
+                                            </tr>
+                                            <!-- Empty rows for manual entries -->
+                                            <tr>
+                                                <td class="text-center">2</td>
+                                                <td>&#160;</td>
+                                                <td class="text-center">&#160;</td>
+                                                <td class="text-center">&#160;</td>
+                                                <td class="text-center">&#160;</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-center">3</td>
+                                                <td>&#160;</td>
+                                                <td class="text-center">&#160;</td>
+                                                <td class="text-center">&#160;</td>
+                                                <td class="text-center">&#160;</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-center">4</td>
+                                                <td>&#160;</td>
+                                                <td class="text-center">&#160;</td>
+                                                <td class="text-center">&#160;</td>
+                                                <td class="text-center">&#160;</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-center">5</td>
+                                                <td>&#160;</td>
+                                                <td class="text-center">&#160;</td>
+                                                <td class="text-center">&#160;</td>
+                                                <td class="text-center">&#160;</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-center">6</td>
+                                                <td>&#160;</td>
+                                                <td class="text-center">&#160;</td>
+                                                <td class="text-center">&#160;</td>
+                                                <td class="text-center">&#160;</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-center">7</td>
+                                                <td>&#160;</td>
+                                                <td class="text-center">&#160;</td>
+                                                <td class="text-center">&#160;</td>
+                                                <td class="text-center">&#160;</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-center">8</td>
+                                                <td>&#160;</td>
+                                                <td class="text-center">&#160;</td>
+                                                <td class="text-center">&#160;</td>
+                                                <td class="text-center">&#160;</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-center">9</td>
+                                                <td>&#160;</td>
+                                                <td class="text-center">&#160;</td>
+                                                <td class="text-center">&#160;</td>
+                                                <td class="text-center">&#160;</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-center">10</td>
+                                                <td>&#160;</td>
+                                                <td class="text-center">&#160;</td>
+                                                <td class="text-center">&#160;</td>
+                                                <td class="text-center">&#160;</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Signature Section -->
+                            <div class="row mt-5">
+                                <div class="col-6">
+                                    <div class="border-bottom" style="height: 50px; margin-bottom: 10px;">
+                                        <strong>REQUESTED BY:</strong>
+                                        <br/>
+                                        <span t-if="o.user_id" t-esc="o.user_id.name"/>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="border-bottom" style="height: 50px; margin-bottom: 10px;">
+                                        <strong>FOR APPROVAL</strong>
+                                        <br/>
+                                        &#160;
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row mt-3">
+                                <div class="col-6">
+                                    <div class="border-bottom" style="height: 50px; margin-bottom: 10px;">
+                                        <strong>RECEIVED BY</strong>
+                                        <br/>
+                                        &#160;
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="border-bottom" style="height: 50px; margin-bottom: 10px;">
+                                        <strong>ISSUED OUT BY:</strong>
+                                        <br/>
+                                        &#160;
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Footer -->
+                            <div class="row mt-5">
+                                <div class="col-12 text-center">
+                                    <small>Ministry of Finance and Economic Planning, Government of Rwanda</small>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </t>
+            </t>
+        </template>
+    </data>
+</odoo>

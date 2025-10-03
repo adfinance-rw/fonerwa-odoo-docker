@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Default Rating Scales -->
+    <record id="rating_scale_exceptional" model="hr.appraisal.rating.scale">
+        <field name="name">Exceptional Performer</field>
+        <field name="min_score">86</field>
+        <field name="max_score">100</field>
+        <field name="color">#28a745</field>
+        <field name="description">Consistently exceeds expectations and demonstrates exceptional performance</field>
+        <field name="sequence">1</field>
+    </record>
+
+    <record id="rating_scale_out_performer" model="hr.appraisal.rating.scale">
+        <field name="name">Out Performer</field>
+        <field name="min_score">76</field>
+        <field name="max_score">85</field>
+        <field name="color">#007bff</field>
+        <field name="description">Frequently exceeds expectations and shows strong performance</field>
+        <field name="sequence">2</field>
+    </record>
+
+    <record id="rating_scale_solid_performer" model="hr.appraisal.rating.scale">
+        <field name="name">Solid Performer</field>
+        <field name="min_score">66</field>
+        <field name="max_score">75</field>
+        <field name="color">#e83e8c</field>
+        <field name="description">Consistently meets expectations and shows solid performance</field>
+        <field name="sequence">3</field>
+    </record>
+
+    <record id="rating_scale_developing_performer" model="hr.appraisal.rating.scale">
+        <field name="name">Developing Performer</field>
+        <field name="min_score">51</field>
+        <field name="max_score">65</field>
+        <field name="color">#ffc107</field>
+        <field name="description">Sometimes meets expectations, has potential for improvement</field>
+        <field name="sequence">4</field>
+    </record>
+
+    <record id="rating_scale_under_performer" model="hr.appraisal.rating.scale">
+        <field name="name">Under Performer</field>
+        <field name="min_score">1</field>
+        <field name="max_score">50</field>
+        <field name="color">#dc3545</field>
+        <field name="description">Rarely meets expectations, requires significant improvement</field>
+        <field name="sequence">5</field>
+    </record>
+</odoo>

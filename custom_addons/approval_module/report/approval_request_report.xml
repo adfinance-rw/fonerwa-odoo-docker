@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Override the Approvals report template with Memo ERP layout -->
+    <template id="report_aprroval_request_document_inherit_memo" inherit_id="approvals.report_aprroval_request_document">
+        <xpath expr="//t[@t-call='web.external_layout']" position="replace">
+            <t t-call="web.external_layout">
+                <t t-set="o" t-value="o.with_context(lang=o.partner_id.lang)"/>
+
+                <t t-set="cfo" t-value="o.company_id.cfo_id.sudo()"/>
+                <t t-set="ceo" t-value="o.company_id.ceo_id.sudo()"/>
+                <t t-set="cfo_line" t-value="o.approver_ids.filtered(lambda l: cfo and l.user_id.id == cfo.id)[:1]"/>
+                <t t-set="ceo_line" t-value="o.approver_ids.filtered(lambda l: ceo and l.user_id.id == ceo.id)[:1]"/>
+                <t t-set="requester" t-value="(o.request_owner_id or o.create_uid).sudo()"/>
+                <t t-set="dept_manager_user" t-value="(requester.employee_id and requester.employee_id.department_id and requester.employee_id.department_id.manager_id and requester.employee_id.department_id.manager_id.user_id) or False"/>
+                <t t-set="reviewer" t-value="(dept_manager_user or requester.line_manager_id) and (dept_manager_user or requester.line_manager_id).sudo()"/>
+                <t t-set="reviewer_line" t-value="o.approver_ids.filtered(lambda l: reviewer and l.user_id.id == reviewer.id)[:1]"/>
+                <t t-set="is_specialist" t-value="not reviewer"/>
+
+                <style>
+                    .memo-table th { background-color:#6db286; color:#000; }
+                    .memo-table, .memo-table th, .memo-table td { border:1px solid #4b8a62; }
+                    .memo-table { width:100%; border-collapse:collapse; }
+                    .memo-title { text-align:center; margin-top:16px; font-weight:700; }
+                    .sig-box { min-height:60px; }
+                    .signature-image { max-height: 50px; max-width: 150px; }
+                </style>
+
+                <h4 class="memo-title">INTERNAL MEMO</h4>
+
+                <table class="memo-table mt-3">
+                    <thead>
+                        <tr>
+                            <th style="width:30%">Date</th>
+                            <th style="width:35%">For Approval</th>
+                            <th style="width:35%">For authorize</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="vertical-align: top; padding: 8px;">
+                                <div>
+                                    <span t-esc="(o.create_date or o.date or o.write_date).strftime('%d %B %Y') if (o.create_date or o.date or o.write_date) else ''"/>
+                                </div>
+                            </td>
+                            <td style="vertical-align: top; padding: 8px;">
+                                <div><strong>Chief Finance Officer</strong></div>
+                                <div class="sig-box" style="margin-top:8px">
+                                    <t t-if="cfo_line and cfo_line.status == 'approved' and cfo and cfo.sign_signature">
+                                        <img t-att-src="'data:image/png;base64,%s' % cfo.sign_signature.decode('utf-8') if isinstance(cfo.sign_signature, bytes) else cfo.sign_signature" 
+                                             class="signature-image" 
+                                             alt="CFO Signature"
+                                             t-att-onerror="'this.style.display=\'none\''"/>
+                                    </t>
+                                </div>
+                                <div style="margin-top:4px">
+                                    <t t-if="cfo_line and cfo_line.status == 'approved' and cfo and cfo.sign_signature and cfo_line.write_date">
+                                        <span t-esc="cfo_line.write_date.strftime('%d %B %Y')"/>
+                                    </t>
+                                </div>
+                            </td>
+                            <td style="vertical-align: top; padding: 8px;">
+                                <t t-if="ceo_line">
+                                    <div><strong>Chief Executive Officer</strong></div>
+                                    <div class="sig-box" style="margin-top:8px">
+                                        <t t-if="ceo_line.status == 'approved' and ceo and ceo.sign_signature">
+                                            <img t-att-src="'data:image/png;base64,%s' % ceo.sign_signature.decode('utf-8') if isinstance(ceo.sign_signature, bytes) else ceo.sign_signature" 
+                                                 class="signature-image" 
+                                                 alt="CEO Signature"
+                                                 t-att-onerror="'this.style.display=\'none\''"/>
+                                        </t>
+                                    </div>
+                                    <div style="margin-top:4px">
+                                        <t t-if="ceo_line.status == 'approved' and ceo and ceo.sign_signature and ceo_line.write_date">
+                                            <span t-esc="ceo_line.write_date.strftime('%d %B %Y')"/>
+                                        </t>
+                                    </div>
+                                </t>
+                                <t t-else="">
+                                    <div style="text-align:center; padding-top:20px; color:#999;">-</div>
+                                </t>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="mt-4">
+                    <h5>
+                        <span style="text-decoration: underline; font-weight:700">Observation:</span>
+                        <span>
+                            <t t-esc="(o.category_id and o.category_id.name) or ''"/>.
+                        </span>
+                    </h5>
+                </div>
+
+                <div class="mt-3">
+                    <div t-if="o.reason" style="margin-top:6px">
+                        <span t-field="o.reason"/>
+                    </div>
+                </div>
+
+                <!-- Prepared by / Reviewed by (conditional) -->
+                <div class="row mt-5">
+                    <t t-if="is_specialist">
+                        <!-- Specialist: Only show Prepared by (full width) -->
+                        <div class="col-12">
+                            <h5>Prepared by</h5>
+                            <div style="margin-top:6px">
+                                <t t-if="requester and requester.sign_signature">
+                                    <strong><span t-esc="requester.name"/></strong>
+                                </t>
+                            </div>
+                            <div class="sig-box" style="margin-top:12px">
+                                <t t-if="requester and requester.sign_signature">
+                                    <img t-att-src="'data:image/png;base64,%s' % requester.sign_signature.decode('utf-8') if isinstance(requester.sign_signature, bytes) else requester.sign_signature" 
+                                         class="signature-image" 
+                                         alt="Requester Signature"
+                                         t-att-onerror="'this.style.display=\'none\''"/>
+                                </t>
+                            </div>
+                            <div style="margin-top:6px">
+                                <t t-if="o.create_date">
+                                    <span t-esc="o.create_date.strftime('%d %B %Y')"/>
+                                </t>
+                            </div>
+                        </div>
+                    </t>
+                    <t t-else="">
+                        <!-- Normal User: Show both Prepared by and Reviewed by -->
+                        <div class="col-6">
+                            <h5>Prepared by</h5>
+                            <div style="margin-top:6px">
+                                <t t-if="requester and requester.sign_signature">
+                                    <strong><span t-esc="requester.name"/></strong>
+                                </t>
+                            </div>
+                            <div class="sig-box" style="margin-top:12px">
+                                <t t-if="requester and requester.sign_signature">
+                                    <img t-att-src="'data:image/png;base64,%s' % requester.sign_signature.decode('utf-8') if isinstance(requester.sign_signature, bytes) else requester.sign_signature" 
+                                         class="signature-image" 
+                                         alt="Requester Signature"
+                                         t-att-onerror="'this.style.display=\'none\''"/>
+                                </t>
+                            </div>
+                            <div style="margin-top:6px">
+                                <t t-if="o.create_date">
+                                    <span t-esc="o.create_date.strftime('%d %B %Y')"/>
+                                </t>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <h5>Reviewed by</h5>
+                            <div style="margin-top:6px">
+                                <t t-if="reviewer_line and reviewer_line.status == 'approved' and reviewer and reviewer.sign_signature">
+                                    <strong><span t-esc="reviewer.name"/></strong>
+                                </t>
+                            </div>
+                            <div class="sig-box" style="margin-top:12px">
+                                <t t-if="reviewer_line and reviewer_line.status == 'approved' and reviewer and reviewer.sign_signature">
+                                    <img t-att-src="'data:image/png;base64,%s' % reviewer.sign_signature.decode('utf-8') if isinstance(reviewer.sign_signature, bytes) else reviewer.sign_signature" 
+                                         class="signature-image" 
+                                         alt="Reviewer Signature"
+                                         t-att-onerror="'this.style.display=\'none\''"/>
+                                </t>
+                            </div>
+                            <div style="margin-top:6px">
+                                <t t-if="reviewer_line and reviewer_line.status == 'approved' and reviewer and reviewer.sign_signature and reviewer_line.write_date">
+                                    <span t-esc="reviewer_line.write_date.strftime('%d %B %Y')"/>
+                                </t>
+                            </div>
+                        </div>
+                    </t>
+                </div>
+            </t>
+        </xpath>
+    </template>
+
+    <!-- Override the external layout to add custom footer -->
+    <template id="external_layout_footer_inherit" inherit_id="web.external_layout_standard">
+        <xpath expr="//div[contains(@class, 'o_footer_content')]" position="replace">
+            <div class="o_footer_content d-flex border-top pt-2">
+                <div class="flex-grow-1 text-center" style="padding-top: 8px; font-size: 9pt;">
+                    <div style="font-weight: bold; color: #4b8a62;">
+                        <span t-esc="company.name"/>
+                        <t t-if="company.street"> | <span t-esc="company.street"/></t>
+                    </div>
+                    <div>
+                        <span t-if="company.street2" t-esc="company.street2"/>
+                        <t t-if="company.phone"> | Tel: <span t-esc="company.phone"/></t>
+                        <t t-if="company.email"> | Email: <span t-esc="company.email"/></t>
+                    </div>
+                    <div t-if="company.website">
+                        <span t-esc="company.website"/>
+                    </div>
+                </div>
+                <div class="text-end text-muted">
+                    <div t-if="report_type == 'pdf' and display_name_in_footer" t-out="o and o.name or ''"/>
+                    <div t-if="report_type == 'pdf'" class="text-nowrap">Page <span class="page"/> / <span class="topage"/></div>
+                </div>
+            </div>
+        </xpath>
+    </template>
+
+    <!-- Ensure the report wrapper calls the inherited doc template -->
+    <template id="report_approval_request_inherit" inherit_id="approvals.report_approval_request">
+        <xpath expr="//t[@t-foreach='docs']/*[1]" position="replace">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="approval_module.report_aprroval_request_document_inherit_memo" t-lang="o.partner_id.lang"/>
+            </t>
+        </xpath>
+    </template>
+
+    <!-- Header override: show only logo, bigger; remove address/details block -->
+    <template id="external_layout_header_logo_only" inherit_id="web.external_layout_standard">
+        <!-- Replace the top header row (logo + tagline) with a single bigger logo -->
+        <xpath expr="//div[@class='d-flex justify-content-between align-items-center mb-2']" position="replace">
+            <div class="d-flex justify-content-start align-items-center mb-2">
+                <img t-if="company.logo" class="o_company_logo_small" t-att-src="image_data_uri(company.logo)" alt="Logo" style="height: 150px; width: auto;"/>
+            </div>
+        </xpath>
+        <!-- Remove the company address column row under the header -->
+        <xpath expr="//div[@t-attf-class='header o_company_#{company.id}_layout']/div[@class='row']" position="replace">
+            <div class="row"/>
+        </xpath>
+    </template>
+</odoo>

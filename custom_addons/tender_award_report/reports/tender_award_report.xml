@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Report Action -->
+        <record id="action_tender_award_report" model="ir.actions.report">
+            <field name="name">Tender Award Report</field>
+            <field name="model">purchase.order</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">tender_award_report.tender_award_template</field>
+            <field name="binding_model_id" ref="purchase.model_purchase_order"/>
+            <field name="binding_type">report</field>
+            <field name="paperformat_id" ref="base.paperformat_euro"/>
+        </record>
+
+        <!-- Report Template -->
+        <template id="tender_award_template">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="o">
+                    <t t-call="web.external_layout">
+                        <div class="page tender-award-report" style="font-family: 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #000; padding: 20px;">
+                            <!-- Header -->
+                            <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 15px;">
+                                <h1 style="font-size: 24px; font-weight: bold; margin: 0; color: #2c5530;">RWANDA GREEN FUND</h1>
+                                <h2 style="font-size: 14px; font-style: italic; margin: 5px 0 0 0; color: #666;">Financing Green Growth</h2>
+                            </div>
+                            
+                            <!-- Title -->
+                            <div style="text-align: center; margin: 25px 0;">
+                                <h3 style="font-size: 16px; font-weight: bold; text-transform: uppercase; margin: 0; color: #000;">TENDER AWARD FOR <span t-esc="o.tender_description or 'PROCUREMENT PROJECT'"/></h3>
+                            </div>
+
+                            <!-- Introduction -->
+                            <div style="margin: 20px 0;">
+                                <h4 style="font-size: 14px; font-weight: bold; margin: 15px 0 10px 0; text-transform: uppercase;">Introduction</h4>
+                                <p style="margin: 8px 0; text-align: justify;">
+                                    Referring to the <span t-esc="o.legal_reference or 'Ministerial Order N° 001/23/10/TC of 10/10/2023 establishing regulations on public procurement in Article 74'"/>: Tender awarded without evaluation of public tender committee where it states that,
+                                </p>
+                                <p style="margin: 8px 0; text-align: justify; font-style: italic; padding-left: 20px;">
+                                    "(1) A tender whose value does not exceed FRW 1,000,000 is awarded through the procurement officer. This Agent proposes the tender award to the Head in charge of Finance and to the Chief Budget Manager for approval at the first and the second level respectively.
+                                </p>
+                                <p style="margin: 8px 0; text-align: justify; font-style: italic; padding-left: 20px;">
+                                    (2) The procedure provided under paragraph (1) of this Article shall not be used more than once in a term. In any case, the procuring entity is not allowed to split tenders in a manner aimed at avoiding competition in public procurement."
+                                </p>
+                                <p style="margin: 8px 0; text-align: justify;">
+                                    It is in this regard that the user department submitted a request supported by an approved internal MEMO for the needed service.
+                                </p>
+                                <p style="margin: 8px 0; text-align: justify;">
+                                    Below is the table showing the quoted prices of the interested vendors and their qualifications for consideration:
+                                </p>
+                            </div>
+
+                            <!-- Bidders Table -->
+                            <div style="margin: 25px 0;">
+                                <!-- Debug: Check participants -->
+                                <div t-if="not o._get_tender_participants_for_report()" style="color: red; font-weight: bold; margin: 10px 0;">
+                                    DEBUG: No tender participants found. Purchase Group ID: <span t-esc="o.purchase_group_id.id if o.purchase_group_id else 'None'"/>
+                                </div>
+                                <div t-if="o._get_tender_participants_for_report()" style="color: green; font-weight: bold; margin: 10px 0;">
+                                    DEBUG: Found <span t-esc="len(o._get_tender_participants_for_report())"/> participants
+                                </div>
+                                
+                                <table style="width: 100%; border-collapse: collapse; margin: 15px 0; border: 1px solid #000;">
+                                    <thead>
+                                        <tr style="background-color: #f5f5f5;">
+                                            <th style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold; width: 10%;">SN</th>
+                                            <th style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold; width: 30%;">Bidder</th>
+                                            <th style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold; width: 40%;">Qualification supporting documents and Quotation</th>
+                                            <th style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold; width: 20%;">Quoted Price</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr t-foreach="o._get_tender_participants_for_report()" t-as="participant" 
+                                            t-att-style="'background-color: #e8f5e8; font-weight: bold;' if participant['is_selected'] else ''">
+                                            <td style="border: 1px solid #000; padding: 8px; text-align: center;">
+                                                <span t-esc="participant['sn']"/>
+                                            </td>
+                                            <td style="border: 1px solid #000; padding: 8px;">
+                                                <strong t-esc="participant['vendor_name']"/>
+                                            </td>
+                                            <td style="border: 1px solid #000; padding: 8px;">
+                                                <span t-esc="participant['qualifications']"/>
+                                            </td>
+                                            <td style="border: 1px solid #000; padding: 8px; text-align: right;">
+                                                <strong t-esc="participant['quoted_price_formatted']"/>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Recommendation Section -->
+                            <div style="margin: 25px 0;">
+                                <h4 style="font-size: 14px; font-weight: bold; margin: 15px 0 10px 0; text-transform: uppercase;">Recommendation for the Tender Award</h4>
+                                <p style="margin: 10px 0; text-align: justify; line-height: 1.6;">
+                                    Pursuant to the above ministerial order provisions, I, <span t-esc="o.prepared_by.name or 'Procurement Officer'"/>, pursuant to the provisions, recommend the tender award to <span t-esc="o.partner_id.name"/> for the service of <span t-esc="o.tender_description or 'the procurement project'"/> at a total amount not exceeding <span t-esc="o._get_amount_in_words(o.amount_total)"/> (<span t-esc="'{:,.0f}'.format(o.amount_total)"/> FRW), including all applicable taxes.
+                                </p>
+                                <p style="margin: 10px 0; text-align: justify; line-height: 1.6;">
+                                    <span t-esc="o.tender_award_recommendation or 'No additional recommendation provided.'"/>
+                                </p>
+                            </div>
+
+                            <!-- Signature Section -->
+                            <div style="margin: 30px 0 20px 0;">
+                                <p style="margin: 0; font-style: italic;">
+                                    Done in Kigali, on <span t-esc="o._get_formatted_date()"/>
+                                </p>
+                            </div>
+
+                            <!-- Approval Chain -->
+                            <div style="margin: 40px 0; display: table; width: 100%;">
+                                <div style="display: table-cell; width: 33.33%; text-align: center; vertical-align: top; padding: 0 10px;">
+                                    <div style="text-align: center; margin: 20px 0;">
+                                        <div style="border-bottom: 1px solid #000; height: 40px; margin: 10px 0;"></div>
+                                        <strong>Prepared by:</strong><br/>
+                                        <span t-esc="o.prepared_by.name or 'Procurement Officer'"/>
+                                    </div>
+                                </div>
+                                <div style="display: table-cell; width: 33.33%; text-align: center; vertical-align: top; padding: 0 10px;">
+                                    <div style="text-align: center; margin: 20px 0;">
+                                        <div style="border-bottom: 1px solid #000; height: 40px; margin: 10px 0;"></div>
+                                        <strong>First Approval:</strong><br/>
+                                        <span t-esc="o.first_approval.name or 'Chief Finance Officer'"/>
+                                    </div>
+                                </div>
+                                <div style="display: table-cell; width: 33.33%; text-align: center; vertical-align: top; padding: 0 10px;">
+                                    <div style="text-align: center; margin: 20px 0;">
+                                        <div style="border-bottom: 1px solid #000; height: 40px; margin: 10px 0;"></div>
+                                        <strong>Final Approval:</strong><br/>
+                                        <span t-esc="o.final_approval.name or 'Chief Executive Officer'"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Footer -->
+                            <div style="margin-top: 50px; padding-top: 20px; border-top: 1px solid #ccc; text-align: center;">
+                                <small style="font-size: 10px; color: #666; margin: 0;">REPUBULIRA Y'U RWANDA</small><br/>
+                                <small style="font-size: 10px; color: #666; margin: 0;">NATIONAL FUND FOR ENVIRONMENT</small>
+                            </div>
+                        </div>
+                    </t>
+                </t>
+            </t>
+        </template>
+    </data>
+</odoo>

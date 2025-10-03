@@ -1,0 +1,431 @@
+<odoo>
+  <record id="view_hr_department_objective_form" model="ir.ui.view">
+    <field name="name">hr.department.objective.form</field>
+    <field name="model">hr.department.objective</field>
+    <field name="arch" type="xml">
+      <form>
+        <header>
+          <field name="state" widget="statusbar" statusbar_visible="draft,active,completed,cancelled"/>
+          <field name="create_uid" invisible="1"/>
+          <field name="current_uid_int" invisible="1"/>
+          <button name="action_view_draft_objectives"
+                  type="object"
+                  string="Draft"
+                  class="oe_stat_button"
+                  icon="fa-edit"
+                  groups="hr_appraisal_objectives.group_hr_appraisal,hr_appraisal_objectives.group_appraisal_line_manager"
+                  invisible="draft_count == 0">
+            <field name="draft_count" widget="statinfo" string="Draft"/>
+          </button>
+          <button name="action_view_submitted_objectives"
+                  type="object"
+                  string="Submitted"
+                  class="oe_stat_button"
+                  icon="fa-paper-plane"
+                  groups="hr_appraisal_objectives.group_hr_appraisal,hr_appraisal_objectives.group_appraisal_line_manager"
+                  invisible="submitted_count == 0">
+            <field name="submitted_count" widget="statinfo" string="Submitted"/>
+          </button>
+          <button name="action_view_approved_objectives"
+                  type="object"
+                  string="Approved"
+                  class="oe_stat_button"
+                  icon="fa-check-circle"
+                  groups="hr_appraisal_objectives.group_hr_appraisal,hr_appraisal_objectives.group_appraisal_line_manager"
+                  invisible="approved_count == 0">
+            <field name="approved_count" widget="statinfo" string="Approved"/>
+          </button>
+          <button name="action_view_scored_objectives"
+                  type="object"
+                  string="Scored"
+                  class="oe_stat_button"
+                  icon="fa-star"
+                  groups="hr_appraisal_objectives.group_hr_appraisal,hr_appraisal_objectives.group_appraisal_line_manager"
+                  invisible="scored_count == 0">
+            <field name="scored_count" widget="statinfo" string="Scored"/>
+          </button>
+          <button name="action_view_final_objectives"
+                  type="object"
+                  string="Final"
+                  class="oe_stat_button"
+                  icon="fa-flag-checkered"
+                  groups="hr_appraisal_objectives.group_hr_appraisal,hr_appraisal_objectives.group_appraisal_line_manager"
+                  invisible="final_count == 0">
+            <field name="final_count" widget="statinfo" string="Final"/>
+          </button>
+          <button name="action_start" type="object" string="Activate"
+                  class="oe_stat_button btn-primary"
+                  invisible="state not in ['draft', 'cancelled'] or create_uid != current_uid_int"
+                  groups="hr_appraisal_objectives.group_hr_appraisal,hr_appraisal_objectives.group_appraisal_line_manager"
+                  icon="fa-paper-plane"/>
+          <!-- <button name="action_complete" type="object" string="Complete"
+                  class="oe_stat_button btn-success"
+                  invisible="state != 'active'"
+                  groups="hr_appraisal_objectives.group_hr_appraisal,hr_appraisal_objectives.group_appraisal_line_manager"
+                  icon="fa-check"/> -->
+          <button name="action_cancel" type="object" string="Deactivate"
+                  class="oe_stat_button btn-warning"
+                  invisible="state != 'active'"
+                  groups="hr_appraisal_objectives.group_hr_appraisal,hr_appraisal_objectives.group_appraisal_line_manager"
+                  icon="fa-ban"/>
+        </header>
+        <sheet>          
+          <div class="oe_title">
+            <field name="reference" invisible="1"/>
+            <label for="name" string="Department Objective"/>
+            <h1>
+              <field name="name" placeholder="e.g. Increase Customer Satisfaction by 15%" readonly="id and (current_uid_int != create_uid or state != 'draft')"/>
+            </h1>
+          </div>
+          
+          <!-- Main Information Groups -->
+          <div class="row">
+            <div class="col-lg-6">
+              <group string="Objective Details">
+                <field name="institutional_objective_id" widget="many2one_autocomplete" 
+                    domain="[('state', '=', 'active')]"
+                    options="{'no_create': True, 'no_open': True}" readonly="id and (current_uid_int != create_uid or state != 'draft')"/>
+                <field name="department_id" readonly="1"/>
+              </group>
+            </div>
+            <div class="col-lg-6">
+              <group string="Timeline">
+                <field name="start_date" readonly="id and (current_uid_int != create_uid or state != 'draft')"/>
+                <field name="end_date" readonly="id and (current_uid_int != create_uid or state != 'draft')"/>
+                <field name="fiscal_year_id" readonly="1"/>
+                <field name="deadline_days" readonly="1"/>
+              </group>
+            </div>
+          </div>
+          
+          <!-- Quick Summary Section -->
+          <!-- <div class="row mt-3" invisible="state == 'draft'">
+            <div class="col-12">
+              <div class="alert alert-light border" role="alert">
+                <div class="row text-center">
+                  <div class="col-md-3">
+                    <div class="d-flex flex-column align-items-center">
+                      <span class="h4 text-primary mb-1">
+                        <field name="individual_objective_count" class="oe_inline"/>
+                      </span>
+                      <small class="text-muted">Team Members</small>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="d-flex flex-column align-items-center">
+                      <span class="h4 text-success mb-1">
+                        <field name="progress" widget="float" class="oe_inline"/>%
+                      </span>
+                      <small class="text-muted">Overall Progress</small>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="d-flex flex-column align-items-center">
+                      <span class="h4 text-warning mb-1">
+                        <field name="deadline_days" class="oe_inline"/>
+                      </span>
+                      <small class="text-muted">Days Remaining</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div> -->
+          
+          <!-- Main Content Notebook -->
+          <notebook>
+            <!-- Overview Tab -->
+            <page string="Overview" name="overview">
+              <field name="description" nolabel="1" placeholder="Describe the objective, its purpose, and expected outcomes..."/>
+            </page>        
+            <page string="Analytics" invisible="individual_objective_count == 0">
+              <div class="o_dashboard">
+                  <div class="o_dashboard_header mb-4">
+                      <h2 class="o_dashboard_title">Performance Analytics</h2>
+                      <p class="text-muted">Track team progress and individual objectives</p>
+                  </div>
+                  <div class="row">
+                      <div class="col-lg-6 col-md-12 mb-4">
+                          <div class="card h-100">
+                              <div class="card-header bg-secondary text-white">
+                                  <h5 class="card-title mb-0">
+                                      <i class="fa fa-users me-2"></i>Team Engagement
+                                  </h5>
+                              </div>
+                              <div class="card-body">
+                                  <div class="d-flex justify-content-between align-items-center mb-3">
+                                      <span class="text-muted">Individual Objectives</span>
+                                      <span class="badge bg-secondary fs-6">
+                                          <field name="individual_objective_count" class="oe_inline"/>
+                                      </span>
+                                  </div>
+                                  <field name="progress_bar_html" widget="html" nolabel="1"/>
+                                  <div class="text-center">
+                                      <small class="text-muted">Overall Progress: </small>
+                                      <field name="progress" widget="float" class="fw-bold text-success"/>
+                                  </div>
+                                  <div class="text-center">
+                                      <small class="text-muted">Average Individual Score: </small>
+                                      <field name="avg_score" widget="float" class="fw-bold text-success"/>
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                      <div class="col-lg-6 col-md-12 mb-4">
+                          <div class="card h-100">
+                              <div class="card-header bg-secondary text-white">
+                                  <h5 class="card-title mb-0">
+                                      <i class="fa fa-workflow me-2"></i>Workflow Status
+                                  </h5>
+                              </div>
+                              <div class="card-body">
+                                  <div class="row text-center">
+                                      <div class="col-4">
+                                          <div class="workflow-item">
+                                              <div class="workflow-circle bg-secondary text-white mb-2 mx-auto d-flex align-items-center justify-content-center" 
+                                                  style="width: 50px; height: 50px; border-radius: 50%;">
+                                                  <field name="submitted_count" class="fw-bold"/>
+                                              </div>
+                                              <small class="text-muted">Submitted</small>
+                                          </div>
+                                      </div>
+                                      <div class="col-4">
+                                          <div class="workflow-item">
+                                              <div class="workflow-circle bg-primary text-white mb-2 mx-auto d-flex align-items-center justify-content-center" 
+                                                  style="width: 50px; height: 50px; border-radius: 50%;">
+                                                  <field name="approved_count" class="fw-bold"/>
+                                              </div>
+                                              <small class="text-muted">Approved</small>
+                                          </div>
+                                      </div>
+                                      <div class="col-4">
+                                          <div class="workflow-item">
+                                              <div class="workflow-circle bg-success text-white mb-2 mx-auto d-flex align-items-center justify-content-center" 
+                                                  style="width: 50px; height: 50px; border-radius: 50%;">
+                                                  <field name="final_count" class="fw-bold"/>
+                                              </div>
+                                              <small class="text-muted">Final</small>
+                                          </div>
+                                      </div>
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+                  <div class="row mt-4">
+                      <div class="col-12">
+                          <div class="alert alert-info" role="alert">
+                              <i class="fa fa-info-circle me-2"></i>
+                              <strong>Tip:</strong> Click on any metric to view detailed analytics and team member performance breakdown.
+                          </div>
+                      </div>
+                  </div>
+              </div>
+            </page>
+          </notebook>
+        </sheet>        
+        <chatter/>
+      </form>
+    </field>
+  </record>
+  
+  <record id="view_hr_department_objective_list" model="ir.ui.view">
+    <field name="name">hr.department.objective.list</field>
+    <field name="model">hr.department.objective</field>
+    <field name="arch" type="xml">
+      <list decoration-info="progress &lt; 30" decoration-warning="progress &gt;= 30 and progress &lt; 70" decoration-success="progress &gt;= 70">
+        <field name="institutional_objective_id"/>
+        <field name="department_id"/>
+        <field name="name"/>
+        <field name="start_date"/>
+        <field name="end_date"/>
+        <field name="deadline_days" widget="integer"/>
+        <field name="progress" widget="float"/>
+        <field name="individual_objective_count"/>
+        <field name="avg_score" widget="float" optional="hide"/>
+      </list>
+    </field>
+  </record>
+  
+  <record id="view_hr_department_objective_kanban" model="ir.ui.view">
+    <field name="name">hr.department.objective.kanban</field>
+    <field name="model">hr.department.objective</field>
+    <field name="arch" type="xml">
+        <kanban 
+            quick_create="false"
+            default_order="state desc, end_date"
+            class="o_hr_department_objective_kanban"
+            sample="1"
+            default_group_by="state">
+            
+            <field name="reference"/>
+            <field name="department_id"/>
+            <field name="institutional_objective_id"/>
+            <field name="progress"/>
+            <field name="individual_objective_count"/>
+            <field name="deadline_days"/>
+            <field name="avg_score"/>
+            <field name="state"/>
+            <field name="draft_count"/>
+            <field name="submitted_count"/>
+            <field name="first_approved_count"/>
+            <field name="approved_count"/>
+            <field name="progress_count"/>
+            <field name="self_scored_count"/>
+            <field name="scored_count"/>
+            <field name="final_count"/>
+            <field name="name"/>
+            <field name="start_date"/>
+            <field name="end_date"/>
+            
+            <progressbar field="state" colors='{"completed": "success","active": "info", "draft": "secondary", "cancelled": "danger"}'/>
+            
+            <templates>
+                <t t-name="card" class="flex-row">
+                    <widget name="web_ribbon" title="Completed" bg_color="text-bg-success" invisible="state != 'completed'"/>
+                    <widget name="web_ribbon" title="Cancelled" bg_color="text-bg-danger" invisible="state != 'cancelled'"/>
+                    
+                    <aside class="o_kanban_aside_full">
+                        <div class="o_kanban_image d-flex align-items-center justify-content-center bg-primary text-white rounded">
+                            <i class="fa fa-building fa-2x"></i>
+                        </div>
+                    </aside>
+                    
+                    <main class="ms-2">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <field name="name" class="fw-bolder fs-5 text-truncate"/>
+                        </div>
+                        
+                        <!-- Department info -->
+                        <!-- <div class="mb-1">
+                            <small class="text-muted">
+                                <i class="fa fa-building me-1"></i>
+                                <field name="department_id"/>
+                            </small>
+                        </div> -->
+                        
+                        <!-- Institutional objective link -->
+                        <!-- <div class="mb-2">
+                            <small class="text-primary">
+                                <i class="fa fa-globe me-1"></i>
+                                <field name="institutional_objective_id"/>
+                            </small>
+                        </div> -->
+                        
+                        <!-- Progress Bar -->
+                        <div class="progress mb-2" style="height: 6px;">
+                            <div class="progress-bar" 
+                                 t-att-class="'progress-bar ' + 
+                                     (record.state.raw_value === 'completed' ? 'bg-success'
+                                     : record.state.raw_value === 'cancelled' ? 'bg-danger'
+                                     : record.state.raw_value === 'active' ? 'bg-primary' : 'bg-secondary')"
+                                 t-att-style="'width: ' + (record.progress.value || 0) + '%;'">
+                            </div>
+                        </div>
+                        
+                        <!-- Progress percentage and individual objectives count -->
+                        <!-- <div class="text-center mb-2">
+                            <span class="fw-bold text-primary">
+                                <t t-esc="Math.round(record.progress.value || 0)"/>% Complete
+                            </span>
+                        </div> -->
+                        
+                        <!-- Bottom row with deadline and score -->
+                        <footer class="pt-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <!-- Deadline -->
+                                <div>
+                                    <t t-if="record.deadline_days.value !== undefined">
+                                        <t t-if="record.deadline_days.value &gt;= 0">
+                                            <small t-att-class="'deadline-indicator ' + 
+                                                (record.deadline_days.value &lt;= 7 ? 'text-danger'
+                                                : record.deadline_days.value &lt;= 14 ? 'text-warning' : 'text-success')">
+                                                <i class="fa fa-clock-o me-1"></i>
+                                                <t t-esc="record.deadline_days.value"/> days left
+                                            </small>
+                                        </t>
+                                        <t t-if="record.deadline_days.value &lt; 0">
+                                            <small class="text-danger">
+                                                <i class="fa fa-exclamation-triangle me-1"></i>
+                                                Overdue
+                                            </small>
+                                        </t>
+                                    </t>
+                                </div>
+                                
+                                <!-- Average Score -->
+                                <!-- <div>
+                                    <t t-if="record.avg_score.value > 0">
+                                        <small t-att-class="'fw-bold ' + 
+                                            (record.avg_score.value >= 4 ? 'text-success'
+                                            : record.avg_score.value >= 3 ? 'text-info'
+                                            : record.avg_score.value >= 2 ? 'text-warning' : 'text-danger')">
+                                            <i class="fa fa-star me-1"></i>
+                                            <t t-esc="Math.round(record.avg_score.value * 10) / 10"/>
+                                        </small>
+                                    </t>
+                                </div> -->
+                            </div>
+                            
+                            <field name="activity_ids" widget="kanban_activity"/>
+                        </footer>
+                    </main>
+                    
+                    <!-- Status indicator -->
+                    <small role="img" class="fa fa-circle text-success" 
+                           invisible="state != 'active'"
+                           aria-label="Active" title="Active"/>
+                </t>
+            </templates>
+        </kanban>
+    </field>
+</record>
+  
+  <record id="view_hr_department_objective_search" model="ir.ui.view">
+    <field name="name">hr.department.objective.search</field>
+    <field name="model">hr.department.objective</field>
+    <field name="arch" type="xml">
+      <search>
+        <field name="name" string="Objective"/>
+        <field name="department_id"/>
+        <field name="institutional_objective_id"/>
+        <separator/>
+        <filter string="My Department" name="my_department" 
+                domain="[('current_user_department_id', '=', False)]"/>
+        <filter string="In Progress" name="in_progress" domain="[('progress', '>', 0), ('progress', '&lt;', 100)]"/>
+        <filter string="Completed" name="completed" domain="[('progress', '=', 100)]"/>
+        <filter string="Not Started" name="not_started" domain="[('progress', '=', 0)]"/>
+        <separator/>
+        <filter string="Has Individual Objectives" name="has_objectives" domain="[('appraisal_goal_ids', '!=', False)]"/>
+        <filter string="No Individual Objectives" name="no_objectives" domain="[('appraisal_goal_ids', '=', False)]"/>
+        <separator/>
+        <group expand="0" string="Group By">
+          <filter string="Department" name="group_department" context="{'group_by': 'department_id'}"/>
+          <filter string="Institutional Objective" name="group_institutional" context="{'group_by': 'institutional_objective_id'}"/>
+          <filter string="Progress Level" name="group_progress" context="{'group_by': 'progress'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+  
+  <record id="action_hr_department_objective" model="ir.actions.act_window">
+    <field name="name">Department Objectives</field>
+    <field name="res_model">hr.department.objective</field>
+    <field name="view_mode">kanban,list,form,graph</field>
+    <field name="context">{'search_default_group_department': 1}</field>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">
+        Create your first department objective!
+      </p>
+      <p>
+        Department objectives break down institutional goals into department-specific targets and cascade down to individual employee objectives.
+      </p>
+    </field>
+  </record>
+  
+  <menuitem id="menu_department_objectives"
+        name="Department Objectives"
+        parent="hr_appraisal.menu_hr_appraisal_root"
+        action="action_hr_department_objective"
+        sequence="1"/>
+</odoo>

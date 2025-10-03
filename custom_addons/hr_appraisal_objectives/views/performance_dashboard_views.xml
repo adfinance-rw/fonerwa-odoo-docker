@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <!-- Simplified, valid Performance Dashboard View -->
+  <record id="view_performance_dashboard_form" model="ir.ui.view">
+    <field name="name">performance.dashboard.form</field>
+    <field name="model">hr.appraisal.dashboard</field>
+    <field name="arch" type="xml">
+      <form string="Performance Analytics Dashboard">
+        <sheet>
+          <group string="Filters" colspan="4">
+            <group>
+              <field name="date_from"/>
+              <field name="date_to"/>
+            </group>
+            <group>
+              <field name="department_id" options="{'no_create': True}"/>
+              <field name="employee_id" options="{'no_create': True}"/>
+            </group>
+            <button name="action_refresh_dashboard" type="object" class="btn-primary" string="Refresh Data"/>
+          </group>
+
+          <group string="Executive Overview" colspan="4">
+            <group>
+              <field name="total_employees" readonly="1"/>
+              <field name="total_goals" readonly="1"/>
+              <field name="completed_goals" readonly="1"/>
+            </group>
+            <group>
+              <field name="in_progress_goals" readonly="1"/>
+              <field name="completion_rate" widget="float" readonly="1"/>
+              <field name="avg_score" widget="float" readonly="1"/>
+              <field name="avg_progress" widget="float" readonly="1"/>
+            </group>
+          </group>
+
+          <!-- Hidden JSON fields used by future widgets/reports -->
+          <field name="department_performance_data" invisible="1"/>
+          <field name="top_performers_data" invisible="1"/>
+          <field name="risk_analysis_data" invisible="1"/>
+          <field name="performance_trends_data" invisible="1"/>
+          <field name="dashboard_data" invisible="1"/>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <!-- Dashboard Action -->
+  <record id="action_hr_appraisal_dashboard" model="ir.actions.act_window">
+    <field name="name">Performance Dashboard</field>
+    <field name="res_model">hr.appraisal.dashboard</field>
+    <field name="view_mode">form</field>
+    <field name="view_id" ref="view_performance_dashboard_form"/>
+    <field name="target">current</field>
+  </record>
+
+  <!-- Menu Item -->
+  <!-- <menuitem id="menu_hr_appraisal_dashboard"
+            name="Dashboard"
+            parent="hr_appraisal.menu_hr_appraisal_root"
+            action="action_hr_appraisal_dashboard"
+            groups="hr_appraisal_objectives.group_hr_appraisal"
+            sequence="0"/> -->
+</odoo>

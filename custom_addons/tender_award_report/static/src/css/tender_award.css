@@ -1,0 +1,182 @@
+/* Tender Award Report Styles */
+
+.tender-award-report {
+    font-family: 'Times New Roman', serif;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #000;
+}
+
+/* Header Section */
+.header-section {
+    margin-bottom: 30px;
+    border-bottom: 2px solid #000;
+    padding-bottom: 15px;
+}
+
+.company-name {
+    font-size: 24px;
+    font-weight: bold;
+    margin: 0;
+    color: #2c5530;
+}
+
+.company-tagline {
+    font-size: 14px;
+    font-style: italic;
+    margin: 5px 0 0 0;
+    color: #666;
+}
+
+/* Title Section */
+.title-section {
+    margin: 25px 0;
+}
+
+.report-title {
+    font-size: 16px;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin: 0;
+    color: #000;
+}
+
+/* Introduction Section */
+.introduction-section {
+    margin: 20px 0;
+}
+
+.section-title {
+    font-size: 14px;
+    font-weight: bold;
+    margin: 15px 0 10px 0;
+    text-transform: uppercase;
+}
+
+.introduction-text {
+    margin: 8px 0;
+    text-align: justify;
+}
+
+.legal-text {
+    margin: 8px 0;
+    text-align: justify;
+    font-style: italic;
+    padding-left: 20px;
+}
+
+/* Table Section */
+.table-section {
+    margin: 25px 0;
+}
+
+.bidders-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+}
+
+.bidders-table th {
+    background-color: #f5f5f5;
+    font-weight: bold;
+    padding: 8px;
+    border: 1px solid #000;
+    text-align: center;
+}
+
+.bidders-table td {
+    padding: 8px;
+    border: 1px solid #000;
+    vertical-align: top;
+}
+
+.bidders-table .selected-row {
+    background-color: #e8f5e8;
+    font-weight: bold;
+}
+
+.bidders-table .text-center {
+    text-align: center;
+}
+
+.bidders-table .text-right {
+    text-align: right;
+}
+
+/* Recommendation Section */
+.recommendation-section {
+    margin: 25px 0;
+}
+
+.recommendation-text {
+    margin: 10px 0;
+    text-align: justify;
+    line-height: 1.6;
+}
+
+/* Signature Section */
+.signature-section {
+    margin: 30px 0 20px 0;
+}
+
+.signature-text {
+    margin: 0;
+    font-style: italic;
+}
+
+/* Approval Section */
+.approval-section {
+    margin: 40px 0;
+}
+
+.signature-box {
+    text-align: center;
+    margin: 20px 0;
+}
+
+.signature-line {
+    border-bottom: 1px solid #000;
+    height: 40px;
+    margin: 10px 0;
+}
+
+/* Footer Section */
+.footer-section {
+    margin-top: 50px;
+    padding-top: 20px;
+    border-top: 1px solid #ccc;
+}
+
+.footer-text {
+    font-size: 10px;
+    color: #666;
+    margin: 0;
+}
+
+/* Print Styles */
+@media print {
+    .tender-award-report {
+        font-size: 11px;
+    }
+    
+    .page {
+        page-break-inside: avoid;
+    }
+    
+    .header-section,
+    .title-section,
+    .introduction-section,
+    .table-section,
+    .recommendation-section {
+        page-break-inside: avoid;
+    }
+    
+    .bidders-table {
+        page-break-inside: auto;
+    }
+    
+    .bidders-table tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+}
