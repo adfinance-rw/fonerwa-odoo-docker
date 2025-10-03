@@ -29,7 +29,8 @@
         'purchase_stock',
         'portal',
         'mail',
-        'website'
+        'website',
+        'web'
     ],
     'data': [
         'security/ir.model.access.csv',

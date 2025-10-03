@@ -2,6 +2,7 @@ services:
   web:
     build: .
     container_name: fonerwa-odoo-web
+    user: root
     restart: unless-stopped
     expose:
       - "8069"
