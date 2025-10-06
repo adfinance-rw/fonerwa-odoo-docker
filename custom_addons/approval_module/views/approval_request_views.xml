@@ -17,11 +17,11 @@
                    context="{'search_default_approved': 1, 'search_default_purchase_orders': 1}"
                    options="{'no_create': True}"
                    domain="[('category_type', '=', 'purchase_order'), ('request_status', '=', 'approved')]"/>
-            <field name="invoice_payment_type" invisible="category_type != 'invoice_payment'"/>
-            <field name="other_payment_type" invisible="category_type != 'other_payment'"/>
-            <field name="purchase_type" invisible="category_type != 'purchase_order'"/>
+            <field name="invoice_payment_type" invisible="category_type != 'invoice_payment'" modifiers="{'required': [['category_type', '=', 'invoice_payment']]}"/>
+            <field name="other_payment_type" invisible="category_type != 'other_payment'" modifiers="{'required': [['category_type', '=', 'other_payment']]}"/>
+            <field name="purchase_type" invisible="category_type != 'purchase_order'" modifiers="{'required': [['category_type', '=', 'purchase_order']]}"/>
             <field name="po_exceeds_10m" invisible="category_type != 'purchase_order'"/>
-            <field name="po_exceeds_20m" invisible="category_type != 'purchase_order' or not po_exceeds_10m"/>
+            <field name="po_exceeds_20m" invisible="category_type != 'purchase_order' or po_exceeds_10m != True"/>
         </xpath>
         
         <!-- Make reference field readonly since it's auto-generated -->
@@ -29,49 +29,15 @@
             <attribute name="readonly">1</attribute>
         </xpath>
 
-        <xpath expr="//notebook/page[@name='approvers']" position="before">
-            <page string="Supporting Documents" name="payment_checklist" invisible="category_type not in ('invoice_payment', 'other_payment', 'purchase_order')">
+        <xpath expr="//notebook" position="inside">
+            <page string="Checklist" name="payment_checklist" invisible="category_type not in ('invoice_payment', 'other_payment', 'purchase_order')">
                 <field name="checklist_line_ids" nolabel="1" context="{'list_view_ref': 'approval_module.approval_checklist_line_view_list', 'form_view_ref': 'approval_module.approval_checklist_line_view_form'}" options="{'no_create_edit': True, 'no_open': True}"/>
             </page>
         </xpath>
         
         <!-- Enhance the Approver(s) tab to show roles -->
-        <xpath expr="//page[@name='approvers']" position="replace">
-            <page string="Approver(s)" name="approvers" groups="approvals.group_approval_manager">
-              <field name="approver_ids" mode="list,kanban" readonly="request_status != 'new'">
-                  <list editable="bottom" decoration-success="status=='approved'" decoration-warning="status in ['pending', 'waiting']" decoration-danger="status=='refused'" no_open="1">
-                      <field name="existing_request_user_ids" column_invisible="True"/>
-                      <field name="sequence" column_invisible="True"/>
-                      <field name="can_edit" column_invisible="True"/>
-                      <field name="can_edit_user_id" column_invisible="True"/>
-                      <field name="user_id" string="Approver" readonly="not can_edit_user_id or status != 'new'" force_save="1" />
-                      <field name="required" readonly="not can_edit" force_save="1"/>
-                      <field name="status"/>
-                      <field name="company_id" column_invisible="True"/>
-                      <field name="approval_role" string="Role" optional="show"/>
-                  </list>
-                  <kanban class="o_kanban_mobile">
-                      <templates>
-                          <t t-name="card" class="flex-row">
-                              <field name="user_id"/>
-                              <t t-if="record.status.raw_value">
-                                  <t t-set="classname" t-value="{'approved': 'text-bg-success', 'pending': 'text-bg-warning', 'refused': 'text-bg-danger'}[record.status.raw_value] || 'text-bg-light'"/>
-                                  <span t-attf-class="ms-auto rounded-pill {{ classname }}">
-                                      <field name="status"/>
-                                  </span>
-                              </t>
-                          </t>
-                      </templates>
-                  </kanban>
-                  <form>
-                      <group>
-                          <field name="company_id" invisible="1"/>
-                          <field name="existing_request_user_ids" invisible="1"/>
-                          <field name="user_id"/>
-                      </group>
-                  </form>
-              </field>
-          </page>
+        <xpath expr="//page[@name='approvers']//field[@name='approver_ids']//list" position="inside">
+            <field name="approval_role" string="Role" optional="show"/>
         </xpath>
       </field>
     </record>
@@ -81,8 +47,8 @@
       <field name="model">approval.checklist.line</field>
       <field name="arch" type="xml">
         <list editable="bottom">
-          <field name="name" readonly="1"/>
-          <field name="is_required" readonly="1"/>
+          <field name="name"/>
+          <field name="is_required"/>
           <field name="document_ids" widget="many2many_binary"/>
         </list>
       </field>

@@ -23,6 +23,7 @@
                     .memo-title { text-align:center; margin-top:16px; font-weight:700; }
                     .sig-box { min-height:60px; }
                     .signature-image { max-height: 50px; max-width: 150px; }
+                    .sig-caption { font-size: 10px; color: #555; margin-top: 4px; }
                 </style>
 
                 <h4 class="memo-title">INTERNAL MEMO</h4>
@@ -50,11 +51,12 @@
                                              class="signature-image" 
                                              alt="CFO Signature"
                                              t-att-onerror="'this.style.display=\'none\''"/>
-                                    </t>
-                                </div>
-                                <div style="margin-top:4px">
-                                    <t t-if="cfo_line and cfo_line.status == 'approved' and cfo and cfo.sign_signature and cfo_line.write_date">
-                                        <span t-esc="cfo_line.write_date.strftime('%d %B %Y')"/>
+                                        <div class="sig-caption">
+                                            Digitally signed on
+                                            <t t-if="cfo_line.write_date">
+                                                <span t-esc="cfo_line.write_date.strftime('%d %B %Y')"/>
+                                            </t>
+                                        </div>
                                     </t>
                                 </div>
                             </td>
@@ -67,11 +69,12 @@
                                                  class="signature-image" 
                                                  alt="CEO Signature"
                                                  t-att-onerror="'this.style.display=\'none\''"/>
-                                        </t>
-                                    </div>
-                                    <div style="margin-top:4px">
-                                        <t t-if="ceo_line.status == 'approved' and ceo and ceo.sign_signature and ceo_line.write_date">
-                                            <span t-esc="ceo_line.write_date.strftime('%d %B %Y')"/>
+                                            <div class="sig-caption">
+                                                Digitally signed on
+                                                <t t-if="ceo_line.write_date">
+                                                    <span t-esc="ceo_line.write_date.strftime('%d %B %Y')"/>
+                                                </t>
+                                            </div>
                                         </t>
                                     </div>
                                 </t>
@@ -115,11 +118,12 @@
                                          class="signature-image" 
                                          alt="Requester Signature"
                                          t-att-onerror="'this.style.display=\'none\''"/>
-                                </t>
-                            </div>
-                            <div style="margin-top:6px">
-                                <t t-if="o.create_date">
-                                    <span t-esc="o.create_date.strftime('%d %B %Y')"/>
+                                    <div class="sig-caption">
+                                        Digitally signed on
+                                        <t t-if="o.create_date">
+                                            <span t-esc="o.create_date.strftime('%d %B %Y')"/>
+                                        </t>
+                                    </div>
                                 </t>
                             </div>
                         </div>
@@ -139,11 +143,12 @@
                                          class="signature-image" 
                                          alt="Requester Signature"
                                          t-att-onerror="'this.style.display=\'none\''"/>
-                                </t>
-                            </div>
-                            <div style="margin-top:6px">
-                                <t t-if="o.create_date">
-                                    <span t-esc="o.create_date.strftime('%d %B %Y')"/>
+                                    <div class="sig-caption">
+                                        Digitally signed on
+                                        <t t-if="o.create_date">
+                                            <span t-esc="o.create_date.strftime('%d %B %Y')"/>
+                                        </t>
+                                    </div>
                                 </t>
                             </div>
                         </div>
@@ -160,11 +165,12 @@
                                          class="signature-image" 
                                          alt="Reviewer Signature"
                                          t-att-onerror="'this.style.display=\'none\''"/>
-                                </t>
-                            </div>
-                            <div style="margin-top:6px">
-                                <t t-if="reviewer_line and reviewer_line.status == 'approved' and reviewer and reviewer.sign_signature and reviewer_line.write_date">
-                                    <span t-esc="reviewer_line.write_date.strftime('%d %B %Y')"/>
+                                    <div class="sig-caption">
+                                        Digitally signed on
+                                        <t t-if="reviewer_line.write_date">
+                                            <span t-esc="reviewer_line.write_date.strftime('%d %B %Y')"/>
+                                        </t>
+                                    </div>
                                 </t>
                             </div>
                         </div>

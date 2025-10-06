@@ -78,7 +78,14 @@ class ApprovalRequest(models.Model):
                 dept_manager_user = manager.user_id if manager and hasattr(manager, 'user_id') else False
             except Exception:
                 dept_manager_user = False
-            reviewer = dept_manager_user or getattr(requester, 'line_manager_id', False)
+            # Fallback to the employee's direct manager (parent_id.user_id) when no department manager
+            parent_manager_user = False
+            try:
+                parent = emp and hasattr(emp, 'parent_id') and emp.parent_id or False
+                parent_manager_user = parent and hasattr(parent, 'user_id') and parent.user_id or False
+            except Exception:
+                parent_manager_user = False
+            reviewer = parent_manager_user or dept_manager_user
             
             # Find corresponding approver records
             request.cfo_approver_id = request.approver_ids.filtered(lambda a: cfo and a.user_id.id == cfo.id)[:1] if cfo else False
@@ -119,7 +126,7 @@ class ApprovalRequest(models.Model):
     ], string="Purchase Type")
 
     po_exceeds_10m = fields.Boolean(string='PO exceeds 10 million')
-    po_exceeds_20m = fields.Boolean(string='PO exceeds 20 million')
+    po_exceeds_20m = fields.Boolean(string='PO exceeds 20 million (Guarantee Required)')
 
 
     checklist_line_ids = fields.One2many(
@@ -196,7 +203,7 @@ class ApprovalRequest(models.Model):
         """Trigger approver population when amount changes"""
         if self.category_type == 'invoice_payment':
             self._populate_default_approvers()
-
+    
     @api.onchange('po_exceeds_10m')
     def _onchange_po_exceeds_10m(self):
         """For Purchase Orders, toggle CEO approver based on this checkbox"""
@@ -216,7 +223,7 @@ class ApprovalRequest(models.Model):
             ]
             items = list(items_common)
             if self.po_exceeds_20m:
-                items.append('Performance guarantee')
+                items.append('Performance guarantee (threshold exceeds 20 million)')
             self.checklist_line_ids = [fields.Command.create({'name': name, 'is_required': True}) for name in items]
             return
 
@@ -309,6 +316,14 @@ class ApprovalRequest(models.Model):
     @api.constrains('category_type', 'payment_type', 'purchase_type')
     def _check_kind_type_alignment(self):
         for rec in self:
+            # Require specific type fields per category
+            if rec.category_type == 'invoice_payment' and not rec.invoice_payment_type:
+                raise ValidationError(_("Payment Type (Invoice) is required for Invoice Payment category."))
+            if rec.category_type == 'other_payment' and not rec.other_payment_type:
+                raise ValidationError(_("Payment Type (Other) is required for Other Payment category."))
+            if rec.category_type == 'purchase_order' and not rec.purchase_type:
+                raise ValidationError(_("Purchase Type is required for Purchase Order category."))
+
             if rec.category_type in ('invoice_payment', 'other_payment') and rec.purchase_type:
                 raise ValidationError(_("Purchase Type is only for Purchase Order categories."))
             if rec.category_type == 'purchase_order' and rec.payment_type:
@@ -336,19 +351,7 @@ class ApprovalRequest(models.Model):
                 return
             try:
                 # Use sudo to bypass read restriction on sign_signature
-                sign_sig = user_rec.sudo().sign_signature
-                if sign_sig:
-                    # Ensure signature is stored as base64 string, not HTML
-                    if isinstance(sign_sig, bytes):
-                        sign_sig = sign_sig.decode('utf-8')
-                    # If signature contains HTML img tag, extract src
-                    if sign_sig and 'data:image' in sign_sig:
-                        import re
-                        match = re.search(r'src="([^"]+)"', sign_sig)
-                        if match:
-                            sign_sig = match.group(1)
-                    if sign_sig and user_rec.signature != sign_sig:
-                        user_rec.sudo().write({'signature': sign_sig})
+                user_rec.sudo().sign_signature
             except Exception as e:
                 # Log error but don't fail the confirmation
                 import logging
@@ -360,7 +363,7 @@ class ApprovalRequest(models.Model):
             requester = getattr(request, 'request_owner_id', False) or request.create_uid
             sync_user_signature(requester)
 
-            # Reviewer: Department manager user, fallback to line_manager_id
+            # Reviewer: Department manager user, fallback to employee's parent manager
             dept_manager_user = False
             try:
                 emp = hasattr(requester, 'employee_id') and requester.employee_id or False
@@ -369,7 +372,13 @@ class ApprovalRequest(models.Model):
                 dept_manager_user = manager and hasattr(manager, 'user_id') and manager.user_id or False
             except Exception:
                 dept_manager_user = False
-            reviewer = dept_manager_user or getattr(requester, 'line_manager_id', False)
+            parent_manager_user = False
+            try:
+                parent = emp and hasattr(emp, 'parent_id') and emp.parent_id or False
+                parent_manager_user = parent and hasattr(parent, 'user_id') and parent.user_id or False
+            except Exception:
+                parent_manager_user = False
+            reviewer = parent_manager_user or dept_manager_user
             sync_user_signature(reviewer)
 
             # Approvers on the request
@@ -423,7 +432,7 @@ class ApprovalRequest(models.Model):
             cfo = request.company_id.cfo_id if hasattr(request.company_id, 'cfo_id') else False
             ceo = request.company_id.ceo_id if hasattr(request.company_id, 'ceo_id') else False
 
-            # Determine reviewer: Department manager user, fallback to line_manager_id
+            # Determine reviewer: Department manager user, fallback to employee's parent manager
             dept_manager_user = False
             try:
                 emp = hasattr(requester, 'employee_id') and requester.employee_id or False
@@ -432,7 +441,13 @@ class ApprovalRequest(models.Model):
                 dept_manager_user = manager and hasattr(manager, 'user_id') and manager.user_id or False
             except Exception:
                 dept_manager_user = False
-            reviewer = dept_manager_user or getattr(requester, 'line_manager_id', False)
+            parent_manager_user = False
+            try:
+                parent = emp and hasattr(emp, 'parent_id') and emp.parent_id or False
+                parent_manager_user = parent and hasattr(parent, 'user_id') and parent.user_id or False
+            except Exception:
+                parent_manager_user = False
+            reviewer = parent_manager_user or dept_manager_user
             is_specialist = not reviewer  # Specialist = no reviewer
 
             # Step 1: Add Reviewer if not a specialist and not already added
@@ -443,7 +458,7 @@ class ApprovalRequest(models.Model):
                     added_user_ids.add(reviewer.id)
                     seq += 1
 
-            # Step 2: Determine approval flow based on category type and amount/flag
+            # Step 2: Determine approval flow based on category type and amount
             needs_ceo = True  # Default: needs CEO authorization
             
             if request.category_type == 'invoice_payment':
@@ -453,8 +468,7 @@ class ApprovalRequest(models.Model):
                     needs_ceo = False
                 # else: amount > 10M, needs CEO (default True)
             elif request.category_type == 'purchase_order':
-                # Use the checkbox to decide if CEO is required for POs
-                needs_ceo = bool(request.po_exceeds_10m)
+                needs_ceo = bool(request.po_exceeds_10m)  # Always needs CEO
             elif request.category_type == 'other_payment':
                 needs_ceo = True  # Always needs CEO
             else:
@@ -510,7 +524,7 @@ class ApprovalApprover(models.Model):
             elif hasattr(request.company_id, 'ceo_id') and request.company_id.ceo_id and user.id == request.company_id.ceo_id.id:
                 role = 'CEO (Authorized by)'
             else:
-                # Check if user is reviewer (line manager or department manager)
+                # Check if user is reviewer (department manager or employee's parent manager)
                 requester = request.request_owner_id or request.create_uid
                 if requester:
                     dept_manager_user = False
@@ -522,7 +536,14 @@ class ApprovalApprover(models.Model):
                     except Exception:
                         dept_manager_user = False
                     
-                    reviewer = dept_manager_user or getattr(requester, 'line_manager_id', False)
+                    parent_manager_user = False
+                    try:
+                        emp = requester.employee_id if hasattr(requester, 'employee_id') else False
+                        parent = emp.parent_id if emp and hasattr(emp, 'parent_id') else False
+                        parent_manager_user = parent.user_id if parent and hasattr(parent, 'user_id') else False
+                    except Exception:
+                        parent_manager_user = False
+                    reviewer = parent_manager_user or dept_manager_user
                     if reviewer and user.id == reviewer.id:
                         role = 'Reviewer (Reviewed by)'
             
@@ -563,38 +584,4 @@ class ApprovalChecklistLine(models.Model):
         res = super().write(vals)
         if 'document_ids' in vals or 'request_id' in vals:
             self._link_attachments_to_request()
-        return res
-
-    def unlink(self):
-        # When deleting a checklist line, remove its attachments from the request
-        # unless they are still referenced by another line of the same request.
-        for line in self:
-            attachments_to_check = line.document_ids
-            if attachments_to_check:
-                for att in attachments_to_check:
-                    still_used = line.request_id.checklist_line_ids.filtered(lambda l: l.id != line.id and att in l.document_ids)
-                    if not still_used:
-                        att.sudo().unlink()
-        return super().unlink()
-
-    def _sync_removed_attachments(self, before_map):
-        """Delete attachments removed from document_ids if no other
-        checklist line for the same request still references them."""
-        for line in self:
-            before = before_map.get(line.id, self.env['ir.attachment'])
-            removed = before - line.document_ids
-            for att in removed:
-                still_used = line.request_id.checklist_line_ids.filtered(lambda l: att in l.document_ids)
-                if not still_used:
-                    att.sudo().unlink()
-
-    def write(self, vals):
-        before_map = {}
-        if 'document_ids' in vals:
-            for line in self:
-                before_map[line.id] = line.document_ids
-        res = super(ApprovalChecklistLine, self).write(vals)
-        if 'document_ids' in vals:
-            self._link_attachments_to_request()
-            self._sync_removed_attachments(before_map)
         return res
