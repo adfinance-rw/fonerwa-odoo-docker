@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ========================================== -->
+    <!-- EMPLOYEE OBJECTIVE DASHBOARD KANBAN VIEW -->
+    <!-- ========================================== -->
+    
+    <record id="view_employee_objective_dashboard_kanban" model="ir.ui.view">
+        <field name="name">hr.employee.objective.dashboard.kanban</field>
+        <field name="model">hr.employee</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_mobile" create="false" quick_create="false" action="action_view_employee_objectives" type="object" default_order="objective_status_order asc, name asc">
+                <field name="id"/>
+                <field name="name"/>
+                <field name="avatar_128"/>
+                <field name="job_id"/>
+                <field name="department_id"/>
+                <field name="objective_status_order" invisible="1"/>
+                <field name="objective_status"/>
+                <field name="objective_status_color"/>
+                <field name="objective_total_count"/>
+                <field name="objective_draft_count"/>
+                <field name="objective_submitted_count"/>
+                <field name="objective_first_approved_count"/>
+                <field name="objective_progress_count"/>
+                
+                <templates>
+                    <t t-name="card">
+                        <div t-att-class="'card border-start border-4 h-100 o_kanban_global_click'" 
+                             t-att-style="'border-left-color: ' + record.objective_status_color.value + ' !important; cursor: pointer;'">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <img t-att-src="'/web/image/hr.employee/' + record.id.raw_value + '/avatar_128'" 
+                                         class="rounded-circle me-3" 
+                                         style="width: 50px; height: 50px; object-fit: cover;" 
+                                         alt="Avatar"/>
+                                    <div class="flex-grow-1">
+                                        <h5 class="mb-0 fw-bold">
+                                            <field name="name"/>
+                                        </h5>
+                                        <small class="text-muted">
+                                            <field name="job_id"/> 
+                                            <t t-if="record.department_id.value"> • </t>
+                                            <field name="department_id"/>
+                                        </small>
+                                    </div>
+                                </div>
+                                
+                                <!-- Status Badge -->
+                                <div class="mb-3">
+                                    <span class="badge fs-6 fw-bold" 
+                                          t-att-style="'background-color: ' + record.objective_status_color.value + '; color: white;'">
+                                        <t t-if="record.objective_status.raw_value == 'not_started'">
+                                            <i class="fa fa-circle-o me-1"></i> Not Started
+                                        </t>
+                                        <t t-if="record.objective_status.raw_value == 'in_progress'">
+                                            <i class="fa fa-edit me-1"></i> In Progress
+                                        </t>
+                                        <t t-if="record.objective_status.raw_value == 'awaiting_manager'">
+                                            <i class="fa fa-clock-o me-1"></i> Awaiting Manager
+                                        </t>
+                                        <t t-if="record.objective_status.raw_value == 'awaiting_hr'">
+                                            <i class="fa fa-hourglass-half me-1"></i> Awaiting HR
+                                        </t>
+                                        <t t-if="record.objective_status.raw_value == 'approved'">
+                                            <i class="fa fa-check-circle me-1"></i> Approved
+                                        </t>
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <!-- Hidden field for click action -->
+                            <field name="id" invisible="1"/>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+    
+    <!-- ========================================== -->
+    <!-- EMPLOYEE OBJECTIVE DASHBOARD LIST VIEW   -->
+    <!-- ========================================== -->
+    
+    <record id="view_employee_objective_dashboard_list" model="ir.ui.view">
+        <field name="name">hr.employee.objective.dashboard.list</field>
+        <field name="model">hr.employee</field>
+        <field name="arch" type="xml">
+            <list string="Employee Objectives" create="false" edit="false" action="action_view_employee_objectives" type="object" default_order="objective_status_order asc, name asc">
+                <field name="name" string="Employee"/>
+                <field name="department_id"/>
+                <field name="job_id"/>
+                <field name="objective_status_order" invisible="1"/>
+                <field name="objective_status" widget="badge"
+                       decoration-danger="objective_status == 'not_started'"
+                       decoration-warning="objective_status == 'in_progress'"
+                       decoration-info="objective_status == 'awaiting_manager'"
+                       decoration-primary="objective_status == 'awaiting_hr'"
+                       decoration-success="objective_status == 'approved'"/>
+                <field name="objective_total_count" string="Total"/>
+                <field name="objective_draft_count" string="Draft"/>
+                <field name="objective_submitted_count" string="Submitted"/>
+                <field name="objective_first_approved_count" string="First Approved"/>
+                <field name="objective_progress_count" string="Active"/>
+            </list>
+        </field>
+    </record>
+    
+    <!-- ========================================== -->
+    <!-- LINE MANAGER OBJECTIVE DASHBOARD          -->
+    <!-- ========================================== -->
+    
+    <record id="action_line_manager_objective_dashboard" model="ir.actions.act_window">
+        <field name="name">Team Objectives Dashboard</field>
+        <field name="res_model">hr.employee</field>
+        <field name="view_mode">kanban,list</field>
+        <field name="domain">[('department_id.manager_id.user_id', '=', uid)]</field>
+        <field name="context">{}</field>
+        <field name="groups_id" eval="[(4, ref('hr_appraisal_objectives.group_appraisal_line_manager'))]"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No team members found
+            </p>
+            <p>
+                Your team members' objective status will appear here.<br/>
+                Color coding:
+                <span style="color: #198754;">■ Green = Approved</span> |
+                <span style="color: #6f42c1;">■ Purple = Awaiting HR</span> |
+                <span style="color: #0d6efd;">■ Blue = Awaiting Manager</span> |
+                <span style="color: #fd7e14;">■ Orange = In Progress</span> |
+                <span style="color: #dc3545;">■ Red = Not Started</span>
+            </p>
+        </field>
+    </record>
+    
+    <!-- ========================================== -->
+    <!-- HR OBJECTIVE DASHBOARD                     -->
+    <!-- ========================================== -->
+    
+    <record id="action_hr_objective_dashboard" model="ir.actions.act_window">
+        <field name="name">HR Objectives Dashboard</field>
+        <field name="res_model">hr.employee</field>
+        <field name="view_mode">kanban,list</field>
+        <field name="view_id" ref="view_employee_objective_dashboard_kanban"/>
+        <field name="context">{
+            'search_default_group_by_department': 1,
+        }</field>
+        <field name="groups_id" eval="[(4, ref('hr_appraisal_objectives.group_hr_appraisal'))]"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No employees found
+            </p>
+            <p>
+                All employees' objective status will appear here, grouped by department.<br/>
+                Color coding:
+                <span style="color: #198754;">■ Green = Approved</span> |
+                <span style="color: #6f42c1;">■ Purple = Awaiting HR</span> |
+                <span style="color: #0d6efd;">■ Blue = Awaiting Manager</span> |
+                <span style="color: #fd7e14;">■ Orange = In Progress</span> |
+                <span style="color: #dc3545;">■ Red = Not Started</span>
+            </p>
+        </field>
+    </record>
+    
+    <!-- Search view with status and department grouping -->
+    <record id="view_employee_objective_dashboard_search" model="ir.ui.view">
+        <field name="name">hr.employee.objective.dashboard.search</field>
+        <field name="model">hr.employee</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name" string="Employee"/>
+                <field name="department_id"/>
+                <field name="job_id"/>
+                
+                <separator/>
+                
+                <!-- Status Filters -->
+                <filter string="🔴 Not Started" name="filter_not_started" 
+                        domain="[('objective_status', '=', 'not_started')]"/>
+                <filter string="🟠 In Progress" name="filter_in_progress" 
+                        domain="[('objective_status', '=', 'in_progress')]"/>
+                <filter string="🔵 Awaiting Manager" name="filter_awaiting_manager" 
+                        domain="[('objective_status', '=', 'awaiting_manager')]"/>
+                <filter string="🟣 Awaiting HR" name="filter_awaiting_hr" 
+                        domain="[('objective_status', '=', 'awaiting_hr')]"/>
+                <filter string="🟢 Approved" name="filter_approved" 
+                        domain="[('objective_status', '=', 'approved')]"/>
+                
+                <separator/>
+                
+                <!-- Quick Action Filters -->
+                <filter string="Needs Action" name="filter_needs_action" 
+                        domain="['|', ('objective_status', '=', 'awaiting_manager'), ('objective_status', '=', 'awaiting_hr')]"
+                        help="Show employees with objectives awaiting approval"/>
+                <filter string="Active Objectives" name="filter_active" 
+                        domain="[('objective_status', 'in', ['in_progress', 'awaiting_manager', 'awaiting_hr', 'approved'])]"
+                        help="Show employees with active or approved objectives"/>
+                
+                <separator/>
+                
+                <!-- Group By -->
+                <filter string="Department" name="group_by_department" 
+                        context="{'group_by': 'department_id'}"/>
+                <filter string="Job Position" name="group_by_job" 
+                        context="{'group_by': 'job_id'}"/>
+            </search>
+        </field>
+    </record>
+    
+    <!-- Update actions to use the search view and specify views -->
+    <record id="action_line_manager_objective_dashboard" model="ir.actions.act_window">
+        <field name="search_view_id" ref="view_employee_objective_dashboard_search"/>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'kanban', 'view_id': ref('view_employee_objective_dashboard_kanban')}),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_employee_objective_dashboard_list')})]"/>
+    </record>
+    
+    <record id="action_hr_objective_dashboard" model="ir.actions.act_window">
+        <field name="search_view_id" ref="view_employee_objective_dashboard_search"/>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'kanban', 'view_id': ref('view_employee_objective_dashboard_kanban')}),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_employee_objective_dashboard_list')})]"/>
+    </record>
+    
+    <!-- Menu items -->
+    <menuitem id="menu_line_manager_objective_dashboard"
+              name="Team Objectives"
+              parent="hr_appraisal.menu_hr_appraisal_root"
+              action="action_line_manager_objective_dashboard"
+              groups="hr_appraisal_objectives.group_appraisal_line_manager"
+              sequence="10"/>
+              
+    <menuitem id="menu_hr_objective_dashboard"
+              name="Objectives Dashboard"
+              parent="hr_appraisal.menu_hr_appraisal_root"
+              action="action_hr_objective_dashboard"
+              groups="hr_appraisal_objectives.group_hr_appraisal"
+              sequence="5"/>
+              
+</odoo>
+

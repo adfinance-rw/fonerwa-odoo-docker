@@ -28,9 +28,7 @@ class HrAppraisalGoal(models.Model):
     institutional_objective_id = fields.Many2one(
         "hr.institutional.objective",
         string="Institutional Objective",
-        compute="_compute_institutional_objective",
-        store=True,
-        readonly=True,
+        ondelete="cascade",
     )
     # Fiscal year follows the institutional/department objective
     fiscal_year_id = fields.Many2one(
@@ -61,7 +59,7 @@ class HrAppraisalGoal(models.Model):
     )
     target = fields.Char()
     measurement_method = fields.Char()
-    weight = fields.Float(default=1.0)
+    weight = fields.Integer(default=1)
     self_score = fields.Float("Score", help="Score (0-100)")
     manager_score = fields.Float("Manager Score", help="Line manager's score (0-100)")
     supervisor_score = fields.Float(
@@ -105,8 +103,8 @@ class HrAppraisalGoal(models.Model):
     state = fields.Selection(
         [
             ("draft", "Draft"),
-            ("submitted", "Sent"),
-            ("first_approved", "F-Apd"),
+            ("submitted", "To Review"),
+            ("first_approved", "To Approve"),
             ("progress", "Active"),
             ("progress_done", "Done"),
         ],
@@ -141,7 +139,7 @@ class HrAppraisalGoal(models.Model):
     kpi_count = fields.Integer(
         compute="_compute_kpi_count", string="Number of KPIs", store=True
     )
-    kpi_total_weight = fields.Float(
+    kpi_total_weight = fields.Integer(
         compute="_compute_kpi_total_weight", string="Total KPI Weight", store=True
     )
     
@@ -206,9 +204,9 @@ class HrAppraisalGoal(models.Model):
                 if record.is_common and record.common_origin_id:
                     source_start = record.common_origin_id.start_date
                     source_end = record.common_origin_id.end_date
-                elif record.department_objective_id and record.department_objective_id.institutional_objective_id:
-                    source_start = record.department_objective_id.institutional_objective_id.start_date
-                    source_end = record.department_objective_id.institutional_objective_id.end_date
+                elif record.institutional_objective_id:
+                    source_start = record.institutional_objective_id.start_date
+                    source_end = record.institutional_objective_id.end_date
                 if source_start and record.start_date < source_start:
                     raise ValidationError("Start date cannot be before the linked objective's start date.")
                 if source_end and record.end_date > source_end:
@@ -246,7 +244,7 @@ class HrAppraisalGoal(models.Model):
     @api.depends('kpi_line_ids.weight')
     def _compute_kpi_total_weight(self):
         for rec in self:
-            rec.kpi_total_weight = sum((k.weight or 0.0) for k in rec.kpi_line_ids)
+            rec.kpi_total_weight = sum((k.weight or 0) for k in rec.kpi_line_ids)
 
     @api.depends()
     def _compute_employee_autocomplete_ids(self):
@@ -260,28 +258,18 @@ class HrAppraisalGoal(models.Model):
             else:
                 rec.employee_autocomplete_ids = self.env['hr.employee'].search([])
 
-    @api.depends('department_objective_id', 'common_origin_id')
-    def _compute_institutional_objective(self):
-        for rec in self:
-            inst = False
-            if rec.is_common and rec.common_origin_id and rec.common_origin_id.institutional_objective_id:
-                inst = rec.common_origin_id.institutional_objective_id
-                _logger.warning(f"Common objective {rec.common_origin_id.name} has institutional objective {inst.name}")
-            elif rec.department_objective_id and rec.department_objective_id.institutional_objective_id:
-                inst = rec.department_objective_id.institutional_objective_id
-                _logger.warning(f"Department objective {rec.department_objective_id.name} has institutional objective {inst.name}")
-            rec.institutional_objective_id = inst
 
-    @api.depends('department_objective_id.institutional_objective_id.fiscal_year_id',
-                 'common_origin_id.institutional_objective_id.fiscal_year_id',
+    @api.depends('institutional_objective_id.fiscal_year_id',
+                 'common_origin_id.fiscal_year_id',
                  'is_common')
     def _compute_fiscal_year(self):
         for rec in self:
             fy = False
-            if rec.is_common and rec.common_origin_id and rec.common_origin_id.institutional_objective_id:
-                fy = rec.common_origin_id.institutional_objective_id.fiscal_year_id
-            elif rec.department_objective_id and rec.department_objective_id.institutional_objective_id:
-                fy = rec.department_objective_id.institutional_objective_id.fiscal_year_id
+            if rec.is_common and rec.common_origin_id:
+                # Common objectives now have fiscal_year_id directly
+                fy = rec.common_origin_id.fiscal_year_id
+            elif rec.institutional_objective_id:
+                fy = rec.institutional_objective_id.fiscal_year_id
             rec.fiscal_year_id = fy.id if fy else False
 
     @api.depends('fiscal_year_id')
@@ -425,7 +413,7 @@ class HrAppraisalGoal(models.Model):
             else:
                 record.review_summary = ""
 
-    @api.onchange("department_objective_id", "is_common", "common_origin_id")
+    @api.onchange("department_objective_id", "is_common", "common_origin_id", "institutional_objective_id")
     def _onchange_dates_from_sources(self):
         for record in self:
             # Prefill from source bounds but do not block user edits afterwards
@@ -434,8 +422,8 @@ class HrAppraisalGoal(models.Model):
             if record.is_common and record.common_origin_id:
                 source_start = record.common_origin_id.start_date
                 source_end = record.common_origin_id.end_date
-            elif record.department_objective_id and record.department_objective_id.institutional_objective_id:
-                inst_obj = record.department_objective_id.institutional_objective_id
+            elif record.institutional_objective_id:
+                inst_obj = record.institutional_objective_id
                 source_start = inst_obj.start_date
                 source_end = inst_obj.end_date
 
@@ -496,42 +484,90 @@ class HrAppraisalGoal(models.Model):
             rec.rejection_stage = False
             rec.write({"state": "submitted"})
             rec._send_notification("submitted")
+            
+            # Create activity for line manager to review
+            if rec.department_objective_id and rec.department_objective_id.department_id:
+                dept = rec.department_objective_id.department_id
+                if dept.manager_id and dept.manager_id.user_id:
+                    rec._create_approval_activity(
+                        user_id=dept.manager_id.user_id.id,
+                        summary=f"Review Objective: {rec.name}",
+                        note=f"""<p><strong>Employee:</strong> {rec.employee_id.name}</p>
+                              <p><strong>Department:</strong> {dept.name}</p>
+                              <p><strong>Action Required:</strong> First Approval</p>
+                              <p>Please review and approve or reject this objective.</p>"""
+                    )
 
     def action_first_approve(self):
         """Approve the individual objective"""
         for rec in self:
+            # Mark previous activities as done (use sudo to avoid ir.model access issues)
+            rec.activity_ids.filtered(
+                lambda a: a.user_id == self.env.user and a.res_model == 'hr.appraisal.goal'
+            ).action_feedback(feedback="Approved")
+            
             rec.write({"state": "first_approved"})
             rec._send_notification("first_approved")
+            
+            # Create activity for HR managers to review
+            hr_group = self.env.ref('hr_appraisal_objectives.group_hr_appraisal', raise_if_not_found=False)
+            if hr_group:
+                hr_users = hr_group.users
+                for hr_user in hr_users:
+                    rec._create_approval_activity(
+                        user_id=hr_user.id,
+                        summary=f"HR Review Objective: {rec.name}",
+                        note=f"""<p><strong>Employee:</strong> {rec.employee_id.name}</p>
+                              <p><strong>Department:</strong> {rec.department_objective_id.department_id.name if rec.department_objective_id else 'N/A'}</p>
+                              <p><strong>Action Required:</strong> Final HR Approval</p>
+                              <p><strong>Line Manager:</strong> Approved by {self.env.user.name}</p>
+                              <p>Please review and give final approval to start this objective.</p>"""
+                    )
 
     def action_second_approve(self):
         """Approve the individual objective and automatically start it"""
         for rec in self:
+            # Mark previous activities as done (use sudo to avoid ir.model access issues)
+            rec.activity_ids.filtered(
+                lambda a: a.user_id == self.env.user and a.res_model == 'hr.appraisal.goal'
+            ).action_feedback(feedback="Approved by HR")
+            
             rec.write({"state": "progress"})  # Automatically transition to progress (ongoing)
             rec._send_notification("progress")
+            
+            # Notify employee that objective is approved and active
+            if rec.employee_id and rec.employee_id.user_id:
+                rec._create_approval_activity(
+                    user_id=rec.employee_id.user_id.id,
+                    summary=f"Objective Approved: {rec.name}",
+                    note=f"""<p><strong>Status:</strong> Your objective has been approved!</p>
+                          <p><strong>Action Required:</strong> Start working on your objective</p>
+                          <p>Your objective has been approved by management and HR. You can now begin work.</p>"""
+                )
             # Auto-create tasks for each KPI if not already linked
-            for kpi in rec.kpi_line_ids:
-                if not kpi.task_ids:
-                    # Auto-select project based on the Institutional Objective name
-                    project = kpi.project_id
-                    if not project:
-                        inst_name = rec.institutional_objective_id.name if rec.institutional_objective_id else False
-                        project_name = inst_name or (f"Objectives - {rec.employee_id.name}" if rec.employee_id else "Objectives")
-                        project = self.env['project.project'].search([('name','=', project_name)], limit=1)
-                        if not project:
-                            project = self.env['project.project'].create({'name': project_name, 'allow_timesheets': True})
-                    vals = {
-                        "name": kpi.kpi or rec.name,
-                        "project_id": project.id if project else False,
-                        "user_ids": [(4, rec.employee_id.user_id.id)] if rec.employee_id and rec.employee_id.user_id else False,
-                        "date_deadline": rec.deadline,
-                        "description": kpi.description or rec.name,
-                    }
-                    # Add planned hours only if the field exists on project.task in this database
-                    if "planned_hours" in self.env["project.task"]._fields:
-                        vals["planned_hours"] = kpi.planned_hours or 0.0
-                    task = self.env["project.task"].create(vals)
-                    if task:
-                        kpi.write({"task_ids": [(4, task.id)]})
+            # for kpi in rec.kpi_line_ids:
+            #     if not kpi.task_ids:
+            #         # Auto-select project based on the Institutional Objective name
+            #         project = kpi.project_id
+            #         if not project:
+            #             inst_name = rec.institutional_objective_id.name if rec.institutional_objective_id else False
+            #             project_name = inst_name or (f"Objectives - {rec.employee_id.name}" if rec.employee_id else "Objectives")
+            #             project = self.env['project.project'].search([('name','=', project_name)], limit=1)
+            #             if not project:
+            #                 project = self.env['project.project'].create({'name': project_name, 'allow_timesheets': True})
+            #         vals = {
+            #             "name": kpi.kpi or rec.name,
+            #             "project_id": project.id if project else False,
+            #             "user_ids": [(4, rec.employee_id.user_id.id)] if rec.employee_id and rec.employee_id.user_id else False,
+            #             "date_deadline": rec.deadline,
+            #             "description": kpi.description or rec.name,
+            #         }
+            #         # Add planned hours only if the field exists on project.task in this database
+            #         if "planned_hours" in self.env["project.task"]._fields:
+            #             vals["planned_hours"] = kpi.planned_hours or 0.0
+            #         task = self.env["project.task"].create(vals)
+            #         if task:
+            #             kpi.write({"task_ids": [(4, task.id)]})
 
     def action_first_reject_open(self):
         """Open rejection wizard for first approval stage"""
@@ -601,55 +637,102 @@ class HrAppraisalGoal(models.Model):
                     appraisal.write({'employee_goal_ids': [(4, rec.id)]})
         return True
 
+    def _create_approval_activity(self, user_id, summary, note):
+        """Helper method to create approval activities"""
+        self.ensure_one()
+        try:
+            # Get or create activity type for approvals
+            activity_type = self.env.ref('mail.mail_activity_data_todo', raise_if_not_found=False)
+            if not activity_type:
+                activity_type = self.env['mail.activity.type'].search([('name', '=', 'To Do')], limit=1)
+            
+            if activity_type:
+                self.activity_schedule(
+                    activity_type_xml_id='mail.mail_activity_data_todo',
+                    date_deadline=fields.Date.today(),
+                    user_id=user_id,
+                    summary=summary,
+                    note=note,
+                )
+                _logger.info(f"Created activity for user {user_id}: {summary}")
+        except Exception as e:
+            _logger.warning(f"Failed to create activity: {str(e)}")
+            # Never block workflow on activity creation failure
+            pass
+    
     def _send_notification(self, action):
-        """Send notifications based on state changes"""
+        """Send notifications and create activities for the appropriate users"""
         for record in self:
-            if (
-                action
-                in [
-                    "submitted",
-                    "first_approved",
-                    "progress",
-                    "self_scored",
-                    "scored",
-                    "final",
-                    "rejected",
-                ]
-                and record.department_objective_id
-            ):
+            if action not in [
+                "submitted",
+                "first_approved",
+                "progress",
+                "self_scored",
+                "scored",
+                "final",
+                "rejected",
+            ]:
+                continue
+            
+            action_labels = {
+                "submitted": "submitted, waiting for first approval",
+                "first_approved": "first approved, waiting for HR approval",
+                "progress": "approved and active",
+                "self_scored": "scored, waiting for manager review",
+                "scored": "scored by manager, waiting for supervisor review",
+                "final": "finalized with supervisor score",
+                "rejected": "rejected and returned to draft",
+            }
+            
+            # Post chatter message
+            if record.department_objective_id and record.department_objective_id.department_id:
                 dept = record.department_objective_id.department_id
                 if dept.manager_id and dept.manager_id.user_id:
-                    action_labels = {
-                        "submitted": "submitted, waiting for first approval",
-                        "first_approved": "first approved, waiting for second approval",
-                        "progress": "approved, ready for progress",
-                        "self_scored": "Scored, waiting for manager review",
-                        "scored": "scored by manager, waiting for supervisor review",
-                        "final": "finalized with supervisor score",
-                        "rejected": "rejected and returned to draft",
-                    }
-                    # 1) Post a chatter message
                     record.sudo().message_post(
-                        subject=f"Objective {action_labels[action].capitalize()}: {record.name}",
-                        body=f"Objective for {record.employee_id.name} has been {action_labels[action]}." + (f" Reason: {record.rejection_reason}" if record.rejection_reason else ""),
+                        body=f"<p><strong>Objective {action_labels[action].capitalize()}: {record.name}</strong></p>"
+                             f"<p>Objective for {record.employee_id.name} has been {action_labels[action]}.</p>"
+                             + (f"<p><strong>Reason:</strong> {record.rejection_reason}</p>" if record.rejection_reason else ""),
                         partner_ids=[dept.manager_id.user_id.partner_id.id],
-                        message_type="notification",
+                        message_type="comment",
+                        subtype_xmlid="mail.mt_note",
                     )
-
-                    # 2) Also create a corresponding activity for the manager
-                    try:
-                        summary = f"Objective {record.name}: {action_labels[action]}"
-                        note = f"Employee: {record.employee_id.name}\nStatus: {action_labels[action].capitalize()}"
+            
+            # Create activities for the appropriate users
+            # Don't create activities here for submitted/first_approved/progress 
+            # as they're handled in the action methods
+            if action == "rejected" and record.employee_id and record.employee_id.user_id:
+                # For rejection, notify employee (also handled in rejection wizard)
+                pass
+            elif action in ["self_scored", "scored"]:
+                # For scoring states, create activities
+                try:
+                    summary = f"Objective {record.name}: {action_labels[action]}"
+                    note = f"Employee: {record.employee_id.name}\nStatus: {action_labels[action].capitalize()}"
+                    
+                    # Determine recipient based on action
+                    recipient_user = None
+                    if action == "self_scored" and record.department_objective_id:
+                        # Manager needs to review
+                        dept = record.department_objective_id.department_id
+                        if dept and dept.manager_id and dept.manager_id.user_id:
+                            recipient_user = dept.manager_id.user_id
+                    elif action == "scored":
+                        # HR needs to review
+                        hr_group = self.env.ref('hr_appraisal_objectives.group_hr_appraisal', raise_if_not_found=False)
+                        if hr_group and hr_group.users:
+                            recipient_user = hr_group.users[0]  # Assign to first HR user
+                    
+                    if recipient_user:
                         record.activity_schedule(
                             'mail.mail_activity_data_todo',
                             date_deadline=fields.Date.today(),
-                            user_id=dept.manager_id.user_id.id,
+                            user_id=recipient_user.id,
                             summary=summary,
                             note=note,
                         )
-                    except Exception:
-                        # Never block state change on activity issues
-                        pass
+                except Exception as e:
+                    _logger.warning(f"Failed to create activity: {str(e)}")
+                    pass
 
     @api.model
     def cron_sync_kpi_progress(self):

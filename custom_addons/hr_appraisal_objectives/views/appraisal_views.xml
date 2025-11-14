@@ -30,13 +30,16 @@
           
           <!-- Add institutional objective field after department -->
           <xpath expr="//field[@name='department_id']" position="after">
-              <field name="institutional_objective_id" placeholder="Institutional Objective"/>
-              <field name="fiscal_year_id" readonly="1"/>
+              <field name="fiscal_year_id" required="1" placeholder="Select Fiscal Year"/>
+              <!-- <field name="institutional_objective_id" placeholder="Institutional Objective (Optional)"/> -->
               <!-- Hidden helper fields for access control -->
               <field name="employee_user_id" invisible="1"/>
               <field name="is_manager" invisible="1"/>
               <field name="is_hr_user" invisible="1"/>
               <field name="current_uid_int" invisible="1"/>
+          </xpath>
+          <!-- Remove duplicate appraisal alert - handled by model constraint -->
+          <xpath expr="//sheet/div[@class='alert alert-warning p-2']" position="replace">
           </xpath>
           <xpath expr="//sheet/group" position="after">
             <group>                
@@ -57,7 +60,7 @@
                   <h5 class="mb-0">Individual Objectives</h5>
                 </div>
                 <div class="card-body p-0">
-                  <field name="employee_goal_ids" invisible="state == 'done'" readonly="state in ['done', 'cancel'] or (state in ['manager_scored', 'hr_scored'] and employee_user_id != current_uid_int)">
+                  <field name="employee_goal_ids" invisible="state == 'done'" readonly="state in ['done', 'cancel'] or (state in ['hr_scored'] and employee_user_id != current_uid_int)">
                     <list>
                       <field name="name" string="Objective" class="font-weight-medium"/>
                       <field name="kpi_total_weight" string="Weight" class="text-end badge badge-pill badge-info"/>
@@ -81,8 +84,8 @@
                 </div>
                 <div class="card-footer bg-light text-muted small" invisible="not employee_goal_ids">
                   <i class="fa fa-info-circle me-1"></i>
-                  <span class="float-end fw-bold">Total Weight: <field name="employee_goal_total_weight" readonly="1" class="badge badge-primary"/></span>
-                  <span class="float-end fw-bold" invisible="state != 'done'">Score: <field name="final_overall_score" readonly="1" class="badge badge-primary"/></span>
+                  <span class="float-end fw-bold">Total Weight: <field name="employee_goal_total_weight" readonly="1" class="badge badge-secondary"/></span>
+                  <span class="float-end fw-bold" invisible="state != 'done'">Score: <field name="final_overall_score" readonly="1" class="badge badge-secondary"/></span>
                   <span class="float-end fw-bold" invisible="state != 'done' or not assessment_note">Scale: <field name="assessment_note" widget="badge" readonly="1"
                               decoration-success="final_overall_score &gt;= 86"
                               decoration-info="final_overall_score &gt;= 76 and final_overall_score &lt; 86"
@@ -324,6 +327,19 @@
         <field name="is_hr_user"/>
       </xpath>
       
+      <!-- Add colored left border to kanban cards based on state -->
+      <xpath expr="//aside[@class='o_kanban_aside_full']" position="before">
+        <div t-att-class="'position-absolute top-0 start-0 h-100 ' + 
+          (record.state.raw_value === 'new' ? 'border-start border-5 border-secondary' :
+          record.state.raw_value === 'pending' ? 'border-start border-5 border-warning' :
+          record.state.raw_value === 'self_scored' ? 'border-start border-5 border-info' :
+          record.state.raw_value === 'manager_scored' ? 'border-start border-5 border-primary' :
+          record.state.raw_value === 'hr_scored' ? 'border-start border-5 border-success' :
+          record.state.raw_value === 'done' ? 'border-start border-5 border-success' :
+          record.state.raw_value === 'cancel' ? 'border-start border-5 border-danger' :
+          'border-start border-5 border-dark')" style="width: 5px; z-index: 1;"/>
+      </xpath>
+      
       <!-- Add fiscal year and score info after department -->
       <xpath expr="//field[@name='department_id']" position="after">
         <div class="mb-1">
@@ -397,7 +413,7 @@ action
     <field name="model">hr.employee</field>
     <field name="groups_id" eval="[(4, ref('hr_appraisal_objectives.group_hr_appraisal')), (4, ref('hr_appraisal_objectives.group_appraisal_line_manager'))]"/>
     <field name="arch" type="xml">
-      <kanban quick_create="false" default_group_by="department_id" class="o_hr_employee_overview_kanban">
+      <kanban quick_create="false" create="false" default_group_by="department_id" class="o_hr_employee_overview_kanban">
         <field name="name"/>
         <field name="work_email"/>
         <field name="department_id"/>
@@ -405,8 +421,8 @@ action
         <field name="avatar_128"/>
         <templates>
           <t t-name="card">
-            <a type="action" class="o_kanban_record text-decoration-none" name="%(hr_appraisal_objectives.action_open_appraisals_for_employee)d" t-attf-title="Open appraisals for #{record.name.value}">
-              <div class="d-flex align-items-center p-2">
+            <div class="d-flex align-items-center p-2">
+              <a type="action" class="d-flex align-items-center flex-grow-1 text-decoration-none" name="%(hr_appraisal_objectives.action_open_appraisals_for_employee)d" t-attf-title="Open appraisals for #{record.name.value}">
                 <div class="me-3">
                   <img t-att-src="'/web/image/hr.employee/' + record.id.raw_value + '/avatar_128'" alt="avatar" class="rounded-circle" style="width:48px;height:48px;object-fit:cover;"/>
                 </div>
@@ -421,8 +437,13 @@ action
                 <div class="ms-2 text-muted">
                   <i class="fa fa-chevron-right" title="Open"/>
                 </div>
+              </a>
+              <div class="ms-2" groups="hr_appraisal_objectives.group_hr_appraisal,hr_appraisal_objectives.group_appraisal_line_manager">
+                <button type="object" name="action_create_appraisal_for_employee" class="btn btn-sm btn-primary" title="Create New Appraisal">
+                  <i class="fa fa-plus"></i>
+                </button>
               </div>
-            </a>
+            </div>
           </t>
         </templates>
       </kanban>

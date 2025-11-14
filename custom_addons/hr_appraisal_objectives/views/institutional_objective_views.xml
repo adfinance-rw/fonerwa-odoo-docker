@@ -51,8 +51,8 @@
           
           <!-- Timeline -->
           <group string="Timeline">
-            <field name="start_date" readonly="id and (current_uid_int != create_uid or state != 'draft')"/>
-            <field name="end_date" readonly="id and (current_uid_int != create_uid or state != 'draft')"/>
+            <field name="start_date" readonly="id and (current_uid_int != create_uid or state != 'draft')" invisible="1"/>
+            <field name="end_date" readonly="id and (current_uid_int != create_uid or state != 'draft')" invisible="1"/>
             <field name="fiscal_year_id" readonly="1" required="1"/>
             <field name="deadline_days" readonly="1"/>
           </group>

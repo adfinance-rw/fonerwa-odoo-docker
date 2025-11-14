@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    
+    <!-- ========================================== -->
+    <!-- BATCH SUBMIT: Employee submits all drafts -->
+    <!-- ========================================== -->
+    
+    <record id="action_batch_submit_all_objectives" model="ir.actions.server">
+        <field name="name">Submit All Objectives</field>
+        <field name="model_id" ref="hr.model_hr_employee"/>
+        <field name="binding_model_id" ref="hr.model_hr_employee"/>
+        <field name="binding_type">action</field>
+        <field name="binding_view_types">kanban,list,form</field>
+        <field name="state">code</field>
+        <field name="code"><![CDATA[
+# Get selected employees or current employee
+employee_ids = env.context.get('active_ids', [])
+if not employee_ids:
+    employee_ids = [env.context.get('active_id')]
+
+employees = env['hr.employee'].browse(employee_ids)
+submitted_count = 0
+failed_employees = []
+
+for employee in employees:
+    # Get all draft objectives for this employee
+    draft_objectives = env['hr.appraisal.goal'].search([
+        ('employee_id', '=', employee.id),
+        ('state', '=', 'draft')
+    ])
+    
+    if not draft_objectives:
+        continue
+    
+    # Check if all have KPIs
+    missing_kpi = draft_objectives.filtered(lambda o: not o.kpi_line_ids)
+    if missing_kpi:
+        failed_employees.append(f"{employee.name} (missing KPIs on {len(missing_kpi)} objectives)")
+        continue
+    
+    # Submit all draft objectives
+    for objective in draft_objectives:
+        objective.action_submit()
+        submitted_count += 1
+
+# Show result message
+if submitted_count:
+    message = f"✓ Submitted {submitted_count} objectives"
+    if failed_employees:
+        message += f"\n⚠ Skipped: {', '.join(failed_employees)}"
+    action = {
+        'type': 'ir.actions.client',
+        'tag': 'display_notification',
+        'params': {
+            'message': message,
+            'type': 'success',
+            'sticky': False,
+        },
+    }
+else:
+    action = {
+        'type': 'ir.actions.client',
+        'tag': 'display_notification',
+        'params': {
+            'message': 'No draft objectives found to submit' + (f"\n⚠ {', '.join(failed_employees)}" if failed_employees else ''),
+            'type': 'warning',
+            'sticky': False,
+        },
+    }
+]]></field>
+        <field name="groups_id" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+    
+    <!-- ========================================== -->
+    <!-- BATCH APPROVE: Line Manager approves all submitted -->
+    <!-- ========================================== -->
+    
+    <record id="action_batch_approve_line_manager" model="ir.actions.server">
+        <field name="name">Approve All Objectives</field>
+        <field name="model_id" ref="hr.model_hr_employee"/>
+        <field name="binding_model_id" ref="hr.model_hr_employee"/>
+        <field name="binding_type">action</field>
+        <field name="binding_view_types">kanban,list,form</field>
+        <field name="state">code</field>
+        <field name="code"><![CDATA[
+# Get selected employees
+employee_ids = env.context.get('active_ids', [])
+if not employee_ids:
+    employee_ids = [env.context.get('active_id')]
+
+employees = env['hr.employee'].browse(employee_ids)
+approved_count = 0
+
+for employee in employees:
+    # Get all submitted objectives for this employee
+    submitted_objectives = env['hr.appraisal.goal'].search([
+        ('employee_id', '=', employee.id),
+        ('state', '=', 'submitted')
+    ])
+    
+    # Approve all
+    for objective in submitted_objectives:
+        objective.action_first_approve()
+        approved_count += 1
+
+# Show result
+if approved_count:
+    action = {
+        'type': 'ir.actions.client',
+        'tag': 'display_notification',
+        'params': {
+            'message': f"✓ Approved {approved_count} objectives for {len(employees)} employee(s)",
+            'type': 'success',
+            'sticky': False,
+        },
+    }
+else:
+    action = {
+        'type': 'ir.actions.client',
+        'tag': 'display_notification',
+        'params': {
+            'message': 'No submitted objectives found to approve',
+            'type': 'warning',
+            'sticky': False,
+        },
+    }
+]]></field>
+        <field name="groups_id" eval="[(4, ref('hr_appraisal_objectives.group_appraisal_line_manager'))]"/>
+    </record>
+    
+    <!-- ========================================== -->
+    <!-- BATCH APPROVE: HR approves all first_approved -->
+    <!-- ========================================== -->
+    
+    <record id="action_batch_approve_hr" model="ir.actions.server">
+        <field name="name">Final Approve All Objectives</field>
+        <field name="model_id" ref="hr.model_hr_employee"/>
+        <field name="binding_model_id" ref="hr.model_hr_employee"/>
+        <field name="binding_type">action</field>
+        <field name="binding_view_types">kanban,list,form</field>
+        <field name="state">code</field>
+        <field name="code"><![CDATA[
+# Get selected employees
+employee_ids = env.context.get('active_ids', [])
+if not employee_ids:
+    employee_ids = [env.context.get('active_id')]
+
+employees = env['hr.employee'].browse(employee_ids)
+approved_count = 0
+
+for employee in employees:
+    # Get all first_approved objectives for this employee
+    first_approved_objectives = env['hr.appraisal.goal'].search([
+        ('employee_id', '=', employee.id),
+        ('state', '=', 'first_approved')
+    ])
+    
+    # Final approve all
+    for objective in first_approved_objectives:
+        objective.action_second_approve()
+        approved_count += 1
+
+# Show result
+if approved_count:
+    action = {
+        'type': 'ir.actions.client',
+        'tag': 'display_notification',
+        'params': {
+            'message': f"✓ Approved {approved_count} objectives for {len(employees)} employee(s)",
+            'type': 'success',
+            'sticky': False,
+        },
+    }
+else:
+    action = {
+        'type': 'ir.actions.client',
+        'tag': 'display_notification',
+        'params': {
+            'message': 'No objectives awaiting HR approval found',
+            'type': 'warning',
+            'sticky': False,
+        },
+    }
+]]></field>
+        <field name="groups_id" eval="[(4, ref('hr_appraisal_objectives.group_hr_appraisal'))]"/>
+    </record>
+    
+    <!-- ========================================== -->
+    <!-- SELECTIVE REJECT: Open wizard to reject specific objectives -->
+    <!-- ========================================== -->
+    
+    <record id="action_selective_reject" model="ir.actions.server">
+        <field name="name">Reject Objectives (Selective)</field>
+        <field name="model_id" ref="hr.model_hr_employee"/>
+        <field name="binding_model_id" ref="hr.model_hr_employee"/>
+        <field name="binding_type">action</field>
+        <field name="binding_view_types">kanban,list,form</field>
+        <field name="state">code</field>
+        <field name="code"><![CDATA[
+# Get selected employee
+employee_id = env.context.get('active_id')
+if not employee_id:
+    raise UserError("Please select an employee")
+
+employee = env['hr.employee'].browse(employee_id)
+
+# Get objectives awaiting approval
+pending_objectives = env['hr.appraisal.goal'].search([
+    ('employee_id', '=', employee.id),
+    ('state', 'in', ['submitted', 'first_approved'])
+])
+
+if not pending_objectives:
+    action = {
+        'type': 'ir.actions.client',
+        'tag': 'display_notification',
+        'params': {
+            'message': 'No objectives awaiting approval for this employee',
+            'type': 'warning',
+            'sticky': False,
+        },
+    }
+else:
+    # Open wizard to select which objectives to reject
+    action = {
+        'name': f'Reject Objectives: {employee.name}',
+        'type': 'ir.actions.act_window',
+        'res_model': 'hr.appraisal.goal.batch.rejection.wizard',
+        'view_mode': 'form',
+        'target': 'new',
+        'context': {
+            'default_employee_id': employee.id,
+            'default_objective_ids': [(6, 0, pending_objectives.ids)],
+        },
+    }
+]]></field>
+        <field name="groups_id" eval="[(4, ref('hr_appraisal_objectives.group_appraisal_line_manager')), (4, ref('hr_appraisal_objectives.group_hr_appraisal'))]"/>
+    </record>
+    
+</odoo>
+

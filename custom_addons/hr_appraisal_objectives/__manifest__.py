@@ -45,10 +45,14 @@
         "views/individual_objective_views.xml",
         "views/common_objective_views.xml",
         "views/timesheet_views.xml",
+        "views/objective_dashboard_views.xml",
         # Wizards
-        "wizards/performance_report_views.xml",
+        # "wizards/performance_report_views.xml",
         "wizards/rejection_wizard_views.xml",
+        "wizards/batch_rejection_wizard_views.xml",
         "wizards/hr_revert_wizard_views.xml",
+        # Actions
+        "views/batch_approval_actions.xml",
         # Reports
         "reports/performance_report.xml",
         # Dashboard Views

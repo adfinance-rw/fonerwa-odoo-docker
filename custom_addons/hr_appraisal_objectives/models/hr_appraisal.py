@@ -1,10 +1,19 @@
 from odoo import models, fields, api
 from odoo.exceptions import ValidationError
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 class HrAppraisal(models.Model):
 
     _inherit = "hr.appraisal"
+    
+    _sql_constraints = [
+        ('unique_employee_fiscal_year', 
+         'UNIQUE(employee_id, fiscal_year_id)', 
+         'An appraisal already exists for this employee in the selected fiscal year. Please use the existing appraisal or choose a different fiscal year.')
+    ]
 
     objectives_progress = fields.Float(
         "Objectives Progress",
@@ -24,9 +33,9 @@ class HrAppraisal(models.Model):
     fiscal_year_id = fields.Many2one(
         "hr.fiscal.year",
         string="Fiscal Year",
-        compute="_compute_fiscal_year",
-        store=True,
-        help="Fiscal year based on appraisal creation date"
+        default=lambda self: self.env['hr.fiscal.year'].get_current_fiscal_year(),
+        required=True,
+        help="Fiscal year for this appraisal"
     )
     is_current_fy = fields.Boolean(
         string="Is Current Fiscal Year",
@@ -106,7 +115,7 @@ class HrAppraisal(models.Model):
         store=True
     )
 
-    employee_goal_total_weight = fields.Float(string="Total Weight", compute="_compute_employee_goal_total_weight")
+    employee_goal_total_weight = fields.Integer(string="Total Weight", compute="_compute_employee_goal_total_weight")
     current_uid_int = fields.Integer(
         string="Current User ID", compute="_compute_current_uid", store=False
     )
@@ -153,20 +162,6 @@ class HrAppraisal(models.Model):
         for rec in self:
             rec.is_hr_user = self.env.user.has_group('hr_appraisal_objectives.group_hr_appraisal')
     
-    @api.depends('create_date')
-    def _compute_fiscal_year(self):
-        """Automatically assign fiscal year based on creation date"""
-        for rec in self:
-            if rec.create_date:
-                create_date = rec.create_date.date()
-                fiscal_year = self.env['hr.fiscal.year'].search([
-                    ('date_from', '<=', create_date),
-                    ('date_to', '>=', create_date)
-                ], limit=1)
-                rec.fiscal_year_id = fiscal_year.id if fiscal_year else False
-            else:
-                rec.fiscal_year_id = False
-
     @api.depends('fiscal_year_id')
     def _compute_is_current_fy(self):
         """Flag appraisals that belong to the current fiscal year.
@@ -201,6 +196,20 @@ class HrAppraisal(models.Model):
                 raise ValidationError("Please fill out the Employee Feedback template in the Appraisal tab before submitting your self assessment.")
             
             rec.state = 'self_scored'
+            
+            # Create activity for line manager(s) to review
+            for manager in rec.manager_ids:
+                if manager.user_id:
+                    rec._create_appraisal_activity(
+                        user_id=manager.user_id.id,
+                        summary=f"Manager Assessment Required: {rec.employee_id.name}",
+                        note=f"""<p><strong>Employee:</strong> {rec.employee_id.name}</p>
+                              <p><strong>Department:</strong> {rec.department_id.name if rec.department_id else 'N/A'}</p>
+                              <p><strong>Fiscal Year:</strong> {rec.fiscal_year_id.name if rec.fiscal_year_id else 'N/A'}</p>
+                              <p><strong>Status:</strong> Employee has completed self-assessment</p>
+                              <p><strong>Action Required:</strong> Please complete Manager Assessment</p>
+                              <p>The employee has submitted their self-assessment. Please review and provide your manager feedback.</p>"""
+                    )
         return True
     
     def action_submit_manager_assessment(self):
@@ -220,13 +229,28 @@ class HrAppraisal(models.Model):
                 raise ValidationError("Please fill out the Manager Feedback template in the Appraisal tab before submitting the manager assessment.")
             
             rec.state = 'manager_scored'
+            
+            # Create activity for HR managers to review
+            hr_group = self.env.ref('hr_appraisal_objectives.group_hr_appraisal', raise_if_not_found=False)
+            if hr_group:
+                for hr_user in hr_group.users:
+                    rec._create_appraisal_activity(
+                        user_id=hr_user.id,
+                        summary=f"HR Assessment Required: {rec.employee_id.name}",
+                        note=f"""<p><strong>Employee:</strong> {rec.employee_id.name}</p>
+                              <p><strong>Department:</strong> {rec.department_id.name if rec.department_id else 'N/A'}</p>
+                              <p><strong>Fiscal Year:</strong> {rec.fiscal_year_id.name if rec.fiscal_year_id else 'N/A'}</p>
+                              <p><strong>Status:</strong> Manager assessment completed</p>
+                              <p><strong>Action Required:</strong> Please complete HR/Supervisor Assessment</p>
+                              <p>The manager has completed their assessment. Please review and provide final HR feedback.</p>"""
+                    )
         return True
     
     def action_complete_appraisal(self):
-        """SComplete the appraisal"""
+        """Complete the appraisal"""
         for rec in self:
             # Check if at least one individual objective has been scored by HR
-            hr_not_scored_goals = rec.employee_goal_ids.filtered(lambda g: g.final_score == 0)
+            hr_not_scored_goals = rec.employee_goal_ids.filtered(lambda g: g.supervisor_score == 0)
             if hr_not_scored_goals:
                 raise ValidationError("Please score the individual objectives before completing the appraisal.")
             rec.state = 'done'
@@ -262,6 +286,50 @@ class HrAppraisal(models.Model):
         }
 
 
+    @api.model
+    def create(self, vals_list):
+        """Override create to add activity notification when appraisal is created"""
+        # Call parent's create which handles the base functionality
+        appraisals = super().create(vals_list)
+        
+        # Create activity for employee to start self-assessment
+        for appraisal in appraisals:
+            if appraisal.employee_id and appraisal.employee_id.user_id:
+                appraisal._create_appraisal_activity(
+                    user_id=appraisal.employee_id.user_id.id,
+                    summary=f"New Appraisal: Complete Self-Assessment",
+                    note=f"""<p><strong>Appraisal Created</strong></p>
+                          <p><strong>Fiscal Year:</strong> {appraisal.fiscal_year_id.name if appraisal.fiscal_year_id else 'N/A'}</p>
+                          <p><strong>Department:</strong> {appraisal.department_id.name if appraisal.department_id else 'N/A'}</p>
+                          <p><strong>Action Required:</strong> Complete Self-Assessment</p>
+                          <p>A new appraisal has been created for you. Please complete your self-assessment and submit your feedback.</p>"""
+                )
+        
+        return appraisals
+    
+    def _create_appraisal_activity(self, user_id, summary, note):
+        """Helper method to create activities for appraisals"""
+        self.ensure_one()
+        try:
+            # Get or create activity type for approvals
+            activity_type = self.env.ref('mail.mail_activity_data_todo', raise_if_not_found=False)
+            if not activity_type:
+                activity_type = self.env['mail.activity.type'].search([('name', '=', 'To Do')], limit=1)
+            
+            if activity_type:
+                self.activity_schedule(
+                    activity_type_xml_id='mail.mail_activity_data_todo',
+                    date_deadline=fields.Date.today(),
+                    user_id=user_id,
+                    summary=summary,
+                    note=note,
+                )
+                _logger.info(f"Created appraisal activity for user {user_id}: {summary}")
+        except Exception as e:
+            _logger.warning(f"Failed to create appraisal activity: {str(e)}")
+            # Never block workflow on activity creation failure
+            pass
+
     @api.constrains("institutional_objective_id")
     def _check_institutional_objective_completed(self):
         for record in self:
@@ -272,6 +340,27 @@ class HrAppraisal(models.Model):
                 raise ValidationError(
                     "You can only select an Institutional Objective in 'Completed' or 'Active' state."
                 )
+    
+    @api.constrains("employee_id", "fiscal_year_id")
+    def _check_unique_employee_fiscal_year(self):
+        """Ensure only one appraisal per employee per fiscal year"""
+        for record in self:
+            if record.employee_id and record.fiscal_year_id:
+                duplicate = self.search([
+                    ('employee_id', '=', record.employee_id.id),
+                    ('fiscal_year_id', '=', record.fiscal_year_id.id),
+                    ('id', '!=', record.id)
+                ], limit=1)
+                if duplicate:
+                    # Get state label
+                    state_label = dict(self._fields['state'].selection).get(duplicate.state, duplicate.state)
+                    
+                    raise ValidationError(
+                        f"An appraisal already exists for {record.employee_id.name} "
+                        f"in fiscal year {record.fiscal_year_id.name}.\n\n"
+                        f"Existing appraisal ID: #{duplicate.id} (State: {state_label})\n\n"
+                        f"Please use the existing appraisal or choose a different fiscal year."
+                    )
 
     @api.depends("employee_goal_ids.kpi_total_weight")
     def _compute_employee_goal_total_weight(self):

@@ -16,22 +16,40 @@ class HrDepartmentObjective(models.Model):
     )
     name = fields.Char(required=True)
     institutional_objective_id = fields.Many2one(
-        "hr.institutional.objective", required=True, ondelete="cascade"
+        "hr.institutional.objective", ondelete="cascade"
     )
     department_id = fields.Many2one(
         "hr.department",
         required=True,
-        default=lambda self: (
-            self.env.user.employee_id.department_id
-            if self.env.user.employee_id
-            else False
-        ),
+        default=lambda self: self._get_default_department(),
     )
+    
+    def _get_default_department(self):
+        """Get default department based on user role"""
+        # For line managers, get the department they manage
+        # Check if user is a line manager (but NOT HR manager, as HR can select any dept)
+        is_line_manager = self.env.user.has_group('hr_appraisal_objectives.group_appraisal_line_manager')
+        is_hr_manager = self.env.user.has_group('hr_appraisal_objectives.group_hr_appraisal')
+        
+        if is_line_manager and not is_hr_manager:
+            # Search for department where current user's employee is the manager
+            current_employee = self.env.user.employee_id
+            if current_employee:
+                managed_dept = self.env['hr.department'].search([
+                    ('manager_id', '=', current_employee.id)
+                ], limit=1)
+                if managed_dept:
+                    _logger.info(f"Line manager {self.env.user.name} auto-assigned to department: {managed_dept.name}")
+                    return managed_dept.id
+        
+        # For regular users or if no managed department found, get their employee department
+        if self.env.user.employee_id and self.env.user.employee_id.department_id:
+            return self.env.user.employee_id.department_id.id
+        
+        return False
     description = fields.Html()
     start_date = fields.Date(required=True, default=fields.Date.today)
-    end_date = fields.Date(
-        related="institutional_objective_id.end_date", store=True, readonly=True
-    )
+    end_date = fields.Date(required=True)
     deadline_days = fields.Integer(
         string="Days to Deadline", compute="_compute_deadline_days", store=True
     )
@@ -84,9 +102,9 @@ class HrDepartmentObjective(models.Model):
     fiscal_year_id = fields.Many2one(
         "hr.fiscal.year",
         string="Fiscal Year",
-        related="institutional_objective_id.fiscal_year_id",
+        compute="_compute_fiscal_year",
         store=True,
-        readonly=True,
+        readonly=False,
     )
     create_uid = fields.Many2one(
         "res.users", "Created by", readonly=True, default=lambda self: self.env.uid
@@ -126,6 +144,35 @@ class HrDepartmentObjective(models.Model):
                 )
         return super(HrDepartmentObjective, self).unlink()
 
+    @api.constrains("department_id")
+    def _check_department_manager(self):
+        """Ensure line managers can only create objectives for their own department"""
+        for record in self:
+            # Skip check for HR managers
+            if self.env.user.has_group('hr_appraisal_objectives.group_hr_appraisal'):
+                continue
+            
+            # For line managers, check they manage this department
+            if self.env.user.has_group('hr_appraisal_objectives.group_appraisal_line_manager'):
+                if record.department_id:
+                    current_employee = self.env.user.employee_id
+                    if not current_employee:
+                        raise ValidationError(
+                            _("Your user account is not linked to an employee record. "
+                              "Please contact your administrator.")
+                        )
+                    
+                    # Check if the current employee is the manager of the selected department
+                    is_manager = self.env['hr.department'].search_count([
+                        ('id', '=', record.department_id.id),
+                        ('manager_id', '=', current_employee.id)
+                    ])
+                    if not is_manager:
+                        raise ValidationError(
+                            _("You can only create department objectives for departments you manage. "
+                              "You are not the manager of '%s' department.") % record.department_id.name
+                        )
+
     @api.constrains("start_date", "end_date")
     def _check_dates(self):
         for record in self:
@@ -134,6 +181,32 @@ class HrDepartmentObjective(models.Model):
                     raise ValidationError("Opening date must be before closing date.")
                 elif record.start_date < fields.Date.today():
                     raise ValidationError("Opening date cannot be in the past.")
+
+    @api.depends("start_date", "end_date")
+    def _compute_fiscal_year(self):
+        FiscalYear = self.env["hr.fiscal.year"].sudo()
+        for rec in self:
+            fy = False
+            if rec.start_date:
+                # Prefer a fiscal year covering the full window; fallback to one covering the start date
+                fy = FiscalYear.search([
+                    ("date_from", "<=", rec.start_date),
+                    ("date_to", ">=", rec.end_date or rec.start_date),
+                ], limit=1)
+                if not fy:
+                    fy = FiscalYear.search([
+                        ("date_from", "<=", rec.start_date),
+                        ("date_to", ">=", rec.start_date),
+                    ], limit=1)
+            rec.fiscal_year_id = fy.id if fy else False
+
+    @api.onchange("fiscal_year_id")
+    def _onchange_fiscal_year_id_set_end_date(self):
+        for rec in self:
+            if rec.fiscal_year_id:
+                fy_end = rec.fiscal_year_id.date_to
+                if fy_end and (not rec.end_date or rec.end_date > fy_end):
+                    rec.end_date = fy_end
 
     @api.constrains("end_date", "fiscal_year_id")
     def _check_end_date_within_fiscal_year(self):

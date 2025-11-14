@@ -39,6 +39,54 @@ action = {
     <field name="groups_id" eval="[(4, ref('base.group_user'))]"/>
   </record>
 
+  <!-- Server action: Create Individual Objective from Employee Overview -->
+  <record id="action_create_individual_objective_from_employee" model="ir.actions.server">
+    <field name="name">Create Individual Objective</field>
+    <field name="state">code</field>
+    <field name="model_id" ref="hr.model_hr_employee"/>
+    <field name="binding_model_id" ref="hr.model_hr_employee"/>
+    <field name="binding_type">action</field>
+    <field name="binding_view_types">kanban,tree</field>
+    <field name="groups_id" eval="[(4, ref('hr_appraisal_objectives.group_hr_appraisal'))]"/>
+    <field name="code"><![CDATA[
+ctx = dict(env.context or {})
+
+# Try to pick the active employee when exactly one is selected
+employee_id = False
+active_ids = ctx.get('active_ids') or []
+if isinstance(active_ids, list) and len(active_ids) == 1:
+    employee_id = active_ids[0]
+
+# If no employee selected (or multiple selected), default to current user's employee
+if not employee_id:
+    current_employee = env['hr.employee'].search([('user_id', '=', env.uid)], limit=1)
+    if current_employee:
+        employee_id = current_employee.id
+
+action = env.ref('hr_appraisal_objectives.action_hr_appraisal_goal').sudo().read()[0]
+
+# Ensure we land on the form in create mode
+action['view_mode'] = 'form'
+action['views'] = [(False, 'form')]
+action['target'] = 'current'
+
+# Merge context, setting defaults for quick creation
+actx = action.get('context') or {}
+# In server actions, avoid imports/eval. Ensure dict.
+if not isinstance(actx, dict):
+    actx = {}
+
+if employee_id:
+    actx['default_employee_id'] = employee_id
+
+# Prevent accidental auto-grouping/filters
+actx.pop('search_default_filter_current_fy', None)
+action['context'] = actx
+
+action
+    ]]></field>
+  </record>
+
   <!-- Line Manager: batch first-approve submitted objectives -->
   <record id="action_manager_first_approve_selected" model="ir.actions.server">
     <field name="name">Approve Objectives</field>
@@ -144,9 +192,7 @@ action = {
                 icon="fa-check"/>
       </xpath>
       <xpath expr="//field[@name='employee_id']" position="replace">
-        <field name="employee_id" domain="[['id', 'in', employee_autocomplete_ids]]"
-                                readonly="1"
-                                widget="many2one_avatar_employee"/>
+        <field name="employee_id" readonly="1" widget="many2one_avatar_employee" force_save="1"/>
         <field name="final_score" invisible="not rating_scale_id or appraisal_state != 'done'"/>
       </xpath>
       <xpath expr="//field[@name='manager_id']" position="replace">
@@ -184,12 +230,14 @@ action = {
                   domain="[('state', '=', 'active'), ('current_user_department_id', '=', 'department_id')]"
                   placeholder="Select Department Objective" readonly="state != 'draft' or is_common" invisible="is_common" required="1"/>
             <field name="institutional_objective_id"
-                  string="Institutional Objective" readonly="1"
-                  placeholder="Auto-filled from department"/>
+                  string="Institutional Objective" widget="many2one_autocomplete"
+                  domain="[('state', '=', 'active')]"
+                  options="{'no_create': True}"
+                  placeholder="Select Institutional Objective" readonly="state != 'draft'" required="1" invisible="is_common"/>
         </group>
         <group string="Timeline">
-          <field name="start_date" readonly="id and (current_uid_int != create_uid or state != 'draft')"/>
-          <field name="end_date" readonly="id and (current_uid_int != create_uid or state != 'draft')"/>
+          <field name="start_date" readonly="id and (current_uid_int != create_uid or state != 'draft')" invisible="1"/>
+          <field name="end_date" readonly="id and (current_uid_int != create_uid or state != 'draft')" invisible="1"/>
           <field name="fiscal_year_id" readonly="1"/>
           <field name="deadline_days" readonly="1"/>
         </group>
@@ -205,7 +253,7 @@ action = {
         </group>
 
         <!-- Manager Scoring -->
-         <group string="Manager Assessment" invisible="state not in ['progress_done'] or not manager_user_id_int or manager_user_id_int != current_uid_int or appraisal_state == 'done'"
+         <group string="Manager Assessment" invisible="state not in ['progress_done'] or appraisal_state == 'done'"
                 groups="hr_appraisal_objectives.group_appraisal_line_manager,hr_appraisal_objectives.group_hr_appraisal">
           <field name="manager_score" string="Manager Score (0-100)" 
                   placeholder="Rate employee performance on this objective (0-100)"/>
@@ -221,7 +269,21 @@ action = {
 
       </xpath>
       <xpath expr="//notebook" position="replace">
-        <notebook>          
+        <notebook>
+          <!-- KPI Management Page (shown in draft for detailed editing) -->
+          <page string="Key Performance Indicators" name="kpi_management" invisible="state != 'draft'">
+            <field name="kpi_line_ids" 
+                   readonly="id and (create_uid != current_uid_int or state in ['first_approved', 'progress', 'progress_done', 'self_scored', 'scored', 'final'])">
+              <list>
+                <field name="kpi" string="KPI Name" required="1"/>
+                <field name="description" string="Description"/>
+                <field name="target" string="Target"/>
+                <field name="measurement_method" string="Measurement Method"/>
+                <field name="weight" string="Weight" required="1" sum="Total Weight"/>
+              </list>
+            </field>
+          </page>
+          
           <!-- Assessment Status Page -->
           <page string="Assessment Status" name="assessment_status" invisible="state in ['draft','submitted','first_approved']">
             <div class="alert alert-info" role="alert">
@@ -295,9 +357,9 @@ action = {
           </page>
         </notebook>
       </xpath>
-      <!-- Render KPI panel outside the sheet but without custom chatter HTML to keep Owl stable -->
+      <!-- KPI Review Card (shown after submission for quick review) -->
       <xpath expr="//sheet" position="after">
-        <div class="o-aside col-3">
+        <div class="o-aside col-3" invisible="state == 'draft'">
           <div class="card">
             <div class="card-header text-white d-flex align-items-center">
               <i class="fa fa-bar-chart me-2" aria-hidden="true"></i>
@@ -314,7 +376,7 @@ action = {
             </div>
             <div class="card-footer bg-light text-muted small" invisible="not kpi_line_ids">
               <i class="fa fa-info-circle me-1"></i>
-              <span class="float-end fw-bold">Total Weight: <field name="kpi_total_weight" readonly="1" class="badge badge-primary"/></span>
+              <span class="float-end fw-bold">Total Weight: <field name="kpi_total_weight" readonly="1" class="badge badge-secondary"/></span>
             </div>
           </div>
         </div>
@@ -462,25 +524,58 @@ action = {
                 <field name="start_date"/>
                 <field name="end_date"/>
                 
-                <progressbar field="state" colors='{"final": "success","scored": "info", "progress": "warning", "submitted": "secondary", "draft": "muted"}'/>
+                <progressbar field="state" colors='{"progress_done": "success", "progress": "primary", "first_approved": "info", "submitted": "warning", "draft": "secondary"}'/>
                 
                 <templates>
-                    <t t-name="card" class="flex-row">
-                        <widget name="web_ribbon" title="Final" bg_color="text-bg-success" invisible="state != 'final'"/>
+                    <t t-name="card" t-att-class="'flex-row ' + 
+                        (record.state.raw_value === 'draft' ? 'border-start border-5 border-secondary'
+                        : record.state.raw_value === 'submitted' ? 'border-start border-5 border-warning'
+                        : record.state.raw_value === 'first_approved' ? 'border-start border-5 border-info'
+                        : record.state.raw_value === 'progress' ? 'border-start border-5 border-primary'
+                        : record.state.raw_value === 'progress_done' ? 'border-start border-5 border-success'
+                        : 'border-start border-5 border-dark')">
+                        <widget name="web_ribbon" title="Done" bg_color="text-bg-success" invisible="state != 'progress_done'"/>
                         
-                        <aside class="o_kanban_aside_full">
+                        <!-- <aside class="o_kanban_aside_full">
                             <field name="avatar_128" widget="background_image" class="d-block position-relative"/>
-                        </aside>
+                        </aside> -->
                         
                         <main class="ms-2">
-                            <div class="d-flex justify-content-between align-items-start mb-1">
-                                <field name="employee_id" class="fw-bolder fs-5"/>
-                                <field name="state" widget="badge"/>
+                            <!-- Individual Objective Name (prominent) -->
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="flex-grow-1 me-2" style="min-width: 0;">
+                                    <field name="name" class="fw-bold fs-6 text-dark text-truncate d-block" title="name"/>
+                                </div>
+                                <field name="state" widget="badge"
+                                       decoration-muted="state == 'draft'"
+                                       decoration-warning="state == 'submitted'"
+                                       decoration-info="state == 'first_approved'"
+                                       decoration-primary="state == 'progress'"
+                                       decoration-success="state == 'progress_done'"/>
                             </div>
                             
-                            <!-- Objective name -->
-                            <div class="d-flex justify-content-between align-items-start mb-1">
-                                <field name="name" class="text-muted small text-truncate"/>
+                            <!-- KPI and Weight Info -->
+                            <div class="d-flex justify-content-between align-items-center mb-2 py-1 px-2 bg-light rounded">
+                                <div class="d-flex align-items-center">
+                                    <i class="fa fa-bullseye me-1 text-primary"></i>
+                                    <small class="fw-bold">
+                                        <t t-esc="record.kpi_count.value || 0"/> KPI<t t-if="record.kpi_count.value != 1">s</t>
+                                    </small>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <i class="fa fa-balance-scale me-1 text-warning"></i>
+                                    <small class="fw-bold">
+                                        <t t-esc="record.kpi_total_weight.value || 0"/> Weight
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <!-- Employee Name -->
+                            <div class="mb-2">
+                                <div class="d-flex align-items-center">
+                                    <i class="fa fa-user me-2 text-muted"></i>
+                                    <field name="employee_id" class="text-muted small"/>
+                                </div>
                             </div>
                             
                             <!-- Department and Institutional objective links -->
@@ -501,30 +596,14 @@ action = {
                                 <div class="progress-bar" 
                                      t-att-class="'progress-bar ' + 
                                          (record.state.raw_value === 'progress_done' ? 'bg-success'
-                                         : record.state.raw_value === 'progress' ? 'bg-info'
-                                         : record.state.raw_value === 'progress' ? 'bg-warning'
-                                         : record.state.raw_value === 'first_approved' ? 'bg-secondary' : 'bg-dark')"
+                                         : record.state.raw_value === 'progress' ? 'bg-primary'
+                                         : record.state.raw_value === 'first_approved' ? 'bg-info'
+                                         : record.state.raw_value === 'submitted' ? 'bg-warning'
+                                         : record.state.raw_value === 'draft' ? 'bg-secondary' : 'bg-dark')"
                                      t-att-style="'width: ' + (record.progression.raw_value || 0) + '%;'">
                                 </div>
                             </div>
                             
-                            <!-- <div class="text-center mb-2">
-                                <span class="fw-bold text-primary">
-                                    <t t-esc="Math.round((record.progression and record.progression.value) || 0)"/>% Complete
-                                </span>
-                            </div> -->
-
-                            <!-- KPIs and Weights -->
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <small class="text-muted">
-                                    <i class="fa fa-bullseye me-1"></i>
-                                    <t t-esc="record.kpi_count.value || 0"/> KPIs
-                                </small>
-                                <small class="text-muted">
-                                    <i class="fa fa-balance-scale me-1"></i>
-                                    <t t-esc="record.kpi_total_weight.value || 0"/> Weight
-                                </small>
-                            </div>
                             
                             <!-- Bottom row with deadline and score -->
                             <footer class="pt-0">
@@ -567,10 +646,24 @@ action = {
                             </footer>
                         </main>
                         
-                        <!-- Status indicator -->
-                        <small role="img" class="fa fa-circle text-info" 
-                               invisible="state != 'progress'"
-                               aria-label="In Progress" title="In Progress"/>
+                        <!-- Status indicators with icons -->
+                        <!-- <div class="position-absolute top-0 end-0 m-2">
+                            <small role="img" class="fa fa-circle text-secondary fa-lg" 
+                                   invisible="state != 'draft'"
+                                   aria-label="Draft" title="Draft"/>
+                            <small role="img" class="fa fa-paper-plane text-warning fa-lg" 
+                                   invisible="state != 'submitted'"
+                                   aria-label="Submitted" title="Submitted for Approval"/>
+                            <small role="img" class="fa fa-check-circle text-info fa-lg" 
+                                   invisible="state != 'first_approved'"
+                                   aria-label="First Approved" title="First Approved"/>
+                            <small role="img" class="fa fa-spinner fa-spin text-primary fa-lg" 
+                                   invisible="state != 'progress'"
+                                   aria-label="In Progress" title="In Progress"/>
+                            <small role="img" class="fa fa-check-circle text-success fa-lg" 
+                                   invisible="state != 'progress_done'"
+                                   aria-label="Done" title="Completed"/>
+                        </div> -->
                     </t>
                 </templates>
             </kanban>
@@ -578,17 +671,45 @@ action = {
     </field>
 </record>
 
+  <!-- Server action to dynamically set employee_id for current user -->
+  <record id="action_my_individual_objectives" model="ir.actions.server">
+    <field name="name">My Individual Objectives</field>
+    <field name="state">code</field>
+    <field name="model_id" ref="hr_appraisal.model_hr_appraisal_goal"/>
+    <field name="code"><![CDATA[
+# Get current user's employee
+employee = env['hr.employee'].search([('user_id', '=', env.uid)], limit=1)
+
+action = {
+    'name': 'My Individual Objectives',
+    'type': 'ir.actions.act_window',
+    'res_model': 'hr.appraisal.goal',
+    'view_mode': 'kanban,list,form,graph',
+    'domain': [('employee_id.user_id', '=', env.uid)],
+    'context': {
+        'search_default_filter_current_fy': 1,
+        'default_employee_id': employee.id if employee else False,
+    },
+    'target': 'current',
+}
+action
+    ]]></field>
+  </record>
+  
   <record id="action_hr_appraisal_goal" model="ir.actions.act_window">
-      <field name="name">Individual Objectives</field>
+      <field name="name">My Individual Objectives</field>
       <field name="res_model">hr.appraisal.goal</field>
       <field name="view_mode">kanban,list,form,graph</field>
-      <field name="context">{'search_default_groupby_employee': 1}</field>
+      <field name="domain">[('employee_id.user_id', '=', uid)]</field>
+      <field name="context">{
+          'search_default_filter_current_fy': 1,
+      }</field>
       <field name="help" type="html">
           <p class="o_view_nocontent_smiling_face">
-              Create new individual objectives
+              No objectives yet
           </p>
           <p>
-              Assign objectives to motivate your employees and track progress between appraisals.
+              Create your individual objectives to track your performance goals.
           </p>
       </field>
   </record>
@@ -622,7 +743,7 @@ action
     <field name="model">hr.employee</field>
     <field name="groups_id" eval="[(4, ref('hr_appraisal_objectives.group_hr_appraisal')), (4, ref('hr_appraisal_objectives.group_appraisal_line_manager'))]"/>
     <field name="arch" type="xml">
-      <kanban quick_create="false" default_group_by="department_id" class="o_hr_employee_overview_kanban">
+      <kanban quick_create="false" default_group_by="department_id" class="o_hr_employee_overview_kanban" create="false">
         <field name="name"/>
         <field name="work_email"/>
         <field name="department_id"/>
@@ -653,20 +774,85 @@ action
       </kanban>
     </field>
   </record>
+  
+  <!-- Search view for employee overview with Create button -->
+  <record id="view_employee_appraisal_goal_overview_search" model="ir.ui.view">
+    <field name="name">hr.employee.appraisal.goal.overview.search</field>
+    <field name="model">hr.employee</field>
+    <field name="groups_id" eval="[(4, ref('hr_appraisal_objectives.group_hr_appraisal')), (4, ref('hr_appraisal_objectives.group_appraisal_line_manager'))]"/>
+    <field name="arch" type="xml">
+      <search>
+        <field name="name"/>
+        <field name="department_id"/>
+        <field name="job_id"/>
+        <separator/>
+        <filter string="Department" name="group_by_department" context="{'group_by': 'department_id'}"/>
+        <searchpanel>
+          <field name="department_id" icon="fa-users" enable_counters="1"/>
+        </searchpanel>
+      </search>
+    </field>
+  </record>
+
+  <!-- Server action to create individual objective for current user from overview -->
+  <record id="action_create_my_individual_objective" model="ir.actions.server">
+    <field name="name">Create Individual Objective</field>
+    <field name="state">code</field>
+    <field name="model_id" ref="hr.model_hr_employee"/>
+    <field name="binding_model_id" ref="hr.model_hr_employee"/>
+    <field name="binding_type">action</field>
+    <field name="binding_view_types">kanban,tree</field>
+    <field name="code"><![CDATA[
+# Get current user's employee
+employee = env['hr.employee'].search([('user_id', '=', env.uid)], limit=1)
+
+action = env.ref('hr_appraisal_objectives.action_hr_appraisal_goal').sudo().read()[0]
+
+# Ensure we land on the form in create mode
+action['view_mode'] = 'form'
+action['views'] = [(False, 'form')]
+action['target'] = 'current'
+
+# Merge context, setting defaults for quick creation
+actx = action.get('context') or {}
+if not isinstance(actx, dict):
+    actx = {}
+
+if employee:
+    actx['default_employee_id'] = employee.id
+
+# Prevent accidental auto-grouping/filters
+actx.pop('search_default_filter_current_fy', None)
+action['context'] = actx
+
+action
+    ]]></field>
+    <field name="groups_id" eval="[(4, ref('base.group_user'))]"/>
+  </record>
 
   <record id="action_employee_appraisal_goal_overview_hr" model="ir.actions.act_window">
-    <field name="name">Employee Appraisal Goal Overview</field>
+    <field name="name">Individual Objectives Overview</field>
     <field name="res_model">hr.employee</field>
     <field name="view_mode">kanban,list</field>
     <field name="view_id" ref="view_employee_appraisal_goal_overview_kanban"/>
+    <field name="search_view_id" ref="view_employee_appraisal_goal_overview_search"/>
     <field name="context">{'default_group_by': 'department_id'}</field>
     <field name="domain">[]</field>
     <field name="groups_id" eval="[(4, ref('hr_appraisal_objectives.group_hr_appraisal'))]"/>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">
+        No employees found
+      </p>
+      <p>
+        Click on an employee card to view their objectives.<br/>
+        Or use the <strong>Actions</strong> menu and select "Create Individual Objective".
+      </p>
+    </field>
   </record>
 
   <!-- Line Manager Employee Overview Server Action - dynamically sets domain to prevent glitches -->
   <record id="action_employee_appraisal_goal_overview_lm" model="ir.actions.server">
-    <field name="name">My Team Appraisal Goal Overview</field>
+    <field name="name">My Team Individual Objectives</field>
     <field name="state">code</field>
     <field name="model_id" ref="hr.model_hr_employee"/>
     <field name="groups_id" eval="[(4, ref('hr_appraisal_objectives.group_appraisal_line_manager'))]"/>
@@ -674,7 +860,7 @@ action
 user = env.user
 # Create action for line manager's team with strict access control
 action = {
-    'name': 'My Team Appraisal Goal Overview',
+    'name': 'My Team Individual Objectives',
     'res_model': 'hr.employee',
     'type': 'ir.actions.act_window',
     'view_mode': 'kanban,list',
@@ -687,55 +873,9 @@ action
     ]]></field>
   </record>
 
-  <!-- Entry-point: route users to appropriate views based on their role -->
-  <record id="action_open_appraisal_goals_entrypoint" model="ir.actions.server">
-    <field name="name">Appraisal Goals</field>
-    <field name="state">code</field>
-    <field name="model_id" ref="hr_appraisal_objectives.model_hr_appraisal_goal"/>
-    <field name="code"><![CDATA[
-user = env.user
-action = False
-
-if user.has_group('hr_appraisal_objectives.group_hr_appraisal'):
-    # HR users see all employees grouped by department
-    action = env.ref('hr_appraisal_objectives.action_employee_appraisal_goal_overview_hr').sudo().read()[0]
-elif user.has_group('hr_appraisal_objectives.group_appraisal_line_manager'):
-    # Line Managers use server action that dynamically sets domain
-    action = env.ref('hr_appraisal_objectives.action_employee_appraisal_goal_overview_lm').run()
-    if not action:
-        # Fallback if server action fails
-        action = {
-            'name': 'My Team Appraisal Goal Overview',
-            'res_model': 'hr.employee',
-            'type': 'ir.actions.act_window',
-            'view_mode': 'kanban,list',
-            'views': [(env.ref('hr_appraisal_objectives.view_employee_appraisal_goal_overview_kanban').id, 'kanban'), (False, 'list')],
-            'context': {'group_by': False},
-            'domain': ['|', ('department_id.manager_id.user_id', '=', user.id), ('parent_id.user_id', '=', user.id)],
-            'target': 'current',
-        }
-else:
-    # Regular employees see appraisals directly with current FY filter
-    action = env.ref('hr_appraisal_objectives.action_hr_appraisal_goal').sudo().read()[0]
-    employee = env['hr.employee'].browse(env.context.get('active_id'))
-    # Context can be a string; ensure it's a dict before update
-    ctx = action.get('context')
-    if isinstance(ctx, str):
-        try:
-            ctx = safe_eval(ctx, {})
-        except Exception:
-            ctx = {}
-    if not isinstance(ctx, dict):
-        ctx = {}
-    ctx.setdefault('search_default_filter_current_fy', 1)
-    action['context'] = ctx
-
-action
-    ]]></field>
-  </record>
-
+  <!-- Direct menu to individual objectives - everyone sees their own -->
   <record id="hr_appraisal.menu_hr_appraisal_goal" model="ir.ui.menu">
-    <field name="name">Individual Objectives</field>
-    <field name="action" ref="hr_appraisal_objectives.action_open_appraisal_goals_entrypoint"/>
+    <field name="name">My Objectives</field>
+    <field name="action" ref="hr_appraisal_objectives.action_my_individual_objectives"/>
   </record>
 </odoo>

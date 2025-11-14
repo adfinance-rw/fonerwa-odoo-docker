@@ -82,16 +82,27 @@
           <div class="row">
             <div class="col-lg-6">
               <group string="Objective Details">
-                <field name="institutional_objective_id" widget="many2one_autocomplete" 
+                <!-- <field name="institutional_objective_id" widget="many2one_autocomplete" 
                     domain="[('state', '=', 'active')]"
-                    options="{'no_create': True, 'no_open': True}" readonly="id and (current_uid_int != create_uid or state != 'draft')"/>
-                <field name="department_id" readonly="1"/>
+                    options="{'no_create': True, 'no_open': True}" readonly="id and (current_uid_int != create_uid or state != 'draft')"/> -->
+                <field name="department_id" 
+                       widget="many2one" 
+                       options="{'no_create': True, 'no_open': True}"
+                       readonly="state != 'draft'"
+                       groups="hr_appraisal_objectives.group_hr_appraisal"
+                       class="fw-bold text-primary"/>
+                <field name="department_id" 
+                       widget="many2one" 
+                       options="{'no_create': True, 'no_open': True}"
+                       readonly="1"
+                       groups="hr_appraisal_objectives.group_appraisal_line_manager"
+                       class="fw-bold text-success"/>
               </group>
             </div>
             <div class="col-lg-6">
               <group string="Timeline">
-                <field name="start_date" readonly="id and (current_uid_int != create_uid or state != 'draft')"/>
-                <field name="end_date" readonly="id and (current_uid_int != create_uid or state != 'draft')"/>
+                <field name="start_date" readonly="id and (current_uid_int != create_uid or state != 'draft')" invisible="1"/>
+                <field name="end_date" readonly="id and (current_uid_int != create_uid or state != 'draft')" invisible="1"/>
                 <field name="fiscal_year_id" readonly="1"/>
                 <field name="deadline_days" readonly="1"/>
               </group>
@@ -234,14 +245,23 @@
     <field name="model">hr.department.objective</field>
     <field name="arch" type="xml">
       <list decoration-info="progress &lt; 30" decoration-warning="progress &gt;= 30 and progress &lt; 70" decoration-success="progress &gt;= 70">
-        <field name="institutional_objective_id"/>
-        <field name="department_id"/>
-        <field name="name"/>
-        <field name="start_date"/>
+        <field name="reference" optional="hide"/>
+        <field name="department_id" widget="badge" class="fw-bold text-primary" decoration-bf="1"/>
+        <field name="name" class="fw-bold"/>
+        <field name="institutional_objective_id" optional="show"/>
+        <field name="state" widget="badge" 
+               decoration-muted="state == 'draft'"
+               decoration-primary="state == 'active'"
+               decoration-success="state == 'completed'"
+               decoration-danger="state == 'cancelled'"/>
+        <field name="start_date" optional="hide"/>
         <field name="end_date"/>
-        <field name="deadline_days" widget="integer"/>
-        <field name="progress" widget="float"/>
-        <field name="individual_objective_count"/>
+        <field name="deadline_days" widget="integer" 
+               decoration-danger="deadline_days &lt; 0"
+               decoration-warning="deadline_days &gt;= 0 and deadline_days &lt;= 7"
+               decoration-success="deadline_days &gt; 7"/>
+        <field name="progress" widget="progressbar"/>
+        <field name="individual_objective_count" string="Objectives"/>
         <field name="avg_score" widget="float" optional="hide"/>
       </list>
     </field>
@@ -292,17 +312,14 @@
                     </aside>
                     
                     <main class="ms-2">
-                        <div class="d-flex justify-content-between align-items-start mb-1">
-                            <field name="name" class="fw-bolder fs-5 text-truncate"/>
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="flex-grow-1">
+                                <div class="fw-bolder fs-6 text-truncate">
+                                    <field name="name"/>
+                                </div>
+                            </div>
+                            <field name="state" widget="badge"/>
                         </div>
-                        
-                        <!-- Department info -->
-                        <!-- <div class="mb-1">
-                            <small class="text-muted">
-                                <i class="fa fa-building me-1"></i>
-                                <field name="department_id"/>
-                            </small>
-                        </div> -->
                         
                         <!-- Institutional objective link -->
                         <!-- <div class="mb-2">
@@ -321,6 +338,10 @@
                                      : record.state.raw_value === 'active' ? 'bg-primary' : 'bg-secondary')"
                                  t-att-style="'width: ' + (record.progress.value || 0) + '%;'">
                             </div>
+                        </div>
+                        
+                        <div class="badge bg-primary text-white mb-1">
+                            <field name="department_id" class="fw-bold"/>
                         </div>
                         
                         <!-- Progress percentage and individual objectives count -->
@@ -412,7 +433,7 @@
     <field name="name">Department Objectives</field>
     <field name="res_model">hr.department.objective</field>
     <field name="view_mode">kanban,list,form,graph</field>
-    <field name="context">{'search_default_group_department': 1}</field>
+    <field name="context">{}</field>
     <field name="help" type="html">
       <p class="o_view_nocontent_smiling_face">
         Create your first department objective!

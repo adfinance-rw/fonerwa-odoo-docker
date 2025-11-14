@@ -11,14 +11,23 @@ class HrCommonObjective(models.Model):
 
     name = fields.Char(required=True, tracking=True)
     description = fields.Html()
-    institutional_objective_id = fields.Many2one(
-        "hr.institutional.objective", 
-        string="Institutional Objective", 
-        required=True
+    fiscal_year_id = fields.Many2one(
+        "hr.fiscal.year",
+        string="Fiscal Year",
+        required=True,
+        default=lambda self: self.env['hr.fiscal.year'].get_current_fiscal_year(),
+        help="Fiscal year for this common objective"
     )
-    start_date = fields.Date(related="institutional_objective_id.start_date", store=True)
-    end_date = fields.Date(related="institutional_objective_id.end_date", store=True)
+    start_date = fields.Date(required=True, default=fields.Date.today)
+    end_date = fields.Date(required=True)
     tag_ids = fields.Many2many("hr.appraisal.goal.tag", string="Tags")
+    
+    @api.onchange('fiscal_year_id')
+    def _onchange_fiscal_year(self):
+        """Auto-fill end date from fiscal year"""
+        if self.fiscal_year_id:
+            # Only auto-fill end date, start date stays as today
+            self.end_date = self.fiscal_year_id.date_to
 
     kpi_template_ids = fields.One2many(
         "hr.common.objective.kpi", "common_objective_id", string="KPI Templates", required=True
@@ -29,20 +38,26 @@ class HrCommonObjective(models.Model):
         help="Leave empty to target all employees",
     )
 
-    @api.depends("start_date", "end_date")
+    @api.constrains("start_date", "end_date")
     def _check_dates(self):
         for record in self:
             if record.start_date and record.end_date:
                 if record.start_date >= record.end_date:
                     raise UserError(_("Start date must be before end date."))
-                elif record.start_date < fields.Date.today():
-                    raise UserError(_("Start date cannot be in the past."))
-                elif record.end_date < record.institutional_objective_id.start_date:
-                    raise UserError(_("End date cannot be before the institutional objective's start date."))
-                elif record.end_date > record.institutional_objective_id.end_date:
-                    raise UserError(_("End date cannot be after the institutional objective's end date."))
-            else:
-                raise UserError(_("Start and end date are required."))
+    
+    @api.constrains("start_date", "end_date", "fiscal_year_id")
+    def _check_dates_within_fiscal_year(self):
+        """Ensure dates are within the fiscal year"""
+        for record in self:
+            if record.fiscal_year_id and record.start_date and record.end_date:
+                fy_start = record.fiscal_year_id.date_from
+                fy_end = record.fiscal_year_id.date_to
+                
+                if fy_start and record.start_date < fy_start:
+                    raise UserError(_("Start date cannot be before the fiscal year's start date (%s).") % fy_start)
+                    
+                if fy_end and record.end_date > fy_end:
+                    raise UserError(_("End date cannot be after the fiscal year's end date (%s).") % fy_end)
 
     def action_publish_objectives(self):
         """Create individual objectives for employees based on this template.
@@ -130,6 +145,6 @@ class HrCommonObjectiveKPI(models.Model):
     description = fields.Html()
     target = fields.Html()
     measurement_method = fields.Html()
-    weight = fields.Float(default=1.0)
+    weight = fields.Integer(default=1)
 
 

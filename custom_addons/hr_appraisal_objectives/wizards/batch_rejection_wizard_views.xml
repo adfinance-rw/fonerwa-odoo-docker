@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    
+    <record id="view_batch_rejection_wizard_form" model="ir.ui.view">
+        <field name="name">hr.appraisal.goal.batch.rejection.wizard.form</field>
+        <field name="model">hr.appraisal.goal.batch.rejection.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Selective Objective Rejection">
+                <sheet>
+                    <div class="alert alert-warning" role="alert">
+                        <h4><i class="fa fa-exclamation-triangle me-2"></i>Selective Rejection</h4>
+                        <p>Select which objectives to reject. Rejected objectives will return to draft state.</p>
+                        <p><strong>Other objectives will remain at their current approval level.</strong></p>
+                    </div>
+                    
+                    <group>
+                        <field name="employee_id" readonly="1" widget="many2one_avatar_employee"/>
+                    </group>
+                    
+                    <group string="Select Objectives to Reject">
+                        <field name="objective_ids" nolabel="1" widget="many2many">
+                            <list editable="bottom">
+                                <field name="reference"/>
+                                <field name="name"/>
+                                <field name="state" widget="badge" 
+                                       decoration-warning="state == 'submitted'"
+                                       decoration-info="state == 'first_approved'"/>
+                                <field name="kpi_count"/>
+                            </list>
+                        </field>
+                    </group>
+                    
+                    <group string="Rejection Reason">
+                        <field name="rejection_reason" nolabel="1" 
+                               placeholder="Provide a clear reason for rejection to help the employee improve..."
+                               required="1"/>
+                    </group>
+                </sheet>
+                
+                <footer>
+                    <button string="Reject Selected" name="action_reject_selected" 
+                            type="object" class="btn-danger"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+    
+</odoo>
+

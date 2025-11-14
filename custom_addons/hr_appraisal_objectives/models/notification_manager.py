@@ -51,10 +51,10 @@ class NotificationManager(models.Model):
             message = f'"{getattr(record, "name", "Objective")}" is approaching its deadline on {getattr(record, "end_date", False)}.'
 
             record.sudo().message_post(
-                body=message,
-                subject=title,
+                body=f"<p><strong>{title}</strong></p><p>{message}</p>",
                 partner_ids=list(set(partner_ids)),
-                message_type='notification',
+                message_type='comment',
+                subtype_xmlid='mail.mt_note',
             )
 
             # Schedule To Do activities for recipients
@@ -109,12 +109,12 @@ class NotificationManager(models.Model):
                 f'({goal.progression:.1f}%) with only {goal.deadline_days} day(s) left.'
             )
 
-            # Chatter notification on the goal
+            # Chatter notification on the goal (internal note, no email)
             goal.sudo().message_post(
-                body=message,
-                subject=title,
+                body=f"<p><strong>{title}</strong></p><p>{message}</p>",
                 partner_ids=list(set(partner_ids)),
-                message_type='notification',
+                message_type='comment',
+                subtype_xmlid='mail.mt_note',
             )
 
             # Activities

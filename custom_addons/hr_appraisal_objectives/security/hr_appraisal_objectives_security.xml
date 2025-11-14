@@ -108,13 +108,13 @@
     <field name="perm_create" eval="1"/>
     <field name="perm_unlink" eval="1"/>
   </record>
-  <!-- Line Managers: Full access to their department's goals in active state -->
+  <!-- Line Managers: Full access to their department's goals and own goals in active state -->
   <record id="rule_appraisal_goal_line_manager_dept" model="ir.rule">
-    <field name="name">Appraisal Goal: Line Manager Department Active</field>
+    <field name="name">Appraisal Goal: Line Manager Department and Own Active</field>
     <field name="model_id" ref="hr_appraisal_objectives.model_hr_appraisal_goal"/>
     <field name="groups" eval="[(4, ref('hr_appraisal_objectives.group_appraisal_line_manager'))]"/>
     <field name="domain_force">
-      [('employee_id.department_id.manager_id.user_id', '=', user.id), ('state', '!=', 'draft')]
+      ['&amp;', '|', ('employee_id.department_id.manager_id.user_id', '=', user.id), ('employee_id.user_id', '=', user.id), ('state', '!=', 'draft')]
     </field>
     <field name="perm_read" eval="1"/>
     <field name="perm_write" eval="1"/>
@@ -133,13 +133,13 @@
     <field name="perm_unlink" eval="1"/>
   </record> -->
   
-  <!-- Line Managers: Access to rejected draft goals in their department -->
+  <!-- Line Managers: Access to rejected draft goals in their department and own -->
   <record id="rule_appraisal_goal_line_manager_rejected_drafts" model="ir.rule">
     <field name="name">Appraisal Goal: Line Manager Rejected Drafts</field>
     <field name="model_id" ref="hr_appraisal_objectives.model_hr_appraisal_goal"/>
     <field name="groups" eval="[(4, ref('hr_appraisal_objectives.group_appraisal_line_manager'))]"/>
     <field name="domain_force">
-      [('state', '=', 'draft'), ('rejected', '=', True), ('employee_id.department_id.manager_id.user_id', '=', user.id)]
+      ['&amp;', '&amp;', ('state', '=', 'draft'), ('rejected', '=', True), '|', ('employee_id.department_id.manager_id.user_id', '=', user.id), ('employee_id.user_id', '=', user.id)]
     </field>
     <field name="perm_read" eval="1"/>
     <field name="perm_write" eval="1"/>
@@ -184,13 +184,13 @@
   </record>
 
   <record id="rule_hr_appraisal_line_manager_own" model="ir.rule">
-    <field name="name">HR Appraisal: Line Manager Own Only</field>
+    <field name="name">HR Appraisal: Line Manager Team and Own (Read/Write Only)</field>
     <field name="model_id" ref="hr_appraisal_objectives.model_hr_appraisal"/>
     <field name="groups" eval="[(4, ref('hr_appraisal_objectives.group_appraisal_line_manager'))]"/>
-    <field name="domain_force">[('employee_id.department_id.manager_id.user_id', '=', user.id)]</field>
+    <field name="domain_force">['|', ('employee_id.department_id.manager_id.user_id', '=', user.id), ('employee_id.user_id', '=', user.id)]</field>
     <field name="perm_read" eval="1"/>
     <field name="perm_write" eval="1"/>
-    <field name="perm_create" eval="1"/>
+    <field name="perm_create" eval="0"/>
     <field name="perm_unlink" eval="0"/>
   </record>
   

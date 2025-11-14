@@ -57,13 +57,12 @@ action = {
           <div class="row">
             <div class="col-lg-6">
               <group string="Objective Details">
-                <field name="institutional_objective_id" widget="many2one_autocomplete" 
-                    domain="[('state', '=', 'active')]"/>
+                <field name="fiscal_year_id" required="1" placeholder="Select Fiscal Year"/>
                 <field name="tag_ids" widget="many2many_tags"/>
                 <field name="target_employee_ids" widget="many2many_tags"/>
               </group>
             </div>
-            <div class="col-lg-6">
+            <div class="col-lg-6" invisible="1">
               <group string="Timeline">
                 <field name="start_date"/>
                 <field name="end_date"/>

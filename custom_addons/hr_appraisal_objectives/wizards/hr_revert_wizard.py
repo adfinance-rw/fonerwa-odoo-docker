@@ -23,11 +23,13 @@ class HrAppraisalRevertWizard(models.TransientModel):
             'hr_change_date': fields.Datetime.now()
         })
         
-        # Send notification
+        # Post internal note (doesn't send email)
         appraisal.message_post(
-            subject="Appraisal Reverted to Draft",
-            body=f"HR has reverted this appraisal to draft state. Reason: {self.reason}",
-            message_type="notification"
+            body=f"<p><strong>Appraisal Reverted to Draft</strong></p>"
+                 f"<p>HR has reverted this appraisal to draft state.</p>"
+                 f"<p><strong>Reason:</strong> {self.reason}</p>",
+            message_type="comment",
+            subtype_xmlid="mail.mt_note"
         )
         
         return {"type": "ir.actions.act_window_close"}

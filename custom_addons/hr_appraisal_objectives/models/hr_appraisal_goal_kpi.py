@@ -16,7 +16,7 @@ class HrAppraisalGoalKPI(models.Model):
     description = fields.Html("Description")
     target = fields.Html("Target/Goal")
     measurement_method = fields.Html("Measurement Method")
-    weight = fields.Float("Weight", default=1.0)
+    weight = fields.Integer("Weight", default=1)
 
     # --- Project integration ---
     project_id = fields.Many2one(
