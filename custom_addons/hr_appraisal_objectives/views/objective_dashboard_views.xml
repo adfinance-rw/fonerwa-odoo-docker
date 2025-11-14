@@ -8,13 +8,12 @@
         <field name="name">hr.employee.objective.dashboard.kanban</field>
         <field name="model">hr.employee</field>
         <field name="arch" type="xml">
-            <kanban class="o_kanban_mobile" create="false" quick_create="false" action="action_view_employee_objectives" type="object" default_order="objective_status_order asc, name asc">
+            <kanban class="o_kanban_mobile" create="false" quick_create="false" action="action_view_employee_objectives" type="object" default_order="objective_status asc, name asc">
                 <field name="id"/>
                 <field name="name"/>
                 <field name="avatar_128"/>
                 <field name="job_id"/>
                 <field name="department_id"/>
-                <field name="objective_status_order" invisible="1"/>
                 <field name="objective_status"/>
                 <field name="objective_status_color"/>
                 <field name="objective_total_count"/>
@@ -85,11 +84,10 @@
         <field name="name">hr.employee.objective.dashboard.list</field>
         <field name="model">hr.employee</field>
         <field name="arch" type="xml">
-            <list string="Employee Objectives" create="false" edit="false" action="action_view_employee_objectives" type="object" default_order="objective_status_order asc, name asc">
+            <list string="Employee Objectives" create="false" edit="false" action="action_view_employee_objectives" type="object" default_order="objective_status asc, name asc">
                 <field name="name" string="Employee"/>
                 <field name="department_id"/>
                 <field name="job_id"/>
-                <field name="objective_status_order" invisible="1"/>
                 <field name="objective_status" widget="badge"
                        decoration-danger="objective_status == 'not_started'"
                        decoration-warning="objective_status == 'in_progress'"
@@ -198,6 +196,8 @@
                 <separator/>
                 
                 <!-- Group By -->
+                <filter string="Status" name="group_by_status" 
+                        context="{'group_by': 'objective_status'}"/>
                 <filter string="Department" name="group_by_department" 
                         context="{'group_by': 'department_id'}"/>
                 <filter string="Job Position" name="group_by_job" 

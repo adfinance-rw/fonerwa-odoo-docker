@@ -158,6 +158,7 @@ action = {
       <xpath expr="//button[@name='action_confirm']" position="replace">
         <field name="state" widget="statusbar" statusbar_visible="draft,submitted,first_approved,progress,progress_done"/>
         <field name="create_uid" invisible="1"/>
+        <field name="employee_user_id_int" invisible="1"/>
         <field name="current_uid_int" invisible="1"/>
         <field name="manager_user_id_int" invisible="1"/>
         <button name="action_submit" type="object" string="Submit"
@@ -187,7 +188,7 @@ action = {
                 icon="fa-times"/>
         <button name="action_end_progress" type="object" string="Mark as Done"
                 class="oe_stat_button btn-success"
-                invisible="state != 'progress' or create_uid != current_uid_int"
+                invisible="state != 'progress' or employee_user_id_int != current_uid_int"
                 groups="base.group_user"
                 icon="fa-check"/>
       </xpath>
@@ -477,6 +478,10 @@ action = {
         <separator/>
         <filter string="Current Fiscal Year" name="filter_current_fy" domain="[('is_current_fy', '=', True)]"/>
         <separator/>
+        <!-- Employee filter - uses context variable for dynamic filtering -->
+        <filter string="Employee" name="filter_employee" 
+                domain="[('employee_id', '=', context.get('filter_employee_id'))]"
+                invisible="not context.get('filter_employee_id')"/>
         <filter string="My Objectives" name="my_objectives" 
                 domain="[('employee_id.user_id', '=', uid)]"/>
         <filter string="Draft" name="filter_draft" 

@@ -46,13 +46,6 @@ class HrAppraisalConfig(models.Model):
         "Alert Days Before Deadline", default=14
     )
 
-    # Cron job settings
-    cron_frequency_hours = fields.Integer(
-        "Cron Job Frequency (Hours)",
-        default=24,
-        help="How often to run auto-completion checks",
-    )
-
     @api.constrains(
         "auto_complete_delay_days", "reminder_days_before", "alert_days_before_deadline"
     )
@@ -79,12 +72,6 @@ class HrAppraisalConfig(models.Model):
                     "Low progress threshold must be between 0 and 100."
                 )
 
-    @api.constrains("cron_frequency_hours")
-    def _check_cron_frequency(self):
-        for record in self:
-            if record.cron_frequency_hours < 1:
-                raise ValidationError("Cron job frequency must be at least 1 hour.")
-
     @api.model
     def get_config(self, company_id=None):
         """Get configuration for a specific company or current company"""
@@ -105,7 +92,6 @@ class HrAppraisalConfig(models.Model):
                     "reminder_days_before": 7,
                     "low_progress_threshold": 30.0,
                     "alert_days_before_deadline": 14,
-                    "cron_frequency_hours": 24,
                 }
             )
 

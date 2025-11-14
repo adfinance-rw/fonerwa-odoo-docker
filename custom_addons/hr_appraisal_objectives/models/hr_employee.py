@@ -5,6 +5,12 @@ from odoo.exceptions import AccessError
 class HrEmployee(models.Model):
     _inherit = "hr.employee"
 
+    appraisal_goal_ids = fields.One2many(
+        comodel_name='hr.appraisal.goal',
+        inverse_name='employee_id',
+        string='Goals'
+    )
+
     kpi_task_ids = fields.Many2many(
         "project.task",
         string="KPI Tasks",
@@ -14,31 +20,12 @@ class HrEmployee(models.Model):
     
     # Objective status tracking
     objective_status = fields.Selection([
+        ('awaiting_hr', 'Awaiting HR'),
+        ('awaiting_manager', 'Awaiting Manager'),
         ('not_started', 'Not Started'),
         ('in_progress', 'In Progress'),
-        ('awaiting_manager', 'Awaiting Manager'),
-        ('awaiting_hr', 'Awaiting HR'),
         ('approved', 'Approved'),
-    ], string="Objective Status", compute="_compute_objective_status", search='_search_objective_status')
-
-    objective_status_order = fields.Integer(
-        string="Objective Status Order",
-        store=True,
-        compute="_compute_objective_status_order"
-    )
-
-    @api.depends('objective_status')
-    def _compute_objective_status_order(self):
-        """Map textual status to a numeric rank for ordering."""
-        order_map = {
-            'not_started': 3,
-            'in_progress': 4,
-            'awaiting_manager': 1,
-            'awaiting_hr': 2,
-            'approved': 5,
-        }
-        for rec in self:
-            rec.objective_status_order = order_map.get(rec.objective_status, 0)
+    ], string="Objective Status", compute="_compute_objective_status", store=True, search='_search_objective_status')
     
     objective_status_color = fields.Char(
         string="Status Color",
@@ -90,6 +77,7 @@ class HrEmployee(models.Model):
             emp.objective_first_approved_count = len(goals.filtered(lambda g: g.state == 'first_approved'))
             emp.objective_progress_count = len(goals.filtered(lambda g: g.state in ['progress', 'progress_done']))
     
+    @api.depends('appraisal_goal_ids.state')
     def _compute_objective_status(self):
         """
         Compute overall objective status for employee:
@@ -99,9 +87,8 @@ class HrEmployee(models.Model):
         - awaiting_hr: Has first_approved objectives (purple - #6f42c1 muted)
         - approved: All objectives are in progress/done (green - #198754 muted)
         """
-        Goal = self.env['hr.appraisal.goal']
         for emp in self:
-            goals = Goal.search([('employee_id', '=', emp.id)])
+            goals = emp.appraisal_goal_ids
             
             if not goals:
                 emp.objective_status = 'not_started'
@@ -166,18 +153,26 @@ class HrEmployee(models.Model):
     def action_view_employee_objectives(self):
         """Open employee's objectives for review and batch approval"""
         self.ensure_one()
-        return {
+        # Get the base action (or create a new one)
+        action = {
             'name': f"{self.name}'s Objectives",
             'type': 'ir.actions.act_window',
             'res_model': 'hr.appraisal.goal',
             'view_mode': 'kanban,list,form',
-            'domain': [('employee_id', '=', self.id)],
+            # No domain - use visible filter instead
+            'domain': [],
             'context': {
                 'default_employee_id': self.id,
                 'employee_objective_view': True,
+                # Set employee_id in context for the filter to use
+                'filter_employee_id': self.id,
+                # Auto-apply both employee and fiscal year filters
+                'search_default_filter_employee': 1,
+                'search_default_filter_current_fy': 1,
             },
             'target': 'current',
         }
+        return action
     
     def action_create_appraisal_for_employee(self):
         """Create a new appraisal for this employee (HR only)"""
@@ -207,40 +202,46 @@ class HrEmployee(models.Model):
             },
             'target': 'current',
         }
+    
+    def action_view_employee_appraisals(self):
+        """Open appraisals for this employee with employee filter visible and applied"""
+        self.ensure_one()
+        action = self.env.ref('hr_appraisal.open_view_hr_appraisal_tree').sudo().read()[0]
+        # No domain - use visible filter instead
+        action['domain'] = []
+        # Set context to show employee filter
+        ctx = action.get('context', {})
+        if isinstance(ctx, str):
+            try:
+                ctx = eval(ctx)
+            except:
+                ctx = {}
+        if not isinstance(ctx, dict):
+            ctx = {}
+        ctx['default_employee_id'] = self.id
+        # Set employee_id in context for the filter to use
+        ctx['filter_employee_id'] = self.id
+        # Auto-apply both employee and fiscal year filters
+        ctx['search_default_filter_employee'] = 1
+        ctx['search_default_filter_current_fy'] = 1
+        action['context'] = ctx
+        return action
 
 class EmployeePublic(models.Model):
     _inherit = 'hr.employee.public'
 
     objective_status = fields.Selection(
         selection=[
+            ('awaiting_hr', 'Awaiting HR'),
+            ('awaiting_manager', 'Awaiting Manager'),
             ('not_started', 'Not Started'),
             ('in_progress', 'In Progress'),
-            ('awaiting_manager', 'Awaiting Manager'),
-            ('awaiting_hr', 'Awaiting HR'),
             ('approved', 'Approved'),
         ],
         compute='_compute_objective_status_public',
+        store=True,
         string="Objective Status",
     )
-
-    objective_status_order = fields.Integer(
-        string="Objective Status Order",
-        store=True,
-        compute="_compute_objective_status_order"
-    )
-
-    @api.depends('objective_status')
-    def _compute_objective_status_order(self):
-        """Map textual status to a numeric rank for ordering."""
-        order_map = {
-            'not_started': 3,
-            'in_progress': 4,
-            'awaiting_manager': 1,
-            'awaiting_hr': 2,
-            'approved': 5,
-        }
-        for rec in self:
-            rec.objective_status_order = order_map.get(rec.objective_status, 0)
 
     def _compute_objective_status_public(self):
         for rec in self:

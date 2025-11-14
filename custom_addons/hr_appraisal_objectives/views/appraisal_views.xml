@@ -18,12 +18,9 @@
                   
                   <button name="action_cancel_appraisal" type="object" string="Cancel" 
                           class="btn-secondary" invisible="state in ['done', 'cancel']" groups="hr_appraisal_objectives.group_hr_appraisal"/>
-                  
-                  <button name="action_reset_to_pending" type="object" string="Reset to Pending" 
-                          class="btn-warning" invisible="state not in ['self_scored', 'manager_scored']" groups="hr_appraisal_objectives.group_hr_appraisal"/>
-                  
+
                   <button name="action_hr_revert_to_draft" type="object" string="Revert to Draft" 
-                          class="btn-warning" invisible="state in ['new', 'cancel']" groups="hr_appraisal_objectives.group_hr_appraisal"/>
+                          class="btn-warning" invisible="state in ['new']" groups="hr_appraisal_objectives.group_hr_appraisal"/>
                   
               </header>
           </xpath>
@@ -201,9 +198,6 @@
               <field name="low_progress_threshold"/>
               <field name="alert_days_before_deadline"/>
             </group>
-            <group string="Cron Job Settings">
-              <field name="cron_frequency_hours"/>
-            </group>
           </group>
         </sheet>
       </form>
@@ -245,6 +239,11 @@
     <field name="model">hr.appraisal</field>
     <field name="inherit_id" ref="hr_appraisal.hr_appraisal_search"/>
     <field name="arch" type="xml">
+      <!-- Add employee field to search view so it's visible and searchable -->
+      <xpath expr="//field[@name='employee_id']" position="attributes">
+        <attribute name="string">Employee</attribute>
+      </xpath>
+      
       <!-- Update the To Do filter to include new pending states -->
       <xpath expr="//filter[@name='todo_appraisals']" position="replace">
         <filter string="To Do" name="todo_appraisals" 
@@ -274,6 +273,10 @@
         <filter string="Current Fiscal Year" name="filter_current_fy" domain="[('is_current_fy', '=', True)]"/>
         <filter string="Recent Fiscal Year" name="filter_recent_years" domain="[('fiscal_year_id.date_to', '&gt;=', (context_today() - relativedelta(years=2)).strftime('%Y-%m-%d'))]"/>
         <separator/>
+        <!-- Employee filter - uses context variable for dynamic filtering -->
+        <filter string="Employee" name="filter_employee" 
+                domain="[('employee_id', '=', context.get('filter_employee_id'))]"
+                invisible="not context.get('filter_employee_id')"/>
       </xpath>
       
       <!-- Add employee grouping -->
@@ -391,18 +394,7 @@
     <field name="model_id" ref="hr.model_hr_employee"/>
     <field name="code"><![CDATA[
 employee = env['hr.employee'].browse(env.context.get('active_id'))
-action = env.ref('hr_appraisal.open_view_hr_appraisal_tree').sudo().read()[0]
-action['domain'] = [('employee_id', '=', employee.id)]
-ctx = action.get('context')
-if isinstance(ctx, str):
-    try:
-        ctx = safe_eval(ctx, {})
-    except Exception:
-        ctx = {}
-if not isinstance(ctx, dict):
-    ctx = {}
-ctx['search_default_filter_current_fy'] = 1
-action['context'] = ctx
+action = employee.action_view_employee_appraisals()
 action
     ]]></field>
   </record>
@@ -413,7 +405,7 @@ action
     <field name="model">hr.employee</field>
     <field name="groups_id" eval="[(4, ref('hr_appraisal_objectives.group_hr_appraisal')), (4, ref('hr_appraisal_objectives.group_appraisal_line_manager'))]"/>
     <field name="arch" type="xml">
-      <kanban quick_create="false" create="false" default_group_by="department_id" class="o_hr_employee_overview_kanban">
+      <kanban quick_create="false" create="false" class="o_hr_employee_overview_kanban">
         <field name="name"/>
         <field name="work_email"/>
         <field name="department_id"/>
@@ -450,15 +442,73 @@ action
     </field>
   </record>
 
+  <!-- Line Manager Employee Overview Kanban View - no grouping since LM is in one department -->
+  <record id="view_employee_appraisal_overview_kanban_lm" model="ir.ui.view">
+    <field name="name">hr.employee.appraisal.overview.kanban.lm</field>
+    <field name="model">hr.employee</field>
+    <field name="groups_id" eval="[(4, ref('hr_appraisal_objectives.group_appraisal_line_manager'))]"/>
+    <field name="arch" type="xml">
+      <kanban quick_create="false" create="false" class="o_hr_employee_overview_kanban">
+        <field name="name"/>
+        <field name="work_email"/>
+        <field name="department_id"/>
+        <field name="job_id"/>
+        <field name="avatar_128"/>
+        <templates>
+          <t t-name="card">
+            <div class="d-flex align-items-center p-2">
+              <a type="action" class="d-flex align-items-center flex-grow-1 text-decoration-none" name="%(hr_appraisal_objectives.action_open_appraisals_for_employee)d" t-attf-title="Open appraisals for #{record.name.value}">
+                <div class="me-3">
+                  <img t-att-src="'/web/image/hr.employee/' + record.id.raw_value + '/avatar_128'" alt="avatar" class="rounded-circle" style="width:48px;height:48px;object-fit:cover;"/>
+                </div>
+                <div class="flex-grow-1">
+                  <div class="fw-bold lh-sm"><field name="name"/></div>
+                  <div class="text-muted small">
+                    <t t-if="record.job_id.value"><field name="job_id"/></t>
+                    <t t-if="record.department_id.value"> • <field name="department_id"/></t>
+                    <t t-if="record.work_email.value"> • <t t-esc="record.work_email.value"/></t>
+                  </div>
+                </div>
+                <div class="ms-2 text-muted">
+                  <i class="fa fa-chevron-right" title="Open"/>
+                </div>
+              </a>
+              <div class="ms-2" groups="hr_appraisal_objectives.group_appraisal_line_manager">
+                <button type="object" name="action_create_appraisal_for_employee" class="btn btn-sm btn-primary" title="Create New Appraisal">
+                  <i class="fa fa-plus"></i>
+                </button>
+              </div>
+            </div>
+          </t>
+        </templates>
+      </kanban>
+    </field>
+  </record>
+
   <!-- HR Employee Overview Action - shows all employees grouped by department -->
   <record id="action_employee_appraisal_overview_hr" model="ir.actions.act_window">
     <field name="name">Employee Appraisal Overview</field>
     <field name="res_model">hr.employee</field>
     <field name="view_mode">kanban,list</field>
     <field name="view_id" ref="view_employee_appraisal_overview_kanban"/>
-    <field name="context">{'default_group_by': 'department_id'}</field>
+    <field name="search_view_id" ref="hr_appraisal_objectives.view_employee_appraisal_goal_overview_search"/>
+    <field name="context">{'search_default_group_by_department': 1}</field>
     <field name="domain">[]</field>
     <field name="groups_id" eval="[(4, ref('hr_appraisal_objectives.group_hr_appraisal'))]"/>
+  </record>
+
+  <!-- Search view for Line Manager - no searchpanel since LM is in one department -->
+  <record id="view_employee_appraisal_overview_search_lm" model="ir.ui.view">
+    <field name="name">hr.employee.appraisal.overview.search.lm</field>
+    <field name="model">hr.employee</field>
+    <field name="groups_id" eval="[(4, ref('hr_appraisal_objectives.group_appraisal_line_manager'))]"/>
+    <field name="arch" type="xml">
+      <search>
+        <field name="name"/>
+        <field name="department_id"/>
+        <field name="job_id"/>
+      </search>
+    </field>
   </record>
 
   <!-- Line Manager Employee Overview Server Action - dynamically sets domain to prevent glitches -->
@@ -470,13 +520,15 @@ action
     <field name="code"><![CDATA[
 user = env.user
 # Create action for line manager's team with strict access control
+# No grouping needed since line manager is only in one department
 action = {
     'name': 'My Team Appraisal Overview',
     'res_model': 'hr.employee',
     'type': 'ir.actions.act_window',
     'view_mode': 'kanban,list',
-    'views': [(env.ref('hr_appraisal_objectives.view_employee_appraisal_overview_kanban').id, 'kanban'), (False, 'list')],
-    'context': {'group_by': False},
+    'views': [(env.ref('hr_appraisal_objectives.view_employee_appraisal_overview_kanban_lm').id, 'kanban'), (False, 'list')],
+    'search_view_id': env.ref('hr_appraisal_objectives.view_employee_appraisal_overview_search_lm').id,
+    'context': {'group_by': ''},
     'domain': ['|', ('department_id.manager_id.user_id', '=', user.id), ('parent_id.user_id', '=', user.id)],
     'target': 'current',
 }
@@ -534,9 +586,9 @@ action
   <record id="hr_appraisal.menu_open_view_hr_appraisal_tree" model="ir.ui.menu">
     <field name="action" ref="action_open_appraisals_entrypoint"/>
   </record>
-
++
   <menuitem id="menu_hr_appraisal_config"
-            name="Settings"
+            name="Configurations"
             parent="hr_appraisal.menu_hr_appraisal_configuration"
             action="action_hr_appraisal_config"
             groups="hr_appraisal_objectives.group_hr_appraisal"

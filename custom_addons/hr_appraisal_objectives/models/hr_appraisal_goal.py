@@ -1,6 +1,7 @@
 from odoo import models, fields, api
 from odoo.exceptions import UserError, ValidationError
 import logging
+from markupsafe import Markup
 
 _logger = logging.getLogger(__name__)
 
@@ -689,12 +690,14 @@ class HrAppraisalGoal(models.Model):
                 dept = record.department_objective_id.department_id
                 if dept.manager_id and dept.manager_id.user_id:
                     record.sudo().message_post(
-                        body=f"<p><strong>Objective {action_labels[action].capitalize()}: {record.name}</strong></p>"
-                             f"<p>Objective for {record.employee_id.name} has been {action_labels[action]}.</p>"
-                             + (f"<p><strong>Reason:</strong> {record.rejection_reason}</p>" if record.rejection_reason else ""),
+                        body=Markup(
+                            f"<p><strong>Objective {action_labels[action].capitalize()}: {record.name}</strong></p>"
+                            f"<p>Objective for {record.employee_id.name} has been {action_labels[action]}.</p>"
+                            + (f"<p><strong>Reason:</strong> {record.rejection_reason}</p>" if record.rejection_reason else "")
+                        ),
                         partner_ids=[dept.manager_id.user_id.partner_id.id],
-                        message_type="comment",
-                        subtype_xmlid="mail.mt_note",
+                        message_type="notification",
+                        subtype_xmlid="mail.mt_comment",
                     )
             
             # Create activities for the appropriate users

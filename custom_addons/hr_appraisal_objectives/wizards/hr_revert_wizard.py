@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields
 from odoo.exceptions import ValidationError
+from markupsafe import Markup
 
 
 class HrAppraisalRevertWizard(models.TransientModel):
@@ -25,9 +26,11 @@ class HrAppraisalRevertWizard(models.TransientModel):
         
         # Post internal note (doesn't send email)
         appraisal.message_post(
-            body=f"<p><strong>Appraisal Reverted to Draft</strong></p>"
-                 f"<p>HR has reverted this appraisal to draft state.</p>"
-                 f"<p><strong>Reason:</strong> {self.reason}</p>",
+            body=Markup(
+                f"<p><strong>Appraisal Reverted to Draft</strong></p>"
+                f"<p>HR has reverted this appraisal to draft state.</p>"
+                f"<p><strong>Reason:</strong> {self.reason}</p>"
+            ),
             message_type="comment",
             subtype_xmlid="mail.mt_note"
         )

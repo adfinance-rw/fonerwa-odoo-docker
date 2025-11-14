@@ -1,6 +1,7 @@
 from odoo import models, fields, api
 from datetime import timedelta
 import logging
+from markupsafe import Markup
 
 _logger = logging.getLogger(__name__)
 
@@ -9,10 +10,44 @@ class NotificationManager(models.Model):
     _name = "performance.notification"
     _description = "Performance Notification Manager"
 
+    def _send_email_notification(self, partner_ids, subject, body_html):
+        """Helper method to send email notifications via mail.mail"""
+        if not partner_ids:
+            return
+        
+        try:
+            partners = self.env['res.partner'].browse(partner_ids).filtered(lambda p: p.email)
+            if not partners:
+                _logger.warning(f"No valid email addresses found for partners {partner_ids}")
+                return
+            
+            # Create mail.mail record
+            mail_values = {
+                'subject': subject,
+                'body_html': body_html,
+                'email_to': ','.join(partners.mapped('email')),
+                'partner_ids': [(6, 0, partners.ids)],
+                'auto_delete': True,
+            }
+            
+            mail = self.env['mail.mail'].sudo().create(mail_values)
+            mail.send()
+            _logger.info(f"Sent email notification to {mail_values['email_to']}: {subject}")
+        except Exception as e:
+            _logger.warning(f"Failed to send email notification: {str(e)}")
+
     @api.model
     def send_deadline_reminders(self):
         """Automated method to send deadline reminders"""
-        deadline_date = fields.Date.today() + timedelta(days=7)
+        # Get configuration
+        config = self.env["hr.appraisal.config"].get_config()
+        
+        # Check if reminder notifications are enabled
+        if not config.send_reminder_notifications:
+            return
+        
+        # Use configured reminder days before deadline
+        deadline_date = fields.Date.today() + timedelta(days=config.reminder_days_before)
         inst_objectives = self.env["hr.institutional.objective"].search(
             [("end_date", "<=", deadline_date), ("state", "=", "active")]
         )
@@ -51,10 +86,10 @@ class NotificationManager(models.Model):
             message = f'"{getattr(record, "name", "Objective")}" is approaching its deadline on {getattr(record, "end_date", False)}.'
 
             record.sudo().message_post(
-                body=f"<p><strong>{title}</strong></p><p>{message}</p>",
+                body=Markup(f"<p><strong>{title}</strong></p><p>{message}</p>"),
                 partner_ids=list(set(partner_ids)),
-                message_type='comment',
-                subtype_xmlid='mail.mt_note',
+                message_type='notification',
+                subtype_xmlid='mail.mt_comment',
             )
 
             # Schedule To Do activities for recipients
@@ -76,10 +111,14 @@ class NotificationManager(models.Model):
     @api.model
     def send_performance_alerts(self):
         """Send alerts for performance issues"""
+        # Get configuration
+        config = self.env["hr.appraisal.config"].get_config()
+        
+        # Use configured thresholds
         low_progress_goals = self.env["hr.appraisal.goal"].search(
             [
-                ("progression", "<", 30),
-                ("deadline_days", "<", 14),
+                ("progression", "<", config.low_progress_threshold),
+                ("deadline_days", "<", config.alert_days_before_deadline),
                 ("state", "in", ["scored"]),
             ]
         )
@@ -109,12 +148,12 @@ class NotificationManager(models.Model):
                 f'({goal.progression:.1f}%) with only {goal.deadline_days} day(s) left.'
             )
 
-            # Chatter notification on the goal (internal note, no email)
+            # Chatter notification on the goal (sends email if configured)
             goal.sudo().message_post(
-                body=f"<p><strong>{title}</strong></p><p>{message}</p>",
+                body=Markup(f"<p><strong>{title}</strong></p><p>{message}</p>"),
                 partner_ids=list(set(partner_ids)),
-                message_type='comment',
-                subtype_xmlid='mail.mt_note',
+                message_type='notification',
+                subtype_xmlid='mail.mt_comment',
             )
 
             # Activities
@@ -153,15 +192,19 @@ class NotificationManager(models.Model):
             try:
                 obj.write({"state": "completed"})
                 if config.send_completion_notifications:
-                    self.env["bus.bus"]._sendone(
-                        self.env.user.partner_id,
-                        "objective_completed",
-                        {
-                            "title": "Institutional Objective Completed",
-                            "message": f'Institutional objective "{obj.name}" has been automatically completed.',
-                            "type": "success",
-                        },
-                    )
+                    # Send email notification
+                    recipients = []
+                    if hasattr(obj, 'department_id') and obj.department_id and obj.department_id.manager_id:
+                        recipients.append(obj.department_id.manager_id.user_id.partner_id.id)
+                    if recipients:
+                        self._send_email_notification(
+                            recipients,
+                            f"Institutional Objective Completed: {obj.name}",
+                            f"""<p>Dear Manager,</p>
+                            <p>The institutional objective <strong>"{obj.name}"</strong> has been automatically completed.</p>
+                            <p>End Date: {obj.end_date}</p>
+                            <p>Please review the completion status.</p>"""
+                        )
             except Exception as e:
                 _logger.error(
                     f"Failed to complete institutional objective {obj.id}: {e}"
@@ -176,15 +219,19 @@ class NotificationManager(models.Model):
             try:
                 obj.write({"state": "completed"})
                 if config.send_completion_notifications:
-                    self.env["bus.bus"]._sendone(
-                        self.env.user.partner_id,
-                        "objective_completed",
-                        {
-                            "title": "Department Objective Completed",
-                            "message": f'Department objective "{obj.name}" has been automatically completed.',
-                            "type": "success",
-                        },
-                    )
+                    # Send email notification
+                    recipients = []
+                    if obj.department_id and obj.department_id.manager_id and obj.department_id.manager_id.user_id:
+                        recipients.append(obj.department_id.manager_id.user_id.partner_id.id)
+                    if recipients:
+                        self._send_email_notification(
+                            recipients,
+                            f"Department Objective Completed: {obj.name}",
+                            f"""<p>Dear Manager,</p>
+                            <p>The department objective <strong>"{obj.name}"</strong> has been automatically completed.</p>
+                            <p>End Date: {obj.end_date}</p>
+                            <p>Please review the completion status.</p>"""
+                        )
             except Exception as e:
                 _logger.error(f"Failed to complete department objective {obj.id}: {e}")
 
@@ -206,28 +253,33 @@ class NotificationManager(models.Model):
 
                 # Send notification to relevant users
                 if config.send_completion_notifications:
-                    if goal.employee_id.user_id:
-                        self.env["bus.bus"]._sendone(
-                            goal.employee_id.user_id.partner_id,
-                            "objective_completed",
-                            {
-                                "title": "Individual Objective Completed",
-                                "message": f'Your objective "{goal.name}" has been automatically completed.',
-                                "type": "success",
-                            },
+                    recipients = []
+                    # Notify employee
+                    if goal.employee_id.user_id and goal.employee_id.user_id.partner_id:
+                        recipients.append(goal.employee_id.user_id.partner_id.id)
+                        self._send_email_notification(
+                            [goal.employee_id.user_id.partner_id.id],
+                            f"Objective Completed: {goal.name}",
+                            f"""<p>Dear {goal.employee_id.name},</p>
+                            <p>Your objective <strong>"{goal.name}"</strong> has been automatically completed.</p>
+                            <p>End Date: {goal.end_date}</p>
+                            <p>Final Score: {goal.final_score:.1f}%</p>
+                            <p>Thank you for your work on this objective.</p>"""
                         )
 
                     # Notify manager if exists
-                    if goal.department_objective_id.department_id.manager_id.user_id:
-                        self.env["bus.bus"]._sendone(
-                            goal.department_objective_id.department_id.manager_id.user_id.partner_id,
-                            "objective_completed",
-                            {
-                                "title": "Team Objective Completed",
-                                "message": f'Objective "{goal.name}" for {goal.employee_id.name} has been automatically completed.',
-                                "type": "info",
-                            },
-                        )
+                    if goal.department_objective_id and goal.department_objective_id.department_id:
+                        dept = goal.department_objective_id.department_id
+                        if dept.manager_id and dept.manager_id.user_id and dept.manager_id.user_id.partner_id:
+                            self._send_email_notification(
+                                [dept.manager_id.user_id.partner_id.id],
+                                f"Team Objective Completed: {goal.name}",
+                                f"""<p>Dear Manager,</p>
+                                <p>The objective <strong>"{goal.name}"</strong> for {goal.employee_id.name} has been automatically completed.</p>
+                                <p>End Date: {goal.end_date}</p>
+                                <p>Final Score: {goal.final_score:.1f}%</p>
+                                <p>Please review the completion status.</p>"""
+                            )
 
             except Exception as e:
                 _logger.error(f"Failed to complete individual goal {goal.id}: {e}")
@@ -274,15 +326,15 @@ class NotificationManager(models.Model):
                 goal.write({"state": "final"})
 
                 # Send notification
-                if config.send_completion_notifications and goal.employee_id.user_id:
-                    self.env["bus.bus"]._sendone(
-                        goal.employee_id.user_id.partner_id,
-                        "objective_completed",
-                        {
-                            "title": "Objective Auto-Completed",
-                            "message": f'Your objective "{goal.name}" has been automatically completed due to high progress ({goal.progression:.1f}%).',
-                            "type": "success",
-                        },
+                if config.send_completion_notifications and goal.employee_id.user_id and goal.employee_id.user_id.partner_id:
+                    self._send_email_notification(
+                        [goal.employee_id.user_id.partner_id.id],
+                        f"Objective Auto-Completed: {goal.name}",
+                        f"""<p>Dear {goal.employee_id.name},</p>
+                        <p>Your objective <strong>"{goal.name}"</strong> has been automatically completed due to high progress ({goal.progression:.1f}%).</p>
+                        <p>End Date: {goal.end_date}</p>
+                        <p>Progress: {goal.progression:.1f}%</p>
+                        <p>Congratulations on achieving this milestone!</p>"""
                     )
             except Exception as e:
                 _logger.error(f"Failed to auto-complete goal {goal.id}: {e}")

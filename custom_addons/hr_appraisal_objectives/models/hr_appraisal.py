@@ -265,7 +265,7 @@ class HrAppraisal(models.Model):
     def action_reset_to_pending(self):
         """Reset to pending state"""
         for rec in self:
-            rec.state = 'pending'
+            rec.state = 'new'
         return True
     
     def action_hr_revert_to_draft(self):
@@ -288,12 +288,67 @@ class HrAppraisal(models.Model):
 
     @api.model
     def create(self, vals_list):
-        """Override create to add activity notification when appraisal is created"""
-        # Call parent's create which handles the base functionality
-        appraisals = super().create(vals_list)
+        """Override create to reuse existing appraisals if not confirmed, or add activity notification when appraisal is created"""
+        if not isinstance(vals_list, list):
+            vals_list = [vals_list]
         
-        # Create activity for employee to start self-assessment
-        for appraisal in appraisals:
+        existing_appraisals = self.browse()
+        to_create = []
+        
+        # Separate existing appraisals from new ones
+        for vals in vals_list:
+            employee_id = vals.get('employee_id')
+            fiscal_year_id = vals.get('fiscal_year_id')
+            
+            # If fiscal_year_id is not provided, get it from default
+            if employee_id and not fiscal_year_id:
+                fiscal_year = self.env['hr.fiscal.year'].get_current_fiscal_year()
+                if fiscal_year:
+                    fiscal_year_id = fiscal_year.id
+                    vals['fiscal_year_id'] = fiscal_year_id
+            
+            if employee_id and fiscal_year_id:
+                # Check if an appraisal already exists for this employee + fiscal year
+                existing = self.search([
+                    ('employee_id', '=', employee_id),
+                    ('fiscal_year_id', '=', fiscal_year_id),
+                ], limit=1)
+                
+                if existing:
+                    # If appraisal exists and is confirmed (done), raise error
+                    if existing.state != 'new':
+                        state_label = dict(self._fields['state'].selection).get(existing.state, existing.state)
+                        employee_name = existing.employee_id.name if existing.employee_id else 'Unknown'
+                        fiscal_year_name = existing.fiscal_year_id.name if existing.fiscal_year_id else 'Unknown'
+                        raise ValidationError(
+                            f"An appraisal already exists for {employee_name} "
+                            f"in fiscal year {fiscal_year_name} and has been completed.\n\n"
+                            f"Existing appraisal ID: #{existing.id} (State: {state_label})\n\n"
+                            f"Please use the existing appraisal or choose a different fiscal year."
+                        )
+                    
+                    # If appraisal exists but is not confirmed, update it with new values and reuse it
+                    # Remove fields that shouldn't be updated on existing records
+                    update_vals = {k: v for k, v in vals.items() 
+                                 if k not in ('employee_id', 'fiscal_year_id', 'create_date', 'create_uid')}
+                    if update_vals:
+                        existing.write(update_vals)
+                    existing_appraisals |= existing
+                else:
+                    # No existing appraisal, add to list to create
+                    to_create.append(vals)
+            else:
+                # Missing required fields, add to list to create (will fail validation if needed)
+                to_create.append(vals)
+        
+        # Create new appraisals
+        new_appraisals = super().create(to_create) if to_create else self.browse()
+        
+        # Combine existing and new appraisals
+        all_appraisals = existing_appraisals | new_appraisals
+        
+        # Create activity for employee to start self-assessment (only for newly created appraisals)
+        for appraisal in new_appraisals:
             if appraisal.employee_id and appraisal.employee_id.user_id:
                 appraisal._create_appraisal_activity(
                     user_id=appraisal.employee_id.user_id.id,
@@ -305,7 +360,7 @@ class HrAppraisal(models.Model):
                           <p>A new appraisal has been created for you. Please complete your self-assessment and submit your feedback.</p>"""
                 )
         
-        return appraisals
+        return all_appraisals
     
     def _create_appraisal_activity(self, user_id, summary, note):
         """Helper method to create activities for appraisals"""
@@ -346,11 +401,16 @@ class HrAppraisal(models.Model):
         """Ensure only one appraisal per employee per fiscal year"""
         for record in self:
             if record.employee_id and record.fiscal_year_id:
-                duplicate = self.search([
+                # Build domain to exclude current record if it has an ID
+                domain = [
                     ('employee_id', '=', record.employee_id.id),
                     ('fiscal_year_id', '=', record.fiscal_year_id.id),
-                    ('id', '!=', record.id)
-                ], limit=1)
+                ]
+                # Only exclude current record if it's not a new record
+                if record.id:
+                    domain.append(('id', '!=', record.id))
+                
+                duplicate = self.search(domain, limit=1)
                 if duplicate:
                     # Get state label
                     state_label = dict(self._fields['state'].selection).get(duplicate.state, duplicate.state)
