@@ -27,15 +27,20 @@ else
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] ⚠️  Warning: Docker CLI or socket not available. Will use fallback method for nginx reload."
 fi
 
-# Make sure the renewal hook is executable
+# Verify renewal hook exists and is executable
 if [ -f /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh ]; then
-    chmod +x /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✅ Renewal hook script is ready"
+    if [ -x /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh ]; then
+        echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✅ Renewal hook script is ready"
+    else
+        echo "[$(date +'%Y-%m-%d %H:%M:%S')] ⚠️  Warning: Renewal hook script is not executable"
+    fi
+else
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] ⚠️  Warning: Renewal hook script not found"
 fi
 
 # Renewal loop
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] Starting certbot renewal loop (checks every 12 hours)..."
-trap 'echo "[$(date +'%Y-%m-%d %H:%M:%S')] Received TERM signal, exiting..."; exit 0' TERM
+trap 'echo "Received TERM signal, exiting..."; exit 0' TERM
 
 while :; do
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] Checking for certificate renewal..."

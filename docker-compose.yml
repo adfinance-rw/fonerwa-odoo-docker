@@ -56,7 +56,7 @@ services:
     volumes:
       - ./certbot/www:/var/www/certbot
       - ./certbot/conf:/etc/letsencrypt
-      - ./certbot/renewal-hooks:/etc/letsencrypt/renewal-hooks:ro
+      - ./certbot/renewal-hooks:/etc/letsencrypt/renewal-hooks
       - ./certbot/entrypoint.sh:/entrypoint.sh:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
