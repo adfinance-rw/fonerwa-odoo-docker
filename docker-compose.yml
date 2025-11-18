@@ -51,7 +51,7 @@ services:
       start_period: 60s
 
   certbot:
-    image: certbot/certbot:latest
+    build: ./certbot
     container_name: fonerwa-odoo-certbot
     restart: unless-stopped
     volumes:

@@ -27,12 +27,13 @@ else
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] ⚠️  Warning: Docker CLI or socket not available. Will use fallback method for nginx reload."
 fi
 
-# Verify renewal hook exists and is executable
+# Make renewal hook executable (fixes permission issues with volume mounts)
 if [ -f /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh ]; then
+    chmod +x /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh 2>/dev/null || true
     if [ -x /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh ]; then
-        echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✅ Renewal hook script is ready"
+        echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✅ Renewal hook script is ready and executable"
     else
-        echo "[$(date +'%Y-%m-%d %H:%M:%S')] ⚠️  Warning: Renewal hook script is not executable"
+        echo "[$(date +'%Y-%m-%d %H:%M:%S')] ⚠️  Warning: Could not make renewal hook script executable"
     fi
 else
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] ⚠️  Warning: Renewal hook script not found"
