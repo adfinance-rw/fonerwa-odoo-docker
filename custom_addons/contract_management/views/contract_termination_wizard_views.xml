@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        
+        <!-- Contract Termination Wizard Form View -->
+        <record id="view_contract_termination_wizard_form" model="ir.ui.view">
+            <field name="name">contract.termination.wizard.form</field>
+            <field name="model">contract.termination.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Terminate Contract">
+                    <sheet>
+                        <div class="oe_title">
+                            <h1>
+                                <label for="contract_id" string="Terminate Contract"/>
+                                <field name="contract_id" readonly="1"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <group string="Termination Information">
+                                <field name="termination_date" required="1"/>
+                                <field name="terminated_by" required="1"/>
+                                <field name="termination_reason" nolabel="1" placeholder="Enter the reason for terminating this contract..." required="1"/>
+                            </group>
+                            <group string="Termination Document">
+                                <field name="termination_document" filename="termination_document_name" widget="binary"/>
+                                <field name="termination_document_name"/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Contract Termination Wizard Action -->
+        <record id="action_contract_termination_wizard" model="ir.actions.act_window">
+            <field name="name">Contract Name</field>
+            <field name="res_model">contract.termination.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+            <field name="context">{}</field>
+        </record>
+
+    </data>
+</odoo>
+

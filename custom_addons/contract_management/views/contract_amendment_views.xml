@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        
+        <!-- Contract Amendment Tree View -->
+        <record id="view_contract_amendment_tree" model="ir.ui.view">
+            <field name="name">contract.amendment.tree</field>
+            <field name="model">contract.management.amendment</field>
+            <field name="arch" type="xml">
+                <list string="Contract Amendments" default_order="amendment_date desc">
+                    <field name="contract_number"/>
+                    <field name="name"/>
+                    <field name="partner_id"/>
+                    <field name="version"/>
+                    <field name="amendment_type"/>
+                    <field name="amendment_date"/>
+                    <field name="amended_by"/>
+                    <field name="amendment_reason"/>
+                    <field name="contract_value"/>
+                    <field name="state"/>
+                    <field name="is_current" decoration-success="is_current"/>
+                    <button name="action_view_contract_data" string="View Data" type="object" 
+                            class="btn-primary" icon="fa-eye"/>
+                    <button name="action_compare_with_current" string="Compare" type="object" 
+                            class="btn-secondary" icon="fa-exchange"/>
+                    <button name="action_restore_version" string="Restore" type="object" 
+                            class="btn-warning" icon="fa-undo" 
+                            invisible="is_current"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- Contract Amendment Form View -->
+        <record id="view_contract_amendment_form" model="ir.ui.view">
+            <field name="name">contract.amendment.form</field>
+            <field name="model">contract.management.amendment</field>
+            <field name="arch" type="xml">
+                <form string="Contract Amendment">
+                    <header>
+                        <button name="action_view_contract_data" string="View Contract Data" 
+                                type="object" class="btn-primary"/>
+                        <button name="action_compare_with_current" string="Compare with Current" 
+                                type="object" class="btn-secondary"/>
+                        <button name="action_restore_version" string="Restore This Version" 
+                                type="object" class="btn-warning" 
+                                invisible="is_current"/>
+                        <field name="is_current" widget="statusbar" 
+                               statusbar_visible="False,True"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_title">
+                            <h1>
+                                <field name="display_name" readonly="1"/>
+                            </h1>
+                        </div>
+                        <notebook>
+                            <page string="Amendment Information">
+                                <group>
+                                    <group string="Amendment Details">
+                                        <field name="contract_id"/>
+                                        <field name="version"/>
+                                        <field name="amendment_type"/>
+                                        <field name="amendment_date"/>
+                                        <field name="amended_by"/>
+                                    </group>
+                                    <group string="Amendment Reason">
+                                        <field name="amendment_reason" nolabel="1"/>
+                                    </group>
+                                </group>
+                            </page>
+                            <page string="Contract Data">
+                                <group>
+                                    <group string="Basic Information">
+                                        <field name="name"/>
+                                        <field name="contract_number"/>
+                                        <field name="partner_id"/>
+                                        <field name="contract_type_id"/>
+                                        <field name="classification_ids" widget="many2many_tags"/>
+                                        <field name="category_ids" widget="many2many_tags"/>
+                                        <field name="department_ids" widget="many2many_tags"/>
+                                        <field name="facility_project"/>
+                                        <field name="contract_manager_id"/>
+                                    </group>
+                                    <group string="Dates &amp; Value">
+                                        <field name="effective_date"/>
+                                        <field name="expiry_date"/>
+                                        <field name="days_to_expiry"/>
+                                        <field name="notice_period_days"/>
+                                        <field name="contract_value"/>
+                                        <field name="currency_id" invisible="1"/>
+                                        <field name="version_number"/>
+                                    </group>
+                                </group>
+                                <group>
+                                    <group string="Status &amp; Documents">
+                                        <field name="state"/>
+                                    </group>
+                                    <group string="Documents">
+                                        <field name="contract_documents" filename="contract_document_name" widget="binary"/>
+                                        <field name="contract_document_name"/>
+                                        <field name="additional_documents" filename="additional_document_name" widget="binary"/>
+                                        <field name="additional_document_name"/>
+                                        <field name="document_count"/>
+                                    </group>
+                                </group>
+                                <group>
+                                    <group string="Additional Information">
+                                        <field name="description"/>
+                                        <field name="notes"/>
+                                        <field name="compliance_notes"/>
+                                    </group>
+                                </group>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Contract Amendment Search View -->
+        <record id="view_contract_amendment_search" model="ir.ui.view">
+            <field name="name">contract.amendment.search</field>
+            <field name="model">contract.management.amendment</field>
+            <field name="arch" type="xml">
+                <search string="Search Amendments">
+                    <field name="contract_number"/>
+                    <field name="name"/>
+                    <field name="contract_id"/>
+                    <field name="partner_id"/>
+                    <field name="version"/>
+                    <field name="amendment_type"/>
+                    <field name="amended_by"/>
+                    <field name="amendment_date"/>
+                    <field name="amendment_reason"/>
+                    <field name="contract_value"/>
+                    <field name="state"/>
+                    <separator/>
+                    <filter string="Original" name="original" domain="[('amendment_type', '=', 'original')]"/>
+                    <filter string="Amendments" name="amendments" domain="[('amendment_type', '=', 'amendment')]"/>
+                    <filter string="Corrections" name="corrections" domain="[('amendment_type', '=', 'correction')]"/>
+                    <filter string="Current Versions" name="current" domain="[('is_current', '=', True)]"/>
+                    <separator/>
+                    <group expand="0" string="Group By">
+                        <filter string="Contract" name="group_contract" context="{'group_by': 'contract_id'}"/>
+                        <filter string="Amendment Type" name="group_type" context="{'group_by': 'amendment_type'}"/>
+                        <filter string="Amended By" name="group_user" context="{'group_by': 'amended_by'}"/>
+                        <filter string="Amendment Date" name="group_date" context="{'group_by': 'amendment_date'}"/>
+                        <filter string="Partner" name="group_partner" context="{'group_by': 'partner_id'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- Contract Amendment Action -->
+        <record id="action_contract_amendment" model="ir.actions.act_window">
+            <field name="name">Contract Amendments</field>
+            <field name="res_model">contract.management.amendment</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_contract_amendment_search"/>
+            <field name="context">{}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No amendments found!
+                </p>
+                <p>
+                    Contract amendments will appear here when contracts are modified.
+                </p>
+            </field>
+        </record>
+
+        <!-- Contract Amendment Comparison Form View -->
+        <record id="view_contract_amendment_comparison_form" model="ir.ui.view">
+            <field name="name">contract.amendment.comparison.form</field>
+            <field name="model">contract.amendment.comparison</field>
+            <field name="arch" type="xml">
+                <form string="Contract Amendment Comparison">
+                    <header>
+                        <button string="Close" class="btn-secondary" special="cancel"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_title">
+                            <h1>
+                                <field name="contract_id" readonly="1"/>
+                                <field name="amendment_id" readonly="1"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <field name="comparison_result" widget="html" readonly="1"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Contract Amendment Data Form View -->
+        <record id="view_contract_amendment_data_form" model="ir.ui.view">
+            <field name="name">contract.amendment.data.form</field>
+            <field name="model">contract.management.amendment</field>
+            <field name="arch" type="xml">
+                <form string="Contract Data">
+                    <header>
+                        <button string="Close" class="btn-secondary" special="cancel"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_title">
+                            <h1>
+                                <field name="display_name" readonly="1"/>
+                            </h1>
+                        </div>
+                        <notebook>
+                            <page string="Basic Information">
+                                <group>
+                                    <group string="Contract Details">
+                                        <field name="name" readonly="1"/>
+                                        <field name="contract_number" readonly="1"/>
+                                        <field name="partner_id" readonly="1"/>
+                                        <field name="contract_type_id" readonly="1"/>
+                                        <field name="classification_ids" widget="many2many_tags" readonly="1"/>
+                                        <field name="category_ids" widget="many2many_tags" readonly="1"/>
+                                        <field name="department_ids" widget="many2many_tags" readonly="1"/>
+                                        <field name="facility_project" readonly="1"/>
+                                        <field name="contract_manager_id" readonly="1"/>
+                                    </group>
+                                    <group string="Contract Dates &amp; Value">
+                                        <field name="effective_date" readonly="1"/>
+                                        <field name="expiry_date" readonly="1"/>
+                                        <field name="days_to_expiry" readonly="1"/>
+                                        <field name="notice_period_days" readonly="1"/>
+                                        <field name="contract_value" readonly="1"/>
+                                        <field name="currency_id" invisible="1"/>
+                                        <field name="version_number" readonly="1"/>
+                                    </group>
+                                </group>
+                            </page>
+                            <page string="Status &amp; Documents">
+                                <group>
+                                    <group string="Status &amp; Documents">
+                                        <field name="state" readonly="1"/>
+                                    </group>
+                                    <group string="Documents">
+                                        <field name="contract_documents" filename="contract_document_name" widget="binary" readonly="1"/>
+                                        <field name="contract_document_name" readonly="1"/>
+                                        <field name="additional_documents" filename="additional_document_name" widget="binary" readonly="1"/>
+                                        <field name="additional_document_name" readonly="1"/>
+                                        <field name="document_count" readonly="1"/>
+                                    </group>
+                                </group>
+                            </page>
+                            <page string="Additional Information">
+                                <group>
+                                    <field name="description" readonly="1"/>
+                                    <field name="notes" readonly="1"/>
+                                    <field name="compliance_notes" readonly="1"/>
+                                </group>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+    </data>
+</odoo>

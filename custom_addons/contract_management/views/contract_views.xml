@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Contract Management Tree View -->
+        <record id="view_contract_management_tree" model="ir.ui.view">
+            <field name="name">contract.management.tree</field>
+            <field name="model">contract.management</field>
+            <field name="arch" type="xml">
+                <list string="Contracts">
+                    <field name="contract_number"/>
+                    <field name="name"/>
+                    <field name="partner_id"/>
+                    <field name="contract_type_id"/>
+                    <field name="classification_ids" widget="many2many_tags"/>
+                    <field name="category_ids" widget="many2many_tags"/>
+                    <field name="department_ids" widget="many2many_tags"/>
+                    <field name="effective_date"/>
+                    <field name="expiry_date"/>
+                    <field name="days_to_expiry" decoration-danger="days_to_expiry &lt; 0"/>
+                    <field name="state" decoration-success="state == 'active'" 
+                           decoration-danger="state == 'expired'"
+                           decoration-muted="state == 'archived'"/>
+                    <field name="version"/>
+                    <field name="create_date" widget="date"/>
+                    <field name="contract_value"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- Contract Management Form View -->
+        <record id="view_contract_management_form" model="ir.ui.view">
+            <field name="name">contract.management.form</field>
+            <field name="model">contract.management</field>
+            <field name="arch" type="xml">
+                <form string="Contract">
+                    <header>
+                        <button name="action_activate" string="Activate" type="object" 
+                                class="btn-primary" invisible="state != 'draft'"/>
+                        <button name="action_archive" string="Archive" type="object" 
+                                class="btn-secondary" invisible="state not in ['expired', 'terminated']"/>
+                        <field name="state" widget="statusbar" statusbar_visible="draft,active,expired,terminated,archived"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_button_box" name="button_box">
+                            <button class="oe_stat_button" icon="fa-file-text-o">
+                                <field string="Documents" name="document_count" widget="statinfo"/>
+                            </button>
+                            <button class="oe_stat_button" icon="fa-calendar">
+                                <field string="Milestones" name="milestone_count" widget="statinfo"/>
+                            </button>
+                            <button class="oe_stat_button" icon="fa-history" 
+                                    context="{'search_default_contract_id': id}">
+                                <field string="Amendments" name="amendment_count" widget="statinfo"/>
+                            </button>
+                        </div>
+                        <div class="oe_title">
+                            <h1>
+                                <field name="name" placeholder="Contract Title" readonly="state != 'draft'"/>
+                            </h1>
+                        </div>
+                        <notebook>
+                            <page string="Basic Information">
+                                <div class="alert alert-warning" role="alert" invisible="state == 'draft'">
+                                    <i class="fa fa-info-circle"/> Contract information can only be modified through the Amendment process to maintain version tracking. Please use the "Add Amendment" button below to make changes.
+                                </div>
+                                <group>
+                                    <group string="Contract Details">
+                                        <field name="contract_number"/>
+                                        <field name="partner_id" readonly="state != 'draft'"/>
+                                        <field name="contract_type_id" readonly="state != 'draft'"/>
+                                        <field name="classification_ids" widget="many2many_tags" readonly="state != 'draft'"
+                                               domain="[('contract_type_ids', 'in', [contract_type_id])]"
+                                               options="{'no_create': True}"/>
+                                        <field name="category_ids" widget="many2many_tags" readonly="state != 'draft'"
+                                               domain="[('contract_type_ids', 'in', [contract_type_id])]"
+                                               options="{'no_create': True}"/>
+                                        <field name="department_ids" widget="many2many_tags" readonly="state != 'draft'"
+                                               domain="[('contract_type_ids', 'in', [contract_type_id])]"
+                                               options="{'no_create': True}"/>
+                                        <field name="contract_manager_id" readonly="state != 'draft'"/>
+                                    </group>
+                                    <group string="Contract Dates &amp; Value">
+                                        <field name="effective_date" readonly="state != 'draft'"/>
+                                        <field name="expiry_date" readonly="state != 'draft'"/>
+                                        <field name="days_to_expiry"/>
+                                        <field name="notice_period_days" readonly="state != 'draft'"/>
+                                        <field name="contract_value" readonly="state != 'draft'"/>
+                                        <field name="currency_id" invisible="1"/>
+                                        <field name="version"/>
+                                        <field name="send_recurring_reminders" readonly="state != 'draft'"/>
+                                        <field name="expiration_notification_sent" readonly="1"/>
+                                    </group>
+                                </group>
+                                
+                                <group>
+                                    <group string="Contract Document">
+                                        <field name="contract_documents" filename="contract_document_name" widget="binary" readonly="state != 'draft'"/>
+                                        <field name="contract_document_name" readonly="state != 'draft'"/>
+                                        <button name="action_download_contract_document" string="Download Contract Document" 
+                                                type="object" class="btn-primary" 
+                                                invisible="not contract_documents"/>
+                                    </group>
+                                    <group string="Additional Document">
+                                        <field name="additional_documents" filename="additional_document_name" widget="binary" readonly="state != 'draft'"/>
+                                        <field name="additional_document_name" readonly="state != 'draft'"/>
+                                        <button name="action_download_additional_document" string="Download Additional Document" 
+                                                type="object" class="btn-secondary" 
+                                                invisible="not additional_documents"/>
+                                    </group>
+                                </group>
+                            </page>
+                            <page string="Deliverable">
+                                <field name="milestone_ids" widget="one2many">
+                                    <list>
+                                        <field name="name"/>
+                                        <field name="milestone_date"/>
+                                        <field name="status" decoration-success="status == 'completed'" decoration-danger="status == 'overdue'"/>
+                                        <field name="payment_amount"/>
+                                        <field name="days_until_due" decoration-danger="days_until_due &lt; 0"/>
+                                        <field name="is_overdue" decoration-danger="is_overdue"/>
+                                        <field name="completion_date" invisible="status != 'completed'"/>
+                                        <button name="action_view_contract" string="View Contract" type="object" class="btn-primary" icon="fa-external-link"/>
+                                    </list>
+                                </field>
+                            </page>
+                            <page string="Amendments">
+                                <div class="oe_button_box" name="amendment_button_box">
+                                    <button name="action_create_amendment_from_line" string="Add Amendment" type="object" 
+                                            class="btn-warning" icon="fa-plus"
+                                            invisible="state not in ['active', 'draft']"/>
+                                </div>
+                                <field name="amendment_ids" widget="one2many" 
+                                       context="{'default_contract_id': id, 'create': False, 'edit': False}">
+                                    <list>
+                                        <field name="version"/>
+                                        <field name="amendment_type"/>
+                                        <field name="amendment_date"/>
+                                        <field name="amended_by"/>
+                                        <field name="amendment_reason"/>
+                                        <field name="contract_value"/>
+                                        <field name="state"/>
+                                        <field name="is_current" decoration-success="is_current"/>
+                                        <button name="action_view_contract_data" string="View Data" type="object" 
+                                                class="btn-primary" icon="fa-eye"/>
+                                        <button name="action_compare_with_current" string="Compare" type="object" 
+                                                class="btn-secondary" icon="fa-exchange"/>
+                                        <button name="action_restore_version" string="Restore" type="object" 
+                                                class="btn-warning" icon="fa-undo" 
+                                                invisible="is_current"/>
+                                    </list>
+                                </field>
+                            </page>
+                            <page string="Termination">
+                                <div class="oe_button_box" name="termination_button_box">
+                                    <button name="action_terminate" string="Terminate Contract" type="object" 
+                                            class="btn-danger" icon="fa-ban"
+                                            invisible="state in ['terminated', 'archived']"/>
+                                </div>
+                                <group invisible="state != 'terminated'">
+                                    <group string="Termination Information">
+                                        <field name="termination_date" readonly="1"/>
+                                        <field name="terminated_by" readonly="1"/>
+                                        <field name="termination_reason" readonly="1"/>
+                                    </group>
+                                    <group string="Termination Document">
+                                        <field name="termination_document" filename="termination_document_name" widget="binary" readonly="1"/>
+                                        <field name="termination_document_name" readonly="1"/>
+                                    </group>
+                                </group>
+                                <div class="alert alert-info" role="alert" invisible="state == 'terminated'">
+                                    <i class="fa fa-info-circle"/> Use the "Terminate Contract" button above to terminate this contract. Once terminated, termination details will be displayed here.
+                                </div>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Contract Management Search View -->
+        <record id="view_contract_management_search" model="ir.ui.view">
+            <field name="name">contract.management.search</field>
+            <field name="model">contract.management</field>
+            <field name="arch" type="xml">
+                <search string="Search Contracts">
+                    <field name="name"/>
+                    <field name="contract_number"/>
+                    <field name="partner_id"/>
+                    <field name="contract_type_id"/>
+                    <field name="classification_ids"/>
+                    <field name="category_ids"/>
+                    <field name="department_ids"/>
+                    <field name="contract_manager_id"/>
+                    <field name="effective_date"/>
+                    <field name="expiry_date"/>
+                    <field name="contract_value"/>
+                    <field name="state"/>
+                    <separator/>
+                    <filter string="Active" name="active" domain="[('state', '=', 'active')]"/>
+                    <filter string="Expired" name="expired" domain="[('state', '=', 'expired')]"/>
+                    <filter string="Overdue" name="overdue" domain="[('days_to_expiry', '&lt;', 0)]"/>
+                    <group expand="0" string="Group By">
+                        <filter string="Contract Type" name="group_type" context="{'group_by': 'contract_type_id'}"/>
+                        <filter string="Classification" name="group_classification" context="{'group_by': 'classification_display'}"/>
+                        <filter string="Category" name="group_category" context="{'group_by': 'category_display'}"/>
+                        <filter string="Department" name="group_department" context="{'group_by': 'department_display'}"/>
+                        <filter string="State" name="group_state" context="{'group_by': 'state'}"/>
+                        <filter string="Contract Manager" name="group_manager" context="{'group_by': 'contract_manager_id'}"/>
+                        <filter string="Effective Date" name="group_effective_date" context="{'group_by': 'effective_date'}"/>
+                        <filter string="Expiry Date" name="group_expiry_date" context="{'group_by': 'expiry_date'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- Contract Management Action -->
+        <record id="action_contract_management" model="ir.actions.act_window">
+            <field name="name">Contracts</field>
+            <field name="res_model">contract.management</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_contract_management_search"/>
+            <field name="context">{}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Create your first contract!
+                </p>
+                <p>
+                    Track and manage all your contracts efficiently.
+                </p>
+            </field>
+        </record>
+
+        <!-- Fix Contract Numbers Action -->
+        <record id="action_fix_contract_numbers" model="ir.actions.server">
+            <field name="name">Fix Contract Numbers</field>
+            <field name="model_id" ref="model_contract_management"/>
+            <field name="state">code</field>
+            <field name="code">
+# Fix contract numbers for all contracts with 'New'
+contracts = env['contract.management'].search([('contract_number', '=', 'New')])
+if contracts:
+    contracts.action_fix_contract_numbers()
+else:
+    action = {
+        'type': 'ir.actions.client',
+        'tag': 'display_notification',
+        'params': {
+            'title': 'No Contracts to Fix',
+            'message': 'All contracts already have proper contract numbers.',
+            'type': 'info',
+        }
+    }
+            </field>
+        </record>
+    </data>
+</odoo>

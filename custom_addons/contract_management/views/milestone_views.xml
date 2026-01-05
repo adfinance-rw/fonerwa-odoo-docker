@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Contract Milestone Tree View -->
+        <record id="view_contract_milestone_tree" model="ir.ui.view">
+            <field name="name">contract.milestone.tree</field>
+            <field name="model">contract.milestone</field>
+            <field name="arch" type="xml">
+                <list string="Deliverables">
+                    <field name="contract_number"/>
+                    <field name="contract_name"/>
+                    <field name="name"/>
+                    <field name="milestone_date"/>
+                    <field name="status" decoration-success="status == 'completed'" decoration-danger="status == 'overdue'"/>
+                    <field name="payment_amount"/>
+                    <field name="days_until_due" decoration-danger="days_until_due &lt; 0"/>
+                    <field name="is_overdue" decoration-danger="is_overdue"/>
+                    <button name="action_view_contract" string="View Contract" type="object" class="btn-primary" icon="fa-external-link"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- Contract Milestone Form View -->
+        <record id="view_contract_milestone_form" model="ir.ui.view">
+            <field name="name">contract.milestone.form</field>
+            <field name="model">contract.milestone</field>
+            <field name="arch" type="xml">
+                <form string="Deliverables">
+                    <header>
+                        <button name="action_mark_completed" string="Mark Completed" type="object" 
+                                class="btn-primary" icon="fa-check-circle"
+                                invisible="not id or status == 'completed'"/>
+                        <button name="action_mark_cancelled" string="Cancel" type="object" class="btn-secondary" 
+                                invisible="not id or status in ('completed', 'cancelled')"/>
+                        <button name="action_send_alert" string="Send Alert" type="object" class="btn-info" 
+                                invisible="not id or alert_sent"/>
+                        <button name="action_test_send_milestone_email" string="Test Send Email" 
+                                type="object" class="btn-info" icon="fa-envelope"
+                                invisible="not id or not contract_manager_id or not contract_manager_id.email"
+                                confirm="This will send a test milestone expiration email to the contract manager. Continue?"/>
+                        <button name="action_reset_alert_date" string="Reset Alert Date" 
+                                type="object" class="btn-secondary" icon="fa-refresh"
+                                invisible="not id or not last_alert_date"
+                                confirm="This will reset the alert date so you can test sending emails again today. Continue?"/>
+                        <field name="status" widget="statusbar" statusbar_visible="pending,completed"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_button_box" name="button_box">
+                            <button name="action_view_contract" string="Contract" type="object" class="oe_stat_button" icon="fa-file-text-o">
+                                <field string="Contract" name="contract_number"/>
+                            </button>
+                        </div>
+                        
+                        <div class="oe_title">
+                            <h1>
+                                <field name="name" placeholder="Deliverable Name"/>
+                            </h1>
+                        </div>
+                        
+                        <group>
+                            <group string="Contract Information" readonly="1">
+                                <field name="contract_id"/>
+                                <field name="contract_number"/>
+                                <field name="contract_name"/>
+                                <field name="contract_manager_id"/>
+                            </group>
+                            <group string="Dates &amp; Status">
+                                <field name="milestone_date"/>
+                                <field name="days_until_due" readonly="1"/>
+                                <field name="is_overdue" readonly="1"/>
+                                <field name="completion_date" invisible="status != 'completed'"/>
+                            </group>
+                        </group>
+                        
+                        <group>
+                            <group string="Deliverable Details">
+                                <field name="deliverable" placeholder="Describe the deliverable..."/>
+                            </group>
+                            <group string="Payment &amp; Alerts">
+                                <field name="payment_amount" required="1"/>
+                                <field name="currency_id" invisible="1"/>
+                                <field name="alert_days_before"/>
+                                <field name="alert_sent" readonly="1"/>
+                                <field name="last_alert_date" readonly="1"/>
+                            </group>
+                        </group>
+                        
+                        <group string="Completion Details" invisible="status != 'completed'">
+                            <group string="Completion Information">
+                                <field name="completion_notes" placeholder="Enter completion notes..."/>
+                            </group>
+                            <group string="Proof of Completion">
+                                <field name="proof_of_completion" 
+                                       filename="proof_of_completion_filename"
+                                       widget="binary"/>
+                                <field name="proof_of_completion_filename"/>
+                            </group>
+                        </group>
+                    </sheet>
+                    <!-- <div class="oe_chatter">
+                        <field name="message_follower_ids"/>
+                        <field name="activity_ids"/>
+                        <field name="message_ids"/>
+                    </div> -->
+                    <chatter/>
+                </form>
+            </field>
+        </record>
+
+        <!-- Contract Milestone Search View -->
+        <record id="view_contract_milestone_search" model="ir.ui.view">
+            <field name="name">contract.milestone.search</field>
+            <field name="model">contract.milestone</field>
+            <field name="arch" type="xml">
+                <search string="Search Milestones">
+                    <field name="name"/>
+                    <field name="contract_id"/>
+                    <field name="contract_number"/>
+                    <field name="contract_name"/>
+                    <field name="status"/>
+                    <field name="contract_manager_id"/>
+                    <separator/>
+                    <filter string="Pending" name="pending" domain="[('status', '=', 'pending')]"/>
+                    <filter string="Completed" name="completed" domain="[('status', '=', 'completed')]"/>
+                    <filter string="Overdue" name="overdue" domain="[('is_overdue', '=', True)]"/>
+                    <filter string="Due This Week" name="due_this_week" domain="[('milestone_date', '&gt;=', datetime.datetime.now().date()), ('milestone_date', '&lt;=', datetime.datetime.now().date() + datetime.timedelta(days=7))]"/>
+                    <separator/>
+                    <group expand="0" string="Group By">
+                        <filter string="Contract" name="group_contract" context="{'group_by': 'contract_id'}"/>
+                        <filter string="Contract Number" name="group_contract_number" context="{'group_by': 'contract_number'}"/>
+                        <filter string="Status" name="group_status" context="{'group_by': 'status'}"/>
+                        <filter string="Milestone Date" name="group_date" context="{'group_by': 'milestone_date'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- Contract Milestone Action -->
+        <record id="action_contract_milestone" model="ir.actions.act_window">
+            <field name="name">Deliverables</field>
+            <field name="res_model">contract.milestone</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_contract_milestone_search"/>
+            <field name="context">{}</field>
+        </record>
+    </data>
+</odoo>

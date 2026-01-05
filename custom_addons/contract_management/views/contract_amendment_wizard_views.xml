@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        
+        <!-- Contract Amendment Wizard Form View -->
+        <record id="view_contract_amendment_wizard_form" model="ir.ui.view">
+            <field name="name">contract.amendment.wizard.form</field>
+            <field name="model">contract.amendment.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Create Contract Amendment">
+                    <header>
+                        <button name="action_create_amendment" string="Create Amendment" 
+                                type="object" class="btn-primary"/>
+                        <button name="action_cancel" string="Cancel" 
+                                type="object" class="btn-secondary"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_title">
+                            <h1>
+                                <field name="contract_id" readonly="1"/>
+                                <field name="contract_number" readonly="1"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <group string="Amendment Information">
+                                <field name="amendment_reason" nolabel="1" placeholder="Enter the reason for this amendment..."/>
+                            </group>
+                        </group>
+                        <notebook>
+                            <page string="Amend Basic Information">
+                                <group>
+                                    <group string="Contract Details">
+                                        <field name="name"/>
+                                        <field name="partner_id"/>
+                                        <field name="contract_type_id"/>
+                                        <field name="classification_ids" widget="many2many_tags"/>
+                                        <field name="category_ids" widget="many2many_tags"/>
+                                        <field name="department_ids" widget="many2many_tags"/>
+                                        <field name="facility_project"/>
+                                        <field name="contract_manager_id"/>
+                                    </group>
+                                    <group string="Contract Dates &amp; Value">
+                                        <field name="effective_date"/>
+                                        <field name="expiry_date"/>
+                                        <field name="notice_period_days"/>
+                                        <field name="contract_value"/>
+                                        <field name="currency_id" invisible="1"/>
+                                        <field name="version_number"/>
+                                    </group>
+                                </group>
+                            </page>
+                            <page string="Amend Document">
+                                <group>
+                                    <group string="Documents">
+                                        <field name="contract_documents" filename="contract_document_name" widget="binary"/>
+                                        <field name="contract_document_name"/>
+                                        <field name="additional_documents" filename="additional_document_name" widget="binary"/>
+                                        <field name="additional_document_name"/>
+                                    </group>
+                                </group>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Contract Amendment Wizard Action -->
+        <record id="action_contract_amendment_wizard" model="ir.actions.act_window">
+            <field name="name">Create Amendment</field>
+            <field name="res_model">contract.amendment.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+            <field name="context">{}</field>
+        </record>
+
+    </data>
+</odoo>

@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Type Views -->
+        <record id="view_contract_management_type_tree" model="ir.ui.view">
+            <field name="name">contract.management.type.tree</field>
+            <field name="model">contract.management.type</field>
+            <field name="arch" type="xml">
+                <list string="Contract Types">
+                    <field name="sequence" widget="handle"/>
+                    <field name="name"/>
+                    <field name="code"/>
+                    <field name="description"/>
+                    <field name="active"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_contract_management_type_form" model="ir.ui.view">
+            <field name="name">contract.management.type.form</field>
+            <field name="model">contract.management.type</field>
+            <field name="arch" type="xml">
+                <form string="Contract Type">
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="sequence"/>
+                                <field name="name"/>
+                                <field name="code"/>
+                            </group>
+                            <group>
+                                <field name="description"/>
+                                <field name="active"/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Classification Views -->
+        <record id="view_contract_management_classification_tree" model="ir.ui.view">
+            <field name="name">contract.management.classification.tree</field>
+            <field name="model">contract.management.classification</field>
+            <field name="arch" type="xml">
+                <list string="Contract Classifications">
+                    <field name="sequence" widget="handle"/>
+                    <field name="name"/>
+                    <field name="contract_type_ids" widget="many2many_tags"/>
+                    <field name="active"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_contract_management_classification_form" model="ir.ui.view">
+            <field name="name">contract.management.classification.form</field>
+            <field name="model">contract.management.classification</field>
+            <field name="arch" type="xml">
+                <form string="Contract Classification">
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="sequence"/>
+                                <field name="name"/>
+                                <field name="code"/>
+                            </group>
+                            <group>
+                                <field name="description"/>
+                                <field name="active"/>
+                            </group>
+                        </group>
+                        <group>
+                            <field name="contract_type_ids" widget="many2many_tags" 
+                                   options="{'no_create': True}"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Category Views -->
+        <record id="view_contract_management_category_tree" model="ir.ui.view">
+            <field name="name">contract.management.category.tree</field>
+            <field name="model">contract.management.category</field>
+            <field name="arch" type="xml">
+                <list string="Contract Categories">
+                    <field name="sequence" widget="handle"/>
+                    <field name="name"/>
+                    <field name="contract_type_ids" widget="many2many_tags"/>
+                    <field name="active"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_contract_management_category_form" model="ir.ui.view">
+            <field name="name">contract.management.category.form</field>
+            <field name="model">contract.management.category</field>
+            <field name="arch" type="xml">
+                <form string="Contract Category">
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="sequence"/>
+                                <field name="name"/>
+                                <field name="code"/>
+                            </group>
+                            <group>
+                                <field name="description"/>
+                                <field name="active"/>
+                            </group>
+                        </group>
+                        <group>
+                            <field name="contract_type_ids" widget="many2many_tags" 
+                                   options="{'no_create': True}"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Department Views -->
+        <record id="view_contract_management_department_tree" model="ir.ui.view">
+            <field name="name">contract.management.department.tree</field>
+            <field name="model">contract.management.department</field>
+            <field name="arch" type="xml">
+                <list string="Contract Departments">
+                    <field name="sequence" widget="handle"/>
+                    <field name="name"/>
+                    <field name="contract_type_ids" widget="many2many_tags"/>
+                    <field name="responsible_id"/>
+                    <field name="active"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_contract_management_department_form" model="ir.ui.view">
+            <field name="name">contract.management.department.form</field>
+            <field name="model">contract.management.department</field>
+            <field name="arch" type="xml">
+                <form string="Contract Department">
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="sequence"/>
+                                <field name="name"/>
+                                <field name="code"/>
+                            </group>
+                            <group>
+                                <field name="responsible_id"/>
+                                <field name="active"/>
+                            </group>
+                        </group>
+                        <group>
+                            <field name="description"/>
+                        </group>
+                        <group>
+                            <field name="contract_type_ids" widget="many2many_tags" 
+                                   options="{'no_create': True}"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Actions -->
+        <record id="action_contract_management_type" model="ir.actions.act_window">
+            <field name="name">Contract Types</field>
+            <field name="res_model">contract.management.type</field>
+            <field name="view_mode">list,form</field>
+            <field name="context">{}</field>
+        </record>
+
+        <record id="action_contract_management_classification" model="ir.actions.act_window">
+            <field name="name">Classifications</field>
+            <field name="res_model">contract.management.classification</field>
+            <field name="view_mode">list,form</field>
+            <field name="context">{}</field>
+        </record>
+
+        <record id="action_contract_management_category" model="ir.actions.act_window">
+            <field name="name">Categories</field>
+            <field name="res_model">contract.management.category</field>
+            <field name="view_mode">list,form</field>
+            <field name="context">{}</field>
+        </record>
+
+        <record id="action_contract_management_department" model="ir.actions.act_window">
+            <field name="name">Departments</field>
+            <field name="res_model">contract.management.department</field>
+            <field name="view_mode">list,form</field>
+            <field name="context">{}</field>
+        </record>
+
+        <!-- Menu -->
+        <menuitem id="menu_contract_configuration_root"
+                  name="Configuration"
+                  parent="contract_management.menu_contract_management_root"
+                  sequence="30"/>
+
+        <menuitem id="menu_contract_configuration_type"
+                  name="Contract Types"
+                  parent="menu_contract_configuration_root"
+                  action="action_contract_management_type"
+                  sequence="10"/>
+
+        <menuitem id="menu_contract_configuration_classification"
+                  name="Classifications"
+                  parent="menu_contract_configuration_root"
+                  action="action_contract_management_classification"
+                  sequence="20"/>
+
+        <menuitem id="menu_contract_configuration_category"
+                  name="Categories"
+                  parent="menu_contract_configuration_root"
+                  action="action_contract_management_category"
+                  sequence="30"/>
+
+        <menuitem id="menu_contract_configuration_department"
+                  name="Departments"
+                  parent="menu_contract_configuration_root"
+                  action="action_contract_management_department"
+                  sequence="40"/>
+    </data>
+</odoo>
+

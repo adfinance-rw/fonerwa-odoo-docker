@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Contract Archive Wizard Form View -->
+        <record id="view_contract_archive_wizard_form" model="ir.ui.view">
+            <field name="name">contract.archive.wizard.form</field>
+            <field name="model">contract.archive.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Archive Contracts">
+                    <sheet>
+                        <group>
+                            <group string="Contracts to Archive">
+                                <field name="contract_ids" widget="many2many_tags"/>
+                            </group>
+                            <group string="Archive Details">
+                                <field name="archive_reason"/>
+                                <field name="archive_date"/>
+                                <field name="archive_notes"/>
+                            </group>
+                        </group>
+                    </sheet>
+                    <footer>
+                        <button name="action_archive_contracts" string="Archive Contracts" type="object" class="btn-primary"/>
+                        <button string="Cancel" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <!-- Contract Archive Wizard Action -->
+        <record id="action_contract_archive_wizard" model="ir.actions.act_window">
+            <field name="name">Archive Contracts</field>
+            <field name="res_model">contract.archive.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+            <field name="context">{}</field>
+        </record>
+    </data>
+</odoo>

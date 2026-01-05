@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Main Menu -->
+        <menuitem id="menu_contract_management_root"
+                  name="Contract Management"
+                  sequence="10"
+                  web_icon="contract_management,static/description/icon.png"/>
+
+        <!-- Sub Menus -->
+        <menuitem id="menu_contract_management_contracts"
+                  name="Contracts"
+                  parent="menu_contract_management_root"
+                  action="action_contract_management"
+                  sequence="10"/>
+        
+        <menuitem id="menu_contract_management_milestones"
+                  name="Deliverable"
+                  parent="menu_contract_management_root"
+                  action="action_contract_milestone"
+                  sequence="15"/>
+
+        <!-- Scheduled Actions Menu -->
+        <record id="action_contract_scheduled_actions" model="ir.actions.act_window">
+            <field name="name">Scheduled Actions</field>
+            <field name="res_model">ir.cron</field>
+            <field name="view_mode">list,form</field>
+            <field name="domain">[('model_id.model', '=', 'contract.expiration.cron')]</field>
+            <field name="context">{}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No scheduled actions found
+                </p>
+                <p>
+                    Scheduled actions (cron jobs) for contract management will appear here.
+                    You can manually trigger cron jobs from here.
+                </p>
+            </field>
+        </record>
+
+        <menuitem id="menu_contract_management_scheduled_actions"
+                  name="Scheduled Actions"
+                  parent="menu_contract_management_root"
+                  action="action_contract_scheduled_actions"
+                  sequence="20"/>
+
+    </data>
+</odoo>

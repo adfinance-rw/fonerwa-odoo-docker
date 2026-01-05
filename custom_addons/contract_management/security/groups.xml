@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Contract Management Groups -->
+        <record id="group_contract_user" model="res.groups">
+            <field name="name">Contract User</field>
+            <field name="comment">Can view and create contracts</field>
+        </record>
+
+        <record id="group_contract_manager" model="res.groups">
+            <field name="name">Contract Manager</field>
+            <field name="comment">Can manage all contracts and access reports</field>
+        </record>
+
+        <record id="group_contract_legal" model="res.groups">
+            <field name="name">Contract Legal</field>
+            <field name="comment">Legal team access to contracts</field>
+        </record>
+
+        <record id="group_contract_procurement" model="res.groups">
+            <field name="name">Contract Procurement</field>
+            <field name="comment">Procurement team access to contracts</field>
+        </record>
+
+        <record id="group_contract_finance" model="res.groups">
+            <field name="name">Contract Finance</field>
+            <field name="comment">Finance team access to contracts</field>
+        </record>
+    </data>
+</odoo>

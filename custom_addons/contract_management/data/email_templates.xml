@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Email Template: Contract Expiration Notice -->
+        <record id="email_template_contract_expiration" model="mail.template">
+            <field name="name">Contract Expiration Notice</field>
+            <field name="model_id" ref="model_contract_management"/>
+            <field name="subject">Contract Expiration Notice: ${object.name}</field>
+            <field name="email_from">${(object.contract_manager_id.email_formatted or user.email_formatted) or ''}</field>
+            <field name="email_to">${object.contract_manager_id.email or ''}</field>
+            <field name="partner_to">${object.contract_manager_id.id or False}</field>
+            <field name="body_html" type="html">
+                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h2 style="color: #875A7B; margin-bottom: 20px;">Contract Expiration Notice</h2>
+                    
+                    <p>Dear ${object.contract_manager_id.name or 'Administrator'},</p>
+                    
+                    <p>This is to notify you that the following contract is expiring soon:</p>
+                    
+                    <table style="border-collapse: collapse; width: 100%; margin: 20px 0; border: 1px solid #ddd;">
+                        <tr>
+                            <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold; background-color: #f5f5f5; width: 30%;">Contract Number:</td>
+                            <td style="padding: 12px; border: 1px solid #ddd;">${object.contract_number or 'N/A'}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold; background-color: #f5f5f5;">Contract Title:</td>
+                            <td style="padding: 12px; border: 1px solid #ddd;">${object.name}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold; background-color: #f5f5f5;">Contractor/Vendor:</td>
+                            <td style="padding: 12px; border: 1px solid #ddd;">${object.partner_id.name or 'N/A'}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold; background-color: #f5f5f5;">Expiry Date:</td>
+                            <td style="padding: 12px; border: 1px solid #ddd; color: #d9534f; font-weight: bold;">
+                                ${format_date(object.expiry_date) if object.expiry_date else 'N/A'}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold; background-color: #f5f5f5;">Days to Expiry:</td>
+                            <td style="padding: 12px; border: 1px solid #ddd; color: #d9534f; font-weight: bold;">
+                                ${object.days_to_expiry} days
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold; background-color: #f5f5f5;">Contract Value:</td>
+                            <td style="padding: 12px; border: 1px solid #ddd;">
+                                ${format_amount(object.contract_value or 0.0, object.currency_id) if object.contract_value else '0.0'} ${object.currency_id.name or ''}
+                            </td>
+                        </tr>
+                    </table>
+                    
+                    <p style="color: #d9534f; font-weight: bold; font-size: 14px; margin-top: 20px;">
+                        Please take necessary action to renew or extend this contract before it expires.
+                    </p>
+                    
+                    <p style="margin-top: 30px;">
+                        Best regards,<br/>
+                        <strong>Contract Management System</strong>
+                    </p>
+                    
+                    <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;"/>
+                    <p style="color: #666; font-size: 12px;">
+                        You can view this contract in Odoo by clicking 
+                        <a href="${object.get_base_url()}/web#id=${object.id}&amp;model=${object._name}&amp;view_type=form" style="color: #875A7B;">here</a>.
+                    </p>
+                </div>
+            </field>
+            <field name="auto_delete" eval="True"/>
+        </record>
+    </data>
+</odoo>
+
