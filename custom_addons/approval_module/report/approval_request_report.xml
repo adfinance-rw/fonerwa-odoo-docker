@@ -8,49 +8,131 @@
 
                 <t t-set="cfo" t-value="o.company_id.cfo_id.sudo()"/>
                 <t t-set="ceo" t-value="o.company_id.ceo_id.sudo()"/>
-                <t t-set="cfo_line" t-value="o.approver_ids.filtered(lambda l: cfo and l.user_id.id == cfo.id)[:1]"/>
-                <t t-set="ceo_line" t-value="o.approver_ids.filtered(lambda l: ceo and l.user_id.id == ceo.id)[:1]"/>
+                <t t-set="cfo_line" t-value="o.approver_ids.filtered(lambda l: cfo and (l.user_id.id == cfo.id or l.delegated_by_id.id == cfo.id))[:1]"/>
+                <t t-set="ceo_line" t-value="o.approver_ids.filtered(lambda l: ceo and (l.user_id.id == ceo.id or l.delegated_by_id.id == ceo.id))[:1]"/>
+                <t t-set="cfo_sign_user" t-value="cfo_line and cfo_line.user_id and cfo_line.user_id.sudo() or False"/>
+                <t t-set="ceo_sign_user" t-value="ceo_line and ceo_line.user_id and ceo_line.user_id.sudo() or False"/>
                 <t t-set="requester" t-value="(o.request_owner_id or o.create_uid).sudo()"/>
                 <t t-set="dept_manager_user" t-value="(requester.employee_id and requester.employee_id.department_id and requester.employee_id.department_id.manager_id and requester.employee_id.department_id.manager_id.user_id) or False"/>
                 <t t-set="reviewer" t-value="(dept_manager_user or requester.line_manager_id) and (dept_manager_user or requester.line_manager_id).sudo()"/>
                 <t t-set="reviewer_line" t-value="o.approver_ids.filtered(lambda l: reviewer and l.user_id.id == reviewer.id)[:1]"/>
+                <t t-set="reviewer_lines_all" t-value="o.approver_ids.filtered(lambda l: l.approval_role and 'Reviewer' in l.approval_role)"/>
+                <t t-set="additional_reviewer_lines" t-value="reviewer_lines_all.filtered(lambda l: not reviewer_line or l.id != reviewer_line.id)"/>
+                <t t-set="vat_ratio" t-value="1.18"/>
                 <t t-set="is_specialist" t-value="not reviewer"/>
 
                 <style>
-                    .memo-table th { background-color:#6db286; color:#000; }
-                    .memo-table, .memo-table th, .memo-table td { border:1px solid #4b8a62; }
-                    .memo-table { width:100%; border-collapse:collapse; }
-                    .memo-title { text-align:center; margin-top:16px; font-weight:700; }
-                    .sig-box { min-height:60px; }
-                    .signature-image { max-height: 50px; max-width: 150px; }
-                    .sig-caption { font-size: 10px; color: #555; margin-top: 4px; }
+                    body, div, span, p, td { font-size: 16px; }
+                    h1, h2, h3, h4, h5, h6 { font-size: 16px; font-weight: 700; }
+                    
+                    .article {
+                        padding: 0 !important;
+                    }
+                    
+                    /* Header spacing */
+                    .header {
+                        margin-bottom: 30px !important;
+                    }
+                    
+                    .memo-table th { background-color:#6db286; color:#000; font-size: 16px; font-weight: 700; padding: 10px; }
+                    .memo-table, .memo-table th, .memo-table td { border:1px solid #4b8a62; font-size: 16px; }
+                    .memo-table td { padding: 12px; }
+                    .memo-table { width:100%; border-collapse:collapse; margin-top: 16px; }
+                    .sig-box { min-height:70px; }
+                    .signature-image { max-height: 60px; max-width: 180px; }
+                    .sig-caption { font-size: 10px; color: #555; margin-top: 2px; }
+                    .sig-caption span { font-size: 10px; }
+                    .reviewers-table .sig-box { min-height:50px; }
+                    .reviewers-table .signature-image { max-height: 50px; max-width: 150px; }
+                    .reviewers-table .sig-caption { font-size: 10px; color: #555; margin-top: 2px; }
+                    
+                    /* Additional Reviewers Table - no borders, no colors */
+                    .reviewers-section { margin-top:32px; page-break-inside: avoid; border: none; }
+                    .reviewers-table, .reviewers-table * { 
+                        border: none !important;
+                        border-top: none !important;
+                        border-bottom: none !important;
+                        border-left: none !important;
+                        border-right: none !important;
+                    }
+                    .reviewers-table { 
+                        width:100%; 
+                        border-collapse:collapse; 
+                        border-spacing:0; 
+                        font-size:14px;
+                    }
+                    .reviewers-table thead { 
+                        border: none !important;
+                    }
+                    .reviewers-table thead tr { 
+                        border: none !important;
+                    }
+                    .reviewers-table thead th { 
+                        background-color: transparent; 
+                        color:#000; 
+                        font-weight:700; 
+                        padding:8px 10px;
+                        border: none !important;
+                        border-top: none !important;
+                        border-bottom: none !important;
+                        text-align:left;
+                        font-size:16px;
+                    }
+                    .reviewers-table tbody { 
+                        border: none !important;
+                    }
+                    .reviewers-table tbody tr { 
+                        border: none !important;
+                    }
+                    .reviewers-table tbody td { 
+                        padding:10px 12px; 
+                        vertical-align:top; 
+                        border: none !important;
+                        width:33.33%;
+                    }
+                    .reviewers-table tbody tr.cols-1 td { width:100%; }
+                    .reviewers-table tbody tr.cols-2 td { width:50%; }
+                    .reviewer-cell { min-height:90px; }
+                    .reviewer-cell h6 { margin:0 0 6px 0; font-weight:700; font-size:14px; }
+                    
+                    /* Section headings */
+                    .section-heading { font-weight:700; font-size:16px; margin-top:20px; margin-bottom:10px; }
+                    .section-content { font-size:14px; line-height:1.6; }
                 </style>
-
-                <h4 class="memo-title">INTERNAL MEMO</h4>
-
-                <table class="memo-table mt-3">
+                <!-- Company Logo -->
+                <div style="margin: 0; padding: 0; text-align: left;">
+                    <img t-if="o.company_id and o.company_id.logo"
+                            t-att-src="image_data_uri(o.company_id.logo)"
+                            style="width: 200px; height: auto;"
+                            alt="Company Logo"/>
+                </div>
+                <!-- Header table - only show if we have approvers or want to show date -->
+                <table class="memo-table mt-3" t-if="o.create_date or o.date or o.write_date or cfo_line or ceo_line">
                     <thead>
                         <tr>
-                            <th style="width:30%">Date</th>
-                            <th style="width:35%">For Approval</th>
-                            <th style="width:35%">For authorize</th>
+                            <th t-att-style="'width:' + ('100' if not cfo_line and not ceo_line else '30') + '%'">Date</th>
+                            <th style="width:35%" t-if="cfo_line">For Approval</th>
+                            <th style="width:35%" t-if="ceo_line">For Authorize</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
                             <td style="vertical-align: top; padding: 8px;">
-                                <div>
-                                    <span t-esc="(o.create_date or o.date or o.write_date).strftime('%d %B %Y') if (o.create_date or o.date or o.write_date) else ''"/>
+                                <div t-if="o.create_date or o.date or o.write_date">
+                                    <span t-esc="(o.create_date or o.date or o.write_date).strftime('%d %B %Y')"/>
                                 </div>
                             </td>
-                            <td style="vertical-align: top; padding: 8px;">
+                            <td style="vertical-align: top; padding: 8px;" t-if="cfo_line">
                                 <div><strong>Chief Finance Officer</strong></div>
                                 <div class="sig-box" style="margin-top:8px">
-                                    <t t-if="cfo_line and cfo_line.status == 'approved' and cfo and cfo.sign_signature">
-                                        <img t-att-src="'data:image/png;base64,%s' % cfo.sign_signature.decode('utf-8') if isinstance(cfo.sign_signature, bytes) else cfo.sign_signature" 
-                                             class="signature-image" 
-                                             alt="CFO Signature"
-                                             t-att-onerror="'this.style.display=\'none\''"/>
+                                    <t t-if="cfo_line.status == 'approved' and cfo_sign_user and cfo_sign_user.sign_signature">
+                                        <div class="sig-caption" t-if="cfo_line.delegated_by_id" style="font-size: 10px; font-weight: 600;">
+                                            For <span t-esc="cfo_line.delegated_by_id.name"/>
+                                        </div>
+                                        <img t-att-src="'data:image/png;base64,%s' % cfo_sign_user.sign_signature.decode('utf-8') if isinstance(cfo_sign_user.sign_signature, bytes) else cfo_sign_user.sign_signature" 
+                                                class="signature-image" 
+                                                alt="CFO Signature"
+                                                t-att-onerror="'this.style.display=\'none\''"/>
                                         <div class="sig-caption">
                                             Digitally signed on
                                             <t t-if="cfo_line.write_date">
@@ -60,70 +142,147 @@
                                     </t>
                                 </div>
                             </td>
-                            <td style="vertical-align: top; padding: 8px;">
-                                <t t-if="ceo_line">
-                                    <div><strong>Chief Executive Officer</strong></div>
-                                    <div class="sig-box" style="margin-top:8px">
-                                        <t t-if="ceo_line.status == 'approved' and ceo and ceo.sign_signature">
-                                            <img t-att-src="'data:image/png;base64,%s' % ceo.sign_signature.decode('utf-8') if isinstance(ceo.sign_signature, bytes) else ceo.sign_signature" 
-                                                 class="signature-image" 
-                                                 alt="CEO Signature"
-                                                 t-att-onerror="'this.style.display=\'none\''"/>
-                                            <div class="sig-caption">
-                                                Digitally signed on
-                                                <t t-if="ceo_line.write_date">
-                                                    <span t-esc="ceo_line.write_date.strftime('%d %B %Y')"/>
-                                                </t>
-                                            </div>
-                                        </t>
-                                    </div>
-                                </t>
-                                <t t-else="">
-                                    <div style="text-align:center; padding-top:20px; color:#999;">-</div>
-                                </t>
+                            <td style="vertical-align: top; padding: 8px;" t-if="ceo_line">
+                                <div><strong>Chief Executive Officer</strong></div>
+                                <div class="sig-box" style="margin-top:8px">
+                                    <t t-if="ceo_line.status == 'approved' and ceo_sign_user and ceo_sign_user.sign_signature">
+                                        <div class="sig-caption" t-if="ceo_line.delegated_by_id" style="font-size: 10px; font-weight: 600;">
+                                            For <span t-esc="ceo_line.delegated_by_id.name"/>
+                                        </div>
+                                        <img t-att-src="'data:image/png;base64,%s' % ceo_sign_user.sign_signature.decode('utf-8') if isinstance(ceo_sign_user.sign_signature, bytes) else ceo_sign_user.sign_signature" 
+                                                class="signature-image" 
+                                                alt="CEO Signature"
+                                                t-att-onerror="'this.style.display=\'none\''"/>
+                                        <div class="sig-caption">
+                                            Digitally signed on
+                                            <t t-if="ceo_line.write_date">
+                                                <span t-esc="ceo_line.write_date.strftime('%d %B %Y')"/>
+                                            </t>
+                                        </div>
+                                    </t>
+                                </div>
                             </td>
                         </tr>
                     </tbody>
                 </table>
 
-                <div class="mt-4">
-                    <h5>
-                        <span style="text-decoration: underline; font-weight:700">Observation:</span>
-                        <span>
-                            <t t-esc="(o.category_id and o.category_id.name) or ''"/>.
-                        </span>
-                    </h5>
+                <!-- SUBJECT -->
+                <div style="margin-top:24px;" t-if="o.description_subject">
+                    <h5 class="section-heading"><u>Subject:</u> <span style="font-weight:normal;" t-esc="o.description_subject"/></h5>
                 </div>
 
-                <div class="mt-3">
-                    <div t-if="o.reason" style="margin-top:6px">
-                        <span t-field="o.reason"/>
+                <!-- PURPOSE -->
+                <div style="margin-top:24px;" t-if="o.description_background">
+                    <h5 class="section-heading"><u>Purpose</u></h5>
+                    <div class="section-content" style="margin-top:12px; text-align: justify;">
+                        <span t-field="o.description_background"/>
+                    </div>
+                </div>
+
+                <!-- BUDGET LINE -->
+                <div style="margin-top:24px;" t-if="o.description_budget_line">
+                    <h5 class="section-heading"><u>Budget Line</u></h5>
+                    <div class="section-content" style="margin-top:12px;">
+                        <span t-esc="o.description_budget_line"/>
+                    </div>
+                </div>
+
+                <!-- CONTRACT DETAILS -->
+                <div style="margin-top:24px;" t-if="o.contract_id or o.contract_price_line_ids">
+                    <h5 class="section-heading"><u>Contract Details</u></h5>
+                    
+                    <!-- 1. Contract Validity -->
+                    <div class="section-content" style="margin-top:16px; margin-left:24px;" t-if="o.contract_id">
+                        <p style="font-weight: 600; margin-bottom:8px;">
+                            1. Contract Validity: 
+                            <span style="font-weight: normal;">
+                                ( From 
+                                <span t-if="o.contract_id.effective_date" t-esc="o.contract_id.effective_date.strftime('%d/%m/%Y')"/>
+                                to 
+                                <span t-if="o.contract_id.expiry_date" t-esc="o.contract_id.expiry_date.strftime('%d/%m/%Y')"/>
+                                )
+                            </span>
+                        </p>
+                    </div>
+
+                    <!-- 2. Items details -->
+                    <div style="margin-top:16px; margin-left:24px;" t-if="o.contract_price_line_ids">
+                        <p style="font-weight: 600; margin-bottom:12px;">2. Items details</p>
+                        <div>
+                            <table class="table table-bordered" style="width:100%; font-size: 13px; border-collapse:collapse;">
+                                <thead style="background-color:#0d5f4a; color:#fff;">
+                                    <tr>
+                                        <th style="text-align:center; padding: 8px; font-weight:700;">NO</th>
+                                        <th style="text-align:center; padding: 8px; font-weight:700;">S/N PER CONTRACT</th>
+                                        <th style="text-align:center; padding: 8px; font-weight:700;">ITEM NAME PER CONTRACT</th>
+                                        <th style="text-align:center; padding: 8px; font-weight:700;">QUANTITY</th>
+                                        <th style="text-align:center; padding: 8px; font-weight:700;">UNIT PRICE<br/>(VAT EXCLUSIVE)</th>
+                                        <th style="text-align:center; padding: 8px; font-weight:700;">TOTAL PRICE<br/>(VAT EXCLUSIVE)</th>
+                                        <th style="text-align:center; padding: 8px; font-weight:700;">UNIT PRICE<br/>(VAT INCLUSIVE)</th>
+                                        <th style="text-align:center; padding: 8px; font-weight:700;">TOTAL PRICE<br/>(VAT INCLUSIVE)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="o.contract_price_line_ids" t-as="line">
+                                        <tr>
+                                            <td style="text-align:center; padding: 8px;">
+                                                <span t-esc="line_index + 1"/>
+                                            </td>
+                                            <td style="padding: 8px;">
+                                                <span t-esc="line.serial_number_per_contract or ''"/>
+                                            </td>
+                                            <td style="padding: 8px;">
+                                                <span t-esc="line.item_name_per_contract or ''"/>
+                                            </td>
+                                            <td style="text-align:center; padding: 8px;">
+                                                <span t-esc="line.quantity or 0"/>
+                                            </td>
+                                            <t t-set="line_unit_exclusive" t-value="line.unit_price_vat_exclusive if line.unit_price_vat_exclusive not in (False, None) else ((line.unit_price_vat_inclusive or 0.0) / vat_ratio)"/>
+                                            <t t-set="line_total_exclusive" t-value="line.total_price_vat_exclusive if line.total_price_vat_exclusive not in (False, None) else ((line.quantity or 0.0) * line_unit_exclusive)"/>
+                                            <td style="text-align:right; padding: 8px;">
+                                                <span t-esc="'{:,.2f}'.format(line_unit_exclusive or 0.0)"/>
+                                            </td>
+                                            <td style="text-align:right; padding: 8px;">
+                                                <span t-esc="'{:,.2f}'.format(line_total_exclusive or 0.0)"/>
+                                            </td>
+                                            <td style="text-align:right; padding: 8px;">
+                                                <span t-esc="'{:,.2f}'.format(line.unit_price_vat_inclusive or 0.0)"/>
+                                            </td>
+                                            <td style="text-align:right; padding: 8px;">
+                                                <span t-esc="'{:,.2f}'.format(line.total_price_vat_inclusive or 0.0)"/>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Prepared by / Reviewed by (conditional) -->
-                <div class="row mt-5">
+                <div class="row" t-if="requester" style="margin-top:32px;">
                     <t t-if="is_specialist">
                         <!-- Specialist: Only show Prepared by (full width) -->
                         <div class="col-12">
-                            <h5>Prepared by</h5>
-                            <div style="margin-top:6px">
-                                <t t-if="requester and requester.sign_signature">
-                                    <strong><span t-esc="requester.name"/></strong>
-                                </t>
+                            <h5 style="font-size:16px; font-weight:700; margin-bottom:8px;">Prepared by</h5>
+                            <div style="margin-top:8px; font-size:14px;">
+                                <strong><span t-esc="requester.name"/></strong>
                             </div>
                             <div class="sig-box" style="margin-top:12px">
-                                <t t-if="requester and requester.sign_signature">
+                                <t t-if="requester.sign_signature">
                                     <img t-att-src="'data:image/png;base64,%s' % requester.sign_signature.decode('utf-8') if isinstance(requester.sign_signature, bytes) else requester.sign_signature" 
-                                         class="signature-image" 
-                                         alt="Requester Signature"
-                                         t-att-onerror="'this.style.display=\'none\''"/>
+                                            class="signature-image" 
+                                            alt="Requester Signature"
+                                            t-att-onerror="'this.style.display=\'none\''"/>
                                     <div class="sig-caption">
                                         Digitally signed on
                                         <t t-if="o.create_date">
                                             <span t-esc="o.create_date.strftime('%d %B %Y')"/>
                                         </t>
                                     </div>
+                                </t>
+                                <t t-else="">
+                                    <div style="color:#999; font-style: italic;">Signature pending</div>
                                 </t>
                             </div>
                         </div>
@@ -131,18 +290,16 @@
                     <t t-else="">
                         <!-- Normal User: Show both Prepared by and Reviewed by -->
                         <div class="col-6">
-                            <h5>Prepared by</h5>
-                            <div style="margin-top:6px">
-                                <t t-if="requester and requester.sign_signature">
-                                    <strong><span t-esc="requester.name"/></strong>
-                                </t>
+                            <h5 style="font-size:16px; font-weight:700; margin-bottom:8px;">Prepared by</h5>
+                            <div style="margin-top:8px; font-size:14px;">
+                                <strong><span t-esc="requester.name"/></strong>
                             </div>
                             <div class="sig-box" style="margin-top:12px">
-                                <t t-if="requester and requester.sign_signature">
+                                <t t-if="requester.sign_signature">
                                     <img t-att-src="'data:image/png;base64,%s' % requester.sign_signature.decode('utf-8') if isinstance(requester.sign_signature, bytes) else requester.sign_signature" 
-                                         class="signature-image" 
-                                         alt="Requester Signature"
-                                         t-att-onerror="'this.style.display=\'none\''"/>
+                                            class="signature-image" 
+                                            alt="Requester Signature"
+                                            t-att-onerror="'this.style.display=\'none\''"/>
                                     <div class="sig-caption">
                                         Digitally signed on
                                         <t t-if="o.create_date">
@@ -150,21 +307,27 @@
                                         </t>
                                     </div>
                                 </t>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <h5>Reviewed by</h5>
-                            <div style="margin-top:6px">
-                                <t t-if="reviewer_line and reviewer_line.status == 'approved' and reviewer and reviewer.sign_signature">
-                                    <strong><span t-esc="reviewer.name"/></strong>
+                                <t t-else="">
+                                    <div style="color:#999; font-style: italic;">Signature pending</div>
                                 </t>
                             </div>
+                        </div>
+                        <div class="col-6" t-if="reviewer_line">
+                            <h5 style="font-size:16px; font-weight:700; margin-bottom:8px;">Reviewed by</h5>
+                            <div style="margin-top:8px; font-size:14px;">
+                                <strong>
+                                    <span t-esc="reviewer_line.user_id.name if reviewer_line.user_id else (reviewer.name if reviewer else 'Reviewer')"/>
+                                </strong>
+                            </div>
                             <div class="sig-box" style="margin-top:12px">
-                                <t t-if="reviewer_line and reviewer_line.status == 'approved' and reviewer and reviewer.sign_signature">
-                                    <img t-att-src="'data:image/png;base64,%s' % reviewer.sign_signature.decode('utf-8') if isinstance(reviewer.sign_signature, bytes) else reviewer.sign_signature" 
-                                         class="signature-image" 
-                                         alt="Reviewer Signature"
-                                         t-att-onerror="'this.style.display=\'none\''"/>
+                                <t t-if="reviewer_line.status == 'approved' and reviewer_line.user_id and reviewer_line.user_id.sudo().sign_signature">
+                                    <div class="sig-caption" t-if="reviewer_line.delegated_by_id" style="font-size: 10px; font-weight: 600;">
+                                        For <span t-esc="reviewer_line.delegated_by_id.name"/>
+                                    </div>
+                                    <img t-att-src="'data:image/png;base64,%s' % reviewer_line.user_id.sudo().sign_signature.decode('utf-8') if isinstance(reviewer_line.user_id.sudo().sign_signature, bytes) else reviewer_line.user_id.sudo().sign_signature" 
+                                            class="signature-image" 
+                                            alt="Reviewer Signature"
+                                            t-att-onerror="'this.style.display=\'none\''"/>
                                     <div class="sig-caption">
                                         Digitally signed on
                                         <t t-if="reviewer_line.write_date">
@@ -172,10 +335,64 @@
                                         </t>
                                     </div>
                                 </t>
+                                <t t-else="">
+                                    <div style="color:#999; font-style: italic;">Approval pending</div>
+                                </t>
                             </div>
                         </div>
                     </t>
                 </div>
+                
+                <t t-if="additional_reviewer_lines">
+                    <t t-set="total_reviewers" t-value="len(additional_reviewer_lines)"/>
+                    <t t-set="rows_needed" t-value="(total_reviewers + 2) // 3"/>
+                    <div class="reviewers-section">
+                        <table class="reviewers-table" style="border: none !important; border-top: none !important; border-bottom: none !important;">
+                            <thead style="border: none !important;">
+                                <tr style="border: none !important;">
+                                    <th colspan="3" style="border: none !important; border-top: none !important; border-bottom: none !important;">Additional Reviewers</th>
+                                </tr>
+                            </thead>
+                            <tbody style="border: none !important;">
+                                <t t-foreach="range(rows_needed)" t-as="row_num">
+                                    <t t-set="start_index" t-value="row_num * 3"/>
+                                    <t t-set="end_index" t-value="min(start_index + 3, total_reviewers)"/>
+                                    <t t-set="cols_in_row" t-value="end_index - start_index"/>
+                                    <tr t-attf-class="{{cols_in_row == 1 and 'cols-1' or (cols_in_row == 2 and 'cols-2' or '')}}" style="border: none !important;">
+                                        <t t-foreach="range(start_index, end_index)" t-as="reviewer_index">
+                                            <t t-set="extra_rev" t-value="additional_reviewer_lines[reviewer_index]"/>
+                                            <td style="border: none !important;">
+                                                <div class="reviewer-cell">
+                                                    <h6><span t-esc="extra_rev.user_id.name if extra_rev.user_id else _('Reviewer')"/></h6>
+                                                    <div class="sig-box" style="margin-top:4px;">
+                                                        <t t-if="extra_rev.status == 'approved' and extra_rev.user_id and extra_rev.user_id.sudo().sign_signature">
+                                                            <div class="sig-caption" t-if="extra_rev.delegated_by_id" style="font-size: 10px; font-weight: 600;">
+                                                                For <span t-esc="extra_rev.delegated_by_id.name"/>
+                                                            </div>
+                                                            <img t-att-src="'data:image/png;base64,%s' % extra_rev.user_id.sudo().sign_signature.decode('utf-8') if isinstance(extra_rev.user_id.sudo().sign_signature, bytes) else extra_rev.user_id.sudo().sign_signature" 
+                                                                class="signature-image" 
+                                                                alt="Reviewer Signature"
+                                                                t-att-onerror="'this.style.display=\'none\''"/>
+                                                            <div class="sig-caption">
+                                                                Digitally signed on
+                                                                <t t-if="extra_rev.write_date">
+                                                                    <span t-esc="extra_rev.write_date.strftime('%d %B %Y')"/>
+                                                                </t>
+                                                            </div>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <div style="color:#999; font-style: italic; font-size:13px;">Approval pending</div>
+                                                        </t>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </t>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+                </t>
             </t>
         </xpath>
     </template>
@@ -184,23 +401,20 @@
     <template id="external_layout_footer_inherit" inherit_id="web.external_layout_standard">
         <xpath expr="//div[contains(@class, 'o_footer_content')]" position="replace">
             <div class="o_footer_content d-flex border-top pt-2">
-                <div class="flex-grow-1 text-center" style="padding-top: 8px; font-size: 9pt;">
-                    <div style="font-weight: bold; color: #4b8a62;">
-                        <span t-esc="company.name"/>
+                <div class="flex-grow-1 text-center" style="padding-top: 8px; font-size: 11px;">
+                    <div style="font-size: 16px;">
+                        <span t-esc="company.name" style="font-weight: bold; color: #4b8a62;"/>
                         <t t-if="company.street"> | <span t-esc="company.street"/></t>
+                        <t t-if="company.street2"> | <span t-esc="company.street2"/></t>
                     </div>
-                    <div>
-                        <span t-if="company.street2" t-esc="company.street2"/>
-                        <t t-if="company.phone"> | Tel: <span t-esc="company.phone"/></t>
-                        <t t-if="company.email"> | Email: <span t-esc="company.email"/></t>
+                    <div style="font-size: 16px;">
+                        <span t-if="company.city" t-esc="company.city"/>
+                        <t t-if="company.phone"> | <b>Tel:</b> <span t-esc="company.phone"/></t>
+                        <t t-if="company.email"> | <b>Email:</b> <span t-esc="company.email"/></t>
                     </div>
-                    <div t-if="company.website">
-                        <span t-esc="company.website"/>
+                    <div t-if="company.website" style="font-size: 16px;">
+                        <span t-esc="company.website" style="color: #4b8a62;"/>
                     </div>
-                </div>
-                <div class="text-end text-muted">
-                    <div t-if="report_type == 'pdf' and display_name_in_footer" t-out="o and o.name or ''"/>
-                    <div t-if="report_type == 'pdf'" class="text-nowrap">Page <span class="page"/> / <span class="topage"/></div>
                 </div>
             </div>
         </xpath>
@@ -215,13 +429,11 @@
         </xpath>
     </template>
 
-    <!-- Header override: show only logo, bigger; remove address/details block -->
+    <!-- Hide the default header completely -->
     <template id="external_layout_header_logo_only" inherit_id="web.external_layout_standard">
         <!-- Replace the top header row (logo + tagline) with a single bigger logo -->
         <xpath expr="//div[@class='d-flex justify-content-between align-items-center mb-2']" position="replace">
-            <div class="d-flex justify-content-start align-items-center mb-2">
-                <img t-if="company.logo" class="o_company_logo_small" t-att-src="image_data_uri(company.logo)" alt="Logo" style="height: 150px; width: auto;"/>
-            </div>
+            <div/>
         </xpath>
         <!-- Remove the company address column row under the header -->
         <xpath expr="//div[@t-attf-class='header o_company_#{company.id}_layout']/div[@class='row']" position="replace">

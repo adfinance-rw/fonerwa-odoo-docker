@@ -7,6 +7,7 @@
       <xpath expr="//sheet/notebook/page[@name='general_info']" position="inside">
         <group string="Approvals">
           <field name="cfo_id"/>
+          <field name="senior_approver_id"/>
           <field name="ceo_id"/>
         </group>
       </xpath>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Override "My Requests" menu to make it a direct menu item (not under "My Approvals") -->
+    <record id="approvals.approvals_request_menu_my" model="ir.ui.menu">
+        <field name="name">My Requests</field>
+        <field name="parent_id" ref="approvals.approvals_menu_root"/>
+        <field name="sequence">10</field>
+    </record>
+    
+    <!-- Hide the "My Approvals" parent menu if it exists -->
+    <record id="approvals.approvals_approval_menu" model="ir.ui.menu">
+        <field name="active" eval="False"/>
+    </record>
+</odoo>
+

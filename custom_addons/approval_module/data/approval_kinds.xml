@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Type Options - Generic type options that belong to type categories -->
+    <!-- Admins can add more type options for any type category through the UI -->
+    
+    <!-- Payment Type Options -->
+    <record id="type_option_payment_consultancy" model="approval.type.option">
+        <field name="name">Payment for Consultancy Services</field>
+        <field name="code">consultancy</field>
+        <field name="sequence">10</field>
+    </record>
+    
+    <record id="type_option_payment_hotels" model="approval.type.option">
+        <field name="name">Payment for Hotel and Sport Services</field>
+        <field name="code">hotels</field>
+        <field name="sequence">20</field>
+    </record>
+    
+    <record id="type_option_payment_goods" model="approval.type.option">
+        <field name="name">Payment for Goods</field>
+        <field name="code">goods</field>
+        <field name="sequence">30</field>
+    </record>
+    
+    <record id="type_option_payment_works" model="approval.type.option">
+        <field name="name">Payment for Works</field>
+        <field name="code">works</field>
+        <field name="sequence">40</field>
+    </record>
+    
+    <record id="type_option_payment_disbursement" model="approval.type.option">
+        <field name="name">Support/Transfer to Project (Disbursement)</field>
+        <field name="code">disbursement</field>
+        <field name="sequence">50</field>
+    </record>
+    
+    <record id="type_option_payment_mission" model="approval.type.option">
+        <field name="name">Mission Allowance and Air Ticket</field>
+        <field name="code">mission</field>
+        <field name="sequence">60</field>
+    </record>
+    
+    <record id="type_option_payment_board" model="approval.type.option">
+        <field name="name">Board Sitting Allowance and Communication</field>
+        <field name="code">board_allowance</field>
+        <field name="sequence">70</field>
+    </record>
+    
+    <record id="type_option_payment_refund" model="approval.type.option">
+        <field name="name">Payment of Refund</field>
+        <field name="code">refund</field>
+        <field name="sequence">80</field>
+    </record>
+    
+    <record id="type_option_payment_other" model="approval.type.option">
+        <field name="name">Other Payment</field>
+        <field name="code">other</field>
+        <field name="sequence">90</field>
+    </record>
+
+    <!-- Purchase Type Options -->
+    <record id="type_option_purchase_services" model="approval.type.option">
+        <field name="name">Purchase for Services</field>
+        <field name="code">services</field>
+        <field name="sequence">10</field>
+    </record>
+    
+    <record id="type_option_purchase_goods" model="approval.type.option">
+        <field name="name">Purchase for Goods</field>
+        <field name="code">goods</field>
+        <field name="sequence">20</field>
+    </record>
+    
+    <record id="type_option_purchase_works" model="approval.type.option">
+        <field name="name">Purchase for Works</field>
+        <field name="code">works</field>
+        <field name="sequence">30</field>
+    </record>
+</odoo>
+
+

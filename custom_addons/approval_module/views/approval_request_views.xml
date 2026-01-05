@@ -4,40 +4,145 @@
       <field name="model">approval.request</field>
       <field name="inherit_id" ref="approvals.approval_request_view_form"/>
       <field name="arch" type="xml">
+        <xpath expr="//form" position="inside">
+            <style>
+                .o_form_sheet .o_field_html .note-editor .note-editable {
+                    min-height: 200px !important;
+                    max-height: none !important;
+                    overflow-y: auto !important;
+                }
+                .o_form_sheet .o_field_html .odoo-editor-editable {
+                    min-height: 200px !important;
+                    max-height: none !important;
+                    overflow-y: visible !important;
+                }
+            </style>
+        </xpath>
         <xpath expr="//header/widget[@name='attach_document']" position="replace">
             <button name="action_confirm" string="Submit" type="object" class="btn-primary" invisible="not approver_ids or request_status != 'new'" data-hotkey="q"/>
+            <button name="%(approvals.action_report_approval_request)d" string="PDF" type="action" class="btn-primary" invisible="request_status != 'approved'"/>
         </xpath>
         <xpath expr="//header/button[@name='action_confirm']" position="attributes">
             <attribute name="invisible">1</attribute>
         </xpath>
+        <xpath expr="//header/button[@name='action_cancel']" position="replace">
+          <button name="action_cancel" string="Cancel" type="object" invisible="request_status in ['new', 'approved', 'cancel'] or not user_status and not has_access_to_request or request_owner_id != uid" data-hotkey="x"/>
+        </xpath>
+        <xpath expr="//header/button[@name='action_refuse']" position="attributes">
+            <attribute name="string">Reject</attribute>
+        </xpath>
         <xpath expr="//group[@name='request_main']" position="inside">
             <field name="category_type" invisible="1"/>
+            <field name="category_requires_contract" invisible="1"/>
+            <field name="category_require_unexpired_contract" invisible="1"/>
+            <field name="category_available_type_option_ids" invisible="1"/>
+            <field name="category_has_amount" invisible="1"/>
+            <field name="contract_id" 
+                   invisible="not category_requires_contract"
+                   options="{'no_create': True}" 
+                   placeholder="Select related contract"/>
+            <label for="contract_id" string="Contract Expiry" invisible="not category_requires_contract"/>
+            <div invisible="not category_requires_contract">
+                <field name="contract_expiry_date" readonly="1"/>
+            </div>
+            <label for="contract_value" string="Contract Value" invisible="1"/>
+            <div invisible="1">
+                <field name="contract_value" readonly="1"/>
+            </div>
             <field name="purchase_request_number" 
                    invisible="category_type != 'invoice_payment'"
                    context="{'search_default_approved': 1, 'search_default_purchase_orders': 1}"
                    options="{'no_create': True}"
                    domain="[('category_type', '=', 'purchase_order'), ('request_status', '=', 'approved')]"/>
-            <field name="invoice_payment_type" invisible="category_type != 'invoice_payment'" modifiers="{'required': [['category_type', '=', 'invoice_payment']]}"/>
-            <field name="other_payment_type" invisible="category_type != 'other_payment'" modifiers="{'required': [['category_type', '=', 'other_payment']]}"/>
-            <field name="purchase_type" invisible="category_type != 'purchase_order'" modifiers="{'required': [['category_type', '=', 'purchase_order']]}"/>
-            <field name="po_exceeds_10m" invisible="category_type != 'purchase_order'"/>
-            <field name="po_exceeds_20m" invisible="category_type != 'purchase_order' or po_exceeds_10m != True"/>
+            
+            <!-- Generic type option field with dynamic domain -->
+            <label for="type_option_id" string="Type" invisible="not category_available_type_option_ids"/>
+            <div invisible="not category_available_type_option_ids">
+                <field name="type_option_id" 
+                       nolabel="1"
+                       placeholder="Select type..."
+                       options="{'no_create': True}"
+                       domain="[('id', 'in', category_available_type_option_ids)]"
+                       required="category_available_type_option_ids"/>
+            </div>
+            
+            <field name="po_exceeds_10m" invisible="1"/>
+            <field name="po_exceeds_20m" invisible="1"/>
         </xpath>
         
         <!-- Make reference field readonly since it's auto-generated -->
         <xpath expr="//field[@name='reference']" position="attributes">
             <attribute name="readonly">1</attribute>
         </xpath>
+        
+        <!-- Make amount field required when category requires it -->
+        <xpath expr="//field[@name='amount']" position="attributes">
+            <attribute name="required">category_has_amount == 'required'</attribute>
+        </xpath>
 
+        <xpath expr="//notebook/page[@name='products']" position="replace">
+            <page string="Products" name="products"
+                invisible="has_product == 'no'">
+                <field name="product_line_ids"
+                    context="{'list_view_ref': 'approvals.approval_product_line_view_tree', 'kanban_view_ref': 'approvals.approval_product_kanban_mobile_view'}"
+                    readonly="request_status != 'new'"/>
+            </page>
+        </xpath>
+        <xpath expr="//notebook/page[@name='description']" position="replace">
+            <page string="Description" name="description">
+                <field name="category_show_subject" invisible="1"/>
+                <field name="category_show_background" invisible="1"/>
+                <field name="category_show_budget_line" invisible="1"/>
+                <field name="category_show_contract_price" invisible="1"/>
+                <group invisible="not category_show_subject">
+                    <field name="description_subject"
+                           placeholder="Enter the subject of the approval request..."
+                           readonly="request_status != 'new'"
+                           required="category_show_subject"/>
+                </group>
+                <group invisible="not category_show_background" col="1">
+                    <field name="description_background" 
+                           widget="html"
+                           placeholder="Enter purpose..."
+                           readonly="request_status != 'new'"
+                           required="category_show_background"/>
+                </group>
+                <group string="Budget Line" invisible="not category_show_budget_line">
+                    <field name="description_budget_line"
+                           placeholder="Enter budget line information..."
+                           readonly="request_status != 'new'"
+                           required="category_show_budget_line"/>
+                </group>
+                <group string="Contract Price" invisible="not category_show_contract_price">
+                    <field name="contract_price_line_ids" 
+                           nolabel="1"
+                           context="{'list_view_ref': 'approval_module.approval_contract_price_line_view_tree'}"
+                           readonly="request_status != 'new'"
+                           required="category_show_contract_price"/>
+                </group>
+            </page>
+        </xpath>
         <xpath expr="//notebook" position="inside">
-            <page string="Checklist" name="payment_checklist" invisible="category_type not in ('invoice_payment', 'other_payment', 'purchase_order')">
+            <page string="Checklist" name="payment_checklist">
                 <field name="checklist_line_ids" nolabel="1" context="{'list_view_ref': 'approval_module.approval_checklist_line_view_list', 'form_view_ref': 'approval_module.approval_checklist_line_view_form'}" options="{'no_create_edit': True, 'no_open': True}"/>
+            </page>
+            <page string="Reviewers" name="optional_approvers" invisible="request_status != 'new'">
+                <field name="optional_approver_ids" nolabel="1"
+                       context="{'tree_view_ref': 'approval_module.approval_optional_approver_tree'}"/>
+                <label for="optional_approver_ids" string="Users added here will review the request before default approvers."/>
             </page>
         </xpath>
         
-        <!-- Enhance the Approver(s) tab to show roles -->
+        <!-- Enhance the Approver(s) tab to show roles and delegation -->
         <xpath expr="//page[@name='approvers']//field[@name='approver_ids']//list" position="inside">
             <field name="approval_role" string="Role" optional="show"/>
+            <field name="delegated_by_id" string="Delegated By" optional="hide" 
+                   invisible="not delegated_by_id"/>
+        </xpath>
+        
+        <!-- Make the approvers page visible only to Approval Managers -->
+        <xpath expr="//page[@name='approvers']" position="attributes">
+            <attribute name="groups">approvals.group_approval_manager</attribute>
         </xpath>
       </field>
     </record>
@@ -46,9 +151,9 @@
       <field name="name">approval.checklist.line.view.list</field>
       <field name="model">approval.checklist.line</field>
       <field name="arch" type="xml">
-        <list editable="bottom">
-          <field name="name"/>
-          <field name="is_required"/>
+        <list editable="bottom" create="0" delete="0">
+          <field name="name" readonly="1" force_save="1"/>
+          <field name="is_required" readonly="1" force_save="1"/>
           <field name="document_ids" widget="many2many_binary"/>
         </list>
       </field>
@@ -60,11 +165,22 @@
       <field name="arch" type="xml">
         <form>
           <group>
-            <field name="name"/>
-            <field name="is_required"/>
+            <field name="name" readonly="1" force_save="1"/>
+            <field name="is_required" readonly="1" force_save="1"/>
             <field name="document_ids" widget="many2many_binary"/>
           </group>
         </form>
+      </field>
+    </record>
+
+    <record id="approval_optional_approver_tree" model="ir.ui.view">
+      <field name="name">approval.optional.approver.tree</field>
+      <field name="model">approval.optional.approver</field>
+      <field name="arch" type="xml">
+        <list editable="bottom">
+          <field name="user_id"/>
+          <field name="required"/>
+        </list>
       </field>
     </record>
 
@@ -101,6 +217,24 @@
           <field name="date" string="Date"/>
           <field name="request_status" string="Status"/>
           <field name="amount" string="Amount"/>
+        </list>
+      </field>
+    </record>
+
+    <!-- Contract Price Line Tree View -->
+    <record id="approval_contract_price_line_view_tree" model="ir.ui.view">
+      <field name="name">approval.contract.price.line.view.tree</field>
+      <field name="model">approval.contract.price.line</field>
+      <field name="arch" type="xml">
+        <list editable="bottom" class="o_contract_price_table">
+          <field name="serial_number_per_contract" string="S/N Per Contract"/>
+          <field name="item_name_per_contract" string="Item Name Per Contract"/>
+          <field name="quantity" string="Quantity"/>
+          <field name="unit_price_vat_exclusive" string="Unit Price (VAT Exclusive)"/>
+          <field name="total_price_vat_exclusive" string="Total Price (VAT Exclusive)" readonly="1" force_save="1"/>
+          <field name="tax_rate" string="Tax"/>
+          <field name="unit_price_vat_inclusive" string="Unit Price (VAT Inclusive)" readonly="1" force_save="1"/>
+          <field name="total_price_vat_inclusive" string="Total Price (VAT Inclusive)" readonly="1" force_save="1"/>
         </list>
       </field>
     </record>

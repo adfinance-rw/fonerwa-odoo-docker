@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Inherit the approval category form view -->
+    <record id="view_approval_category_form_inherit" model="ir.ui.view">
+        <field name="name">approval.category.form.inherit</field>
+        <field name="model">approval.category</field>
+        <field name="inherit_id" ref="approvals.approval_category_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Configuration" name="configuration">
+                    <group>
+                        <group string="Security &amp; Notifications">
+                            <field name="prevent_withdrawal_after_approval" 
+                                    string="Lock After Approval"
+                                    help="Prevent cancellation once approved"/>
+                            <field name="approver_sequence" 
+                                    string="Require Sequential Approval"
+                                    help="If checked, approvers must approve in sequence. Previous approvers must approve before later ones can approve."/>
+                            <field name="notification_user_ids" 
+                                    widget="many2many_tags" 
+                                    string="Notify on Approval"
+                                    placeholder="Select users to notify..."/>
+                        </group>
+                        <group string="Description Structure">
+                            <field name="description_show_subject" 
+                                string="Show Subject"
+                                help="Enable Subject field in the Description section"/>
+                            <field name="description_show_background" 
+                                string="Show Background"
+                                help="Enable Background field in the Description section"/>
+                            <field name="description_show_budget_line" 
+                                string="Show Budget Line"
+                                help="Enable Budget Line field in the Description section"/>
+                            <field name="description_show_contract_price" 
+                                string="Show Contract Price"
+                                help="Enable Contract Price table in the Description section"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Contract Requirements">
+                            <field name="requires_contract"/>
+                            <field name="require_unexpired_contract" invisible="not requires_contract"/>
+                            <!-- <field name="match_partner" invisible="not requires_contract"/>
+                            <field name="require_contract_document" invisible="not requires_contract"/> -->
+                        </group>
+                        
+                        <!-- Available Types List -->
+                        <group string="Available Type Options">
+                            <field name="available_type_ids" nolabel="1" colspan="2" context="{'default_category_id': id}">
+                                <list editable="bottom" create="1" delete="1">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="type_option_id" string="Type Option" required="1" options="{'no_open': True}"/>
+                                </list>
+                            </field>
+                        </group>
+                    </group>
+                    
+                    <group>
+                        <group string="Checklist Templates">
+                            <field name="available_type_option_ids" invisible="1"/>
+                            <field name="checklist_template_ids" 
+                                   nolabel="1"
+                                   widget="one2many"
+                                   mode="list"
+                                   context="{'tree_view_ref': 'approval_module.view_category_checklist_tree', 'available_type_option_ids': available_type_option_ids}"/>
+                        </group>
+                        <group string="Approver Templates">
+                            <field name="approver_template_ids" 
+                                   nolabel="1"
+                                   widget="one2many"
+                                   mode="list"
+                                   context="{'tree_view_ref': 'approval_module.view_category_approver_tree', 'available_type_option_ids': available_type_option_ids}"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Available Type Tree View -->
+    <record id="view_category_available_type_tree" model="ir.ui.view">
+        <field name="name">approval.category.available.type.tree</field>
+        <field name="model">approval.category.available.type</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="category_id" column_invisible="1"/>
+                <field name="type_option_id" string="Type Option" required="1"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Checklist Templates Tree View -->
+    <record id="view_category_checklist_tree" model="ir.ui.view">
+        <field name="name">approval.category.checklist.tree</field>
+        <field name="model">approval.category.checklist</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="name"/>
+                <field name="is_required"/>
+                <field name="require_after_approval" string="Require After Approval"/>
+                <field name="po_amount_operator"/>
+                <field name="po_amount"/>
+                <field name="category_id" column_invisible="1"/>
+                <field name="type_option_ids" widget="many2many_tags" string="Type Options" 
+                       domain="[('id', 'in', parent.available_type_option_ids)]"
+                       context="{'tree_view_ref': 'approval_module.view_approval_type_option_tree'}"
+                       options="{'no_create': True}"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Approver Templates Tree View -->
+    <record id="view_category_approver_tree" model="ir.ui.view">
+        <field name="name">approval.category.approver.tree</field>
+        <field name="model">approval.category.approver.template</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="user_ids" widget="many2many_tags" string="Users"/>
+                <field name="required"/>
+                <field name="po_amount_operator"/>
+                <field name="po_amount"/>
+                <field name="category_id" column_invisible="1"/>
+                <field name="type_option_ids" widget="many2many_tags" string="Type Options"
+                       domain="[('id', 'in', parent.available_type_option_ids)]"
+                       context="{'tree_view_ref': 'approval_module.view_approval_type_option_tree'}"
+                       options="{'no_create': True}"/>
+            </list>
+        </field>
+    </record>
+    
+    <!-- Type Option Menu and Views -->
+    <record id="view_approval_type_option_tree" model="ir.ui.view">
+        <field name="name">approval.type.option.tree</field>
+        <field name="model">approval.type.option</field>
+        <field name="arch" type="xml">
+            <list editable="bottom" create="1" delete="1">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+            </list>
+        </field>
+    </record>
+    
+    <record id="view_approval_type_option_form" model="ir.ui.view">
+        <field name="name">approval.type.option.form</field>
+        <field name="model">approval.type.option</field>
+        <field name="arch" type="xml">
+            <form string="Type Option">
+                <sheet>
+                    <group>
+                        <field name="name" placeholder="e.g., Payment for Consultancy Services"/>
+                        <field name="sequence"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Actions (must be defined BEFORE menus that reference them) -->
+    <record id="action_approval_type_option" model="ir.actions.act_window">
+        <field name="name">Type Options</field>
+        <field name="res_model">approval.type.option</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first Type Option
+            </p>
+            <p>
+                Type Options are the specific choices available for approval requests.
+                For example: "Payment for Services", "Purchase of Goods", "Consultancy Services", etc.
+            </p>
+        </field>
+    </record>
+    
+    <!-- Menu Items (must be defined AFTER actions they reference)
+    <menuitem id="menu_approval_configuration" 
+              name="Configuration" 
+              parent="approvals.approvals_menu_root" 
+              sequence="100"/>
+    
+    <menuitem id="menu_approval_type_option" 
+              name="Type Options" 
+              parent="menu_approval_configuration" 
+              action="action_approval_type_option"
+              sequence="20"/> -->
+</odoo>

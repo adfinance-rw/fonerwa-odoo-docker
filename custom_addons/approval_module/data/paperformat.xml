@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Define custom A4 paperformat with margins -->
+    <record id="paperformat_approval_a4" model="report.paperformat">
+        <field name="name">A4 Approval Report</field>
+        <field name="default" eval="False"/>
+        <field name="format">A4</field>
+        <field name="page_height">0</field>
+        <field name="page_width">0</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">20</field>
+        <field name="margin_bottom">30</field>
+        <field name="margin_left">15</field>
+        <field name="margin_right">15</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">15</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <!-- Override the existing approval report to use custom paperformat -->
+    <record id="approvals.action_report_approval_request" model="ir.actions.report">
+        <field name="paperformat_id" ref="paperformat_approval_a4"/>
+    </record>
+</odoo>
+

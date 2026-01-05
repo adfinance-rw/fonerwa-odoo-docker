@@ -1,0 +1,66 @@
+/* Contract Price Table - Column Header Wrapping */
+.o_contract_price_table .o_list_table thead th {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    text-overflow: clip !important;
+    text-align: center !important;
+    vertical-align: top !important;
+    padding: 8px 4px !important;
+    line-height: 1.4 !important;
+    min-width: 100px !important;
+    max-width: none !important;
+    width: auto !important;
+    overflow: visible !important;
+}
+
+.o_contract_price_table .o_list_table thead th * {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    text-overflow: clip !important;
+    overflow: visible !important;
+}
+
+.o_contract_price_table .o_list_table thead th .o_column_title {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    text-overflow: clip !important;
+    display: block !important;
+    line-height: 1.4 !important;
+    overflow: visible !important;
+    max-width: none !important;
+}
+
+.o_contract_price_table .o_list_table thead th .o_column_title span {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    text-overflow: clip !important;
+    overflow: visible !important;
+    display: inline-block !important;
+    max-width: none !important;
+}
+
+/* Override any Odoo default styles that might prevent wrapping */
+.o_contract_price_table .o_list_table thead th,
+.o_contract_price_table .o_list_table thead th a,
+.o_contract_price_table .o_list_table thead th div,
+.o_contract_price_table .o_list_table thead th span {
+    text-overflow: clip !important;
+    overflow: visible !important;
+    white-space: normal !important;
+}
+
+/* Ensure table cells also allow proper width */
+.o_contract_price_table .o_list_table {
+    table-layout: auto !important;
+}
+
+.o_contract_price_table .o_list_table thead th,
+.o_contract_price_table .o_list_table tbody td {
+    width: auto !important;
+    min-width: 100px !important;
+}
+

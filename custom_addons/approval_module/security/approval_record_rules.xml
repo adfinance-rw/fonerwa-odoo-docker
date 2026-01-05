@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Record Rules for Approval Requests -->
+        
+        <!-- Rule 1: Regular users can see their own requests OR requests they need to approve -->
+        <!-- This includes optional approvers and delegates - when added, they automatically get access -->
+        <record id="approval_request_rule_user_own_or_approver" model="ir.rule">
+            <field name="name">Approval Request: User can see own requests or requests to approve</field>
+            <field name="model_id" ref="approvals.model_approval_request"/>
+            <field name="domain_force">[
+                '|',
+                '|',
+                '|',
+                '|',
+                ('request_owner_id', '=', user.id),
+                ('create_uid', '=', user.id),
+                ('approver_ids.user_id', '=', user.id),
+                ('optional_approver_ids.user_id', '=', user.id),
+                ('delegate_user_ids', 'in', [user.id])
+            ]</field>
+            <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <!-- Rule 2: Finance and Management Team can see all approved requests -->
+        <!-- This is OR'd with the base rule, so these users see: their own + all approved -->
+        <record id="approval_request_rule_view_all_approved" model="ir.rule">
+            <field name="name">Approval Request: Finance and Management can view all approved requests</field>
+            <field name="model_id" ref="approvals.model_approval_request"/>
+            <field name="domain_force">[('request_status', '=', 'approved')]</field>
+            <field name="groups" eval="[(4, ref('approval_module.group_approval_finance_team')), (4, ref('approval_module.group_approval_management_team'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <!-- Record Rules for Attachments (ir.attachment) -->
+        <!-- Attachment access is controlled by _search() and read() methods in ir_attachment.py -->
+        <!-- which filter and validate access based on the related approval.request record rules -->
+        
+        <!-- Rule 3: Users can access attachments (model-level filtering enforces approval request access) -->
+        <record id="approval_attachment_rule_user" model="ir.rule">
+            <field name="name">Attachment: User can access attachments</field>
+            <field name="model_id" ref="base.model_ir_attachment"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <!-- Rule 4: Users can see delegations they created or are delegates for -->
+        <record id="approval_delegation_rule_user" model="ir.rule">
+            <field name="name">Approval Delegation: User can see own delegations or delegations to them</field>
+            <field name="model_id" ref="model_approval_delegation"/>
+            <field name="domain_force">[
+                '|',
+                ('delegator_id', '=', user.id),
+                ('delegate_id', '=', user.id)
+            ]</field>
+            <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+    </data>
+</odoo>
+

@@ -1,2 +1,9 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_approval_checklist_line_user,approval.checklist.line.user,model_approval_checklist_line,base.group_user,1,1,1,1
+access_approval_category_checklist_user,approval.category.checklist.user,model_approval_category_checklist,base.group_user,1,1,1,1
+access_approval_category_approver_template_user,approval.category.approver.template.user,model_approval_category_approver_template,base.group_user,1,1,1,1
+access_approval_optional_approver_user,approval.optional.approver.user,model_approval_optional_approver,base.group_user,1,1,1,1
+access_approval_contract_price_line_user,approval.contract.price.line.user,model_approval_contract_price_line,base.group_user,1,1,1,1
+access_approval_type_option_user,approval.type.option.user,model_approval_type_option,base.group_user,1,1,1,1
+access_approval_category_available_type_user,approval.category.available.type.user,model_approval_category_available_type,base.group_user,1,1,1,1
+access_approval_delegation_user,approval.delegation.user,model_approval_delegation,base.group_user,1,1,1,1

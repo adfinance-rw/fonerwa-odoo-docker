@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Default Approval Categories with Templates -->
+
+    <!-- Purchase Order Category -->
+    <record id="approval_category_purchase_order" model="approval.category">
+        <field name="name">Purchase Order</field>
+        <field name="active">True</field>
+    </record>
+
+    <!-- Invoice Payment Category -->
+    <record id="approval_category_invoice_payment" model="approval.category">
+        <field name="name">Invoice Payment</field>
+        <field name="active">True</field>
+    </record>
+
+    <!-- Other Payment Category -->
+    <record id="approval_category_other_payment" model="approval.category">
+        <field name="name">Other Payment</field>
+        <field name="active">True</field>
+    </record>
+
+    <!-- Approver templates (common full chain). Adjust/delete in UI as needed. -->
+    <record id="tmpl_po_appr_reviewer_tpl" model="approval.category.approver.template">
+        <field name="category_id" ref="approval_category_purchase_order"/>
+        <field name="role">reviewer</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="tmpl_po_appr_cfo_tpl" model="approval.category.approver.template">
+        <field name="category_id" ref="approval_category_purchase_order"/>
+        <field name="role">cfo</field>
+        <field name="sequence">20</field>
+    </record>
+    <record id="tmpl_po_appr_senior_tpl" model="approval.category.approver.template">
+        <field name="category_id" ref="approval_category_purchase_order"/>
+        <field name="role">senior</field>
+        <field name="sequence">30</field>
+        <field name="po_amount_operator">ge</field>
+        <field name="po_amount">10000000</field>
+    </record>
+    <record id="tmpl_po_appr_ceo_tpl" model="approval.category.approver.template">
+        <field name="category_id" ref="approval_category_purchase_order"/>
+        <field name="role">ceo</field>
+        <field name="sequence">40</field>
+        <field name="po_amount_operator">ge</field>
+        <field name="po_amount">10000000</field>
+    </record>
+
+    <record id="tmpl_inv_appr_reviewer_tpl" model="approval.category.approver.template">
+        <field name="category_id" ref="approval_category_invoice_payment"/>
+        <field name="role">reviewer</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="tmpl_inv_appr_cfo_tpl" model="approval.category.approver.template">
+        <field name="category_id" ref="approval_category_invoice_payment"/>
+        <field name="role">cfo</field>
+        <field name="sequence">20</field>
+    </record>
+    <record id="tmpl_inv_appr_senior_tpl" model="approval.category.approver.template">
+        <field name="category_id" ref="approval_category_invoice_payment"/>
+        <field name="role">senior</field>
+        <field name="sequence">30</field>
+        <field name="po_amount_operator">ge</field>
+        <field name="po_amount">10000000</field>
+    </record>
+    <record id="tmpl_inv_appr_ceo_tpl" model="approval.category.approver.template">
+        <field name="category_id" ref="approval_category_invoice_payment"/>
+        <field name="role">ceo</field>
+        <field name="sequence">40</field>
+        <field name="po_amount_operator">ge</field>
+        <field name="po_amount">10000000</field>
+    </record>
+
+    <record id="tmpl_other_appr_reviewer_tpl" model="approval.category.approver.template">
+        <field name="category_id" ref="approval_category_other_payment"/>
+        <field name="role">reviewer</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="tmpl_other_appr_cfo_tpl" model="approval.category.approver.template">
+        <field name="category_id" ref="approval_category_other_payment"/>
+        <field name="role">cfo</field>
+        <field name="sequence">20</field>
+    </record>
+    <record id="tmpl_other_appr_senior_tpl" model="approval.category.approver.template">
+        <field name="category_id" ref="approval_category_other_payment"/>
+        <field name="role">senior</field>
+        <field name="sequence">30</field>
+    </record>
+    <record id="tmpl_other_appr_ceo_tpl" model="approval.category.approver.template">
+        <field name="category_id" ref="approval_category_other_payment"/>
+        <field name="role">ceo</field>
+        <field name="sequence">40</field>
+    </record>
+
+    <!-- Checklist templates (minimal baseline; adjust freely in UI) -->
+    <!-- Purchase Order -->
+    <record id="tmpl_po_chk_contract" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_purchase_order"/>
+        <field name="name">Contract</field>
+        <field name="is_required">1</field>
+    </record>
+    <record id="tmpl_po_chk_minutes" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_purchase_order"/>
+        <field name="name">Contract negotiation minutes</field>
+        <field name="is_required">0</field>
+    </record>
+    <record id="tmpl_po_chk_other" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_purchase_order"/>
+        <field name="name">Other supporting documents</field>
+        <field name="is_required">0</field>
+    </record>
+
+    <!-- Invoice Payment: Consultancy -->
+    <record id="tmpl_inv_consultancy_ebm" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_invoice_payment"/>
+        <field name="name">EBM (Electronic Billing Machine) invoice for local Contractor/Supplier/Consultant</field>
+        <field name="is_required">1</field>
+        <field name="type_option_ids" eval="[(6,0,[ref('approval_module.type_option_payment_consultancy')])]"/>
+    </record>
+    <record id="tmpl_inv_consultancy_po" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_invoice_payment"/>
+        <field name="name">Purchase Order</field>
+        <field name="is_required">1</field>
+        <field name="type_option_ids" eval="[(6,0,[ref('approval_module.type_option_payment_consultancy')])]"/>
+    </record>
+    <record id="tmpl_inv_consultancy_report" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_invoice_payment"/>
+        <field name="name">Report (consultancy service)</field>
+        <field name="is_required">1</field>
+        <field name="type_option_ids" eval="[(6,0,[ref('approval_module.type_option_payment_consultancy')])]"/>
+    </record>
+    <record id="tmpl_inv_consultancy_tax" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_invoice_payment"/>
+        <field name="name">RRA Tax declaration for the previous period/CIT or PIT</field>
+        <field name="is_required">0</field>
+        <field name="type_option_ids" eval="[(6,0,[ref('approval_module.type_option_payment_consultancy')])]"/>
+    </record>
+    <record id="tmpl_inv_consultancy_otherdoc" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_invoice_payment"/>
+        <field name="name">Other supporting documents</field>
+        <field name="is_required">0</field>
+        <field name="type_option_ids" eval="[(6,0,[ref('approval_module.type_option_payment_consultancy')])]"/>
+    </record>
+
+    <!-- Invoice Payment: Hotels -->
+    <record id="tmpl_inv_hotels_ebm" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_invoice_payment"/>
+        <field name="name">EBM (Electronic Billing Machine) invoice for local Contractor/Supplier/Consultant</field>
+        <field name="is_required">1</field>
+        <field name="type_option_ids" eval="[(6,0,[ref('approval_module.type_option_payment_hotels')])]"/>
+    </record>
+    <record id="tmpl_inv_hotels_po" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_invoice_payment"/>
+        <field name="name">Purchase Order</field>
+        <field name="is_required">1</field>
+        <field name="type_option_ids" eval="[(6,0,[ref('approval_module.type_option_payment_hotels')])]"/>
+    </record>
+    <record id="tmpl_inv_hotels_attendance" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_invoice_payment"/>
+        <field name="name">Attendance list for participants</field>
+        <field name="is_required">1</field>
+        <field name="type_option_ids" eval="[(6,0,[ref('approval_module.type_option_payment_hotels')])]"/>
+    </record>
+    <record id="tmpl_inv_hotels_tax" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_invoice_payment"/>
+        <field name="name">RRA Tax declaration for the previous period/CIT or PIT</field>
+        <field name="is_required">0</field>
+        <field name="type_option_ids" eval="[(6,0,[ref('approval_module.type_option_payment_hotels')])]"/>
+    </record>
+    <record id="tmpl_inv_hotels_otherdoc" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_invoice_payment"/>
+        <field name="name">Other supporting documents</field>
+        <field name="is_required">0</field>
+        <field name="type_option_ids" eval="[(6,0,[ref('approval_module.type_option_payment_hotels')])]"/>
+    </record>
+
+    <!-- Invoice Payment: Goods -->
+    <record id="tmpl_inv_goods_ebm" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_invoice_payment"/>
+        <field name="name">EBM (Electronic Billing Machine) invoice</field>
+        <field name="is_required">1</field>
+        <field name="type_option_ids" eval="[(6,0,[ref('approval_module.type_option_payment_goods')])]"/>
+    </record>
+    <record id="tmpl_inv_goods_po" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_invoice_payment"/>
+        <field name="name">Purchase Order</field>
+        <field name="is_required">1</field>
+        <field name="type_option_ids" eval="[(6,0,[ref('approval_module.type_option_payment_goods')])]"/>
+    </record>
+    <record id="tmpl_inv_goods_delivery" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_invoice_payment"/>
+        <field name="name">Delivery note (Signed by Supplier and Reception committee)</field>
+        <field name="is_required">1</field>
+        <field name="type_option_ids" eval="[(6,0,[ref('approval_module.type_option_payment_goods')])]"/>
+    </record>
+    <record id="tmpl_inv_goods_grn" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_invoice_payment"/>
+        <field name="name">Goods received note (Approved by Reception Committee)</field>
+        <field name="is_required">1</field>
+        <field name="type_option_ids" eval="[(6,0,[ref('approval_module.type_option_payment_goods')])]"/>
+    </record>
+    <record id="tmpl_inv_goods_tax" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_invoice_payment"/>
+        <field name="name">RRA Tax declaration for the previous period/CIT or PIT</field>
+        <field name="is_required">0</field>
+        <field name="type_option_ids" eval="[(6,0,[ref('approval_module.type_option_payment_goods')])]"/>
+    </record>
+    <record id="tmpl_inv_goods_otherdoc" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_invoice_payment"/>
+        <field name="name">Other supporting documents</field>
+        <field name="is_required">0</field>
+        <field name="type_option_ids" eval="[(6,0,[ref('approval_module.type_option_payment_goods')])]"/>
+    </record>
+
+    <!-- Invoice Payment: Works -->
+    <record id="tmpl_inv_works_ebm" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_invoice_payment"/>
+        <field name="name">EBM (Electronic Billing Machine) invoice for the local Contractor</field>
+        <field name="is_required">1</field>
+        <field name="type_option_ids" eval="[(6,0,[ref('approval_module.type_option_payment_works')])]"/>
+    </record>
+    <record id="tmpl_inv_works_po" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_invoice_payment"/>
+        <field name="name">Purchase Order</field>
+        <field name="is_required">1</field>
+        <field name="type_option_ids" eval="[(6,0,[ref('approval_module.type_option_payment_works')])]"/>
+    </record>
+    <record id="tmpl_inv_works_progress" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_invoice_payment"/>
+        <field name="name">Approved progress report of work done/Final report</field>
+        <field name="is_required">1</field>
+        <field name="type_option_ids" eval="[(6,0,[ref('approval_module.type_option_payment_works')])]"/>
+    </record>
+    <record id="tmpl_inv_works_supervision" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_invoice_payment"/>
+        <field name="name">Supervision Report (contracts above 50 million)</field>
+        <field name="is_required">0</field>
+        <field name="type_option_ids" eval="[(6,0,[ref('approval_module.type_option_payment_works')])]"/>
+    </record>
+    <record id="tmpl_inv_works_validation" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_invoice_payment"/>
+        <field name="name">Validation report signed by the contract manager and the supervisor</field>
+        <field name="is_required">1</field>
+        <field name="type_option_ids" eval="[(6,0,[ref('approval_module.type_option_payment_works')])]"/>
+    </record>
+    <record id="tmpl_inv_works_tax" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_invoice_payment"/>
+        <field name="name">RRA Tax declaration for the previous period/CIT or PIT</field>
+        <field name="is_required">0</field>
+        <field name="type_option_ids" eval="[(6,0,[ref('approval_module.type_option_payment_works')])]"/>
+    </record>
+    <record id="tmpl_inv_works_otherdoc" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_invoice_payment"/>
+        <field name="name">Other supporting documents</field>
+        <field name="is_required">0</field>
+        <field name="type_option_ids" eval="[(6,0,[ref('approval_module.type_option_payment_works')])]"/>
+    </record>
+
+    <!-- Other Payment (generic) -->
+    <record id="tmpl_other_chk_reason" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_other_payment"/>
+        <field name="name">Justification/Reason</field>
+        <field name="is_required">1</field>
+    </record>
+    <!-- Purchase Order extras: Guarantee when >20M -->
+    <record id="tmpl_po_chk_guarantee" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_purchase_order"/>
+        <field name="name">Performance guarantee (threshold exceeds 20 million)</field>
+        <field name="is_required">0</field>
+        <field name="po_amount_operator">ge</field>
+        <field name="po_amount">20000000</field>
+    </record>
+    <record id="tmpl_other_chk_other" model="approval.category.checklist">
+        <field name="category_id" ref="approval_category_other_payment"/>
+        <field name="name">Other supporting documents</field>
+        <field name="is_required">0</field>
+    </record>
+
+</odoo>
+
+
