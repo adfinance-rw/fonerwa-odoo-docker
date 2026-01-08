@@ -195,7 +195,8 @@
         <menuitem id="menu_contract_configuration_root"
                   name="Configuration"
                   parent="contract_management.menu_contract_management_root"
-                  sequence="30"/>
+                  sequence="30"
+                  groups="base.group_system"/>
 
         <menuitem id="menu_contract_configuration_type"
                   name="Contract Types"

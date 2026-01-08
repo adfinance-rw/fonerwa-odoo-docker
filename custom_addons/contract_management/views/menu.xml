@@ -42,7 +42,8 @@
                   name="Scheduled Actions"
                   parent="menu_contract_management_root"
                   action="action_contract_scheduled_actions"
-                  sequence="20"/>
+                  sequence="20"
+                  groups="base.group_system"/>
 
     </data>
 </odoo>

@@ -19,13 +19,6 @@
                     <field name="contract_value"/>
                     <field name="state"/>
                     <field name="is_current" decoration-success="is_current"/>
-                    <button name="action_view_contract_data" string="View Data" type="object" 
-                            class="btn-primary" icon="fa-eye"/>
-                    <button name="action_compare_with_current" string="Compare" type="object" 
-                            class="btn-secondary" icon="fa-exchange"/>
-                    <button name="action_restore_version" string="Restore" type="object" 
-                            class="btn-warning" icon="fa-undo" 
-                            invisible="is_current"/>
                 </list>
             </field>
         </record>
@@ -37,13 +30,6 @@
             <field name="arch" type="xml">
                 <form string="Contract Amendment">
                     <header>
-                        <button name="action_view_contract_data" string="View Contract Data" 
-                                type="object" class="btn-primary"/>
-                        <button name="action_compare_with_current" string="Compare with Current" 
-                                type="object" class="btn-secondary"/>
-                        <button name="action_restore_version" string="Restore This Version" 
-                                type="object" class="btn-warning" 
-                                invisible="is_current"/>
                         <field name="is_current" widget="statusbar" 
                                statusbar_visible="False,True"/>
                     </header>

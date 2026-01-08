@@ -87,7 +87,7 @@
                                         <field name="contract_value" readonly="state != 'draft'"/>
                                         <field name="currency_id" invisible="1"/>
                                         <field name="version"/>
-                                        <field name="send_recurring_reminders" readonly="state != 'draft'"/>
+                                        <!-- <field name="send_recurring_reminders" readonly="state != 'draft'"/> -->
                                         <field name="expiration_notification_sent" readonly="1"/>
                                     </group>
                                 </group>
@@ -110,7 +110,12 @@
                                 </group>
                             </page>
                             <page string="Deliverable">
-                                <field name="milestone_ids" widget="one2many">
+                                <div class="alert alert-warning" role="alert" invisible="state != 'draft'">
+                                    <i class="fa fa-info-circle"/> Please activate the contract first before adding deliverables.
+                                </div>
+                                <field name="milestone_ids" widget="one2many" 
+                                       context="{'default_contract_id': id}"
+                                       readonly="state == 'draft'">
                                     <list>
                                         <field name="name"/>
                                         <field name="milestone_date"/>
@@ -124,14 +129,18 @@
                                 </field>
                             </page>
                             <page string="Amendments">
+                                <div class="alert alert-warning" role="alert" invisible="state != 'draft'">
+                                    <i class="fa fa-info-circle"/> Please activate the contract first before adding amendments.
+                                </div>
                                 <div class="oe_button_box" name="amendment_button_box">
                                     <button name="action_create_amendment_from_line" string="Add Amendment" type="object" 
                                             class="btn-warning" icon="fa-plus"
-                                            invisible="state not in ['active', 'draft']"/>
+                                            invisible="state != 'active'"/>
                                 </div>
                                 <field name="amendment_ids" widget="one2many" 
-                                       context="{'default_contract_id': id, 'create': False, 'edit': False}">
-                                    <list>
+                                       context="{'default_contract_id': id, 'create': False, 'edit': False}"
+                                       options="{'no_delete': True, 'no_create': True}">
+                                    <list delete="0" create="0" edit="0">
                                         <field name="version"/>
                                         <field name="amendment_type"/>
                                         <field name="amendment_date"/>
@@ -140,13 +149,6 @@
                                         <field name="contract_value"/>
                                         <field name="state"/>
                                         <field name="is_current" decoration-success="is_current"/>
-                                        <button name="action_view_contract_data" string="View Data" type="object" 
-                                                class="btn-primary" icon="fa-eye"/>
-                                        <button name="action_compare_with_current" string="Compare" type="object" 
-                                                class="btn-secondary" icon="fa-exchange"/>
-                                        <button name="action_restore_version" string="Restore" type="object" 
-                                                class="btn-warning" icon="fa-undo" 
-                                                invisible="is_current"/>
                                     </list>
                                 </field>
                             </page>

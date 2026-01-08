@@ -21,6 +21,7 @@
     'data': [
         'security/groups.xml',
         'security/ir.model.access.csv',
+        'security/ir.rule.xml',
         'data/contract_configuration_data.xml',
         'data/email_templates.xml',
         'data/cron_data.xml',

@@ -296,6 +296,32 @@ class ContractAmendment(models.Model):
             }
         }
 
+    @api.model
+    def create(self, vals_list):
+        """Override create to validate contract state"""
+        if isinstance(vals_list, dict):
+            vals_list = [vals_list]
+        
+        for vals in vals_list:
+            if 'contract_id' in vals:
+                contract = self.env['contract.management'].browse(
+                    vals['contract_id'])
+                if contract.state == 'draft':
+                    raise UserError(
+                        _('Cannot add amendments to a contract in draft '
+                          'state. Please activate the contract first.'))
+        
+        amendments = super().create(vals_list)
+        
+        # Double check contract state after creation
+        for amendment in amendments:
+            if amendment.contract_id.state == 'draft':
+                raise UserError(
+                    _('Cannot add amendments to a contract in draft state. '
+                      'Please activate the contract first.'))
+        
+        return amendments
+
 
 class ContractAmendmentComparison(models.TransientModel):
     _name = 'contract.amendment.comparison'

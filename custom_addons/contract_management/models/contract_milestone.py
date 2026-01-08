@@ -2,7 +2,7 @@
 
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
-from datetime import date
+from datetime import date, datetime as dt
 
 
 class ContractMilestone(models.Model):
@@ -151,6 +151,24 @@ class ContractMilestone(models.Model):
             else:
                 milestone.is_overdue = False
 
+    @api.constrains('milestone_date', 'contract_id')
+    def _check_milestone_date_range(self):
+        """Validate that milestone date falls within contract date range"""
+        for milestone in self:
+            if milestone.contract_id and milestone.milestone_date:
+                contract = milestone.contract_id
+                if not contract.effective_date or not contract.expiry_date:
+                    continue  # Skip validation if contract dates not set
+                if (milestone.milestone_date < contract.effective_date or
+                        milestone.milestone_date > contract.expiry_date):
+                    raise UserError(
+                        _('Deliverable due date (%s) must fall within the '
+                          'contract date range (%s to %s).') % (
+                            milestone.milestone_date,
+                            contract.effective_date,
+                            contract.expiry_date
+                        ))
+
     @api.depends('milestone_date')
     def _compute_days_until_due(self):
         """Compute days until milestone is due"""
@@ -231,19 +249,16 @@ class ContractMilestone(models.Model):
             payment_amount = (
                 vals.get('payment_amount', milestone.payment_amount) or 0)
             
-            # Validate payment amount is not zero
-            if payment_amount <= 0:
-                raise UserError(
-                    _('Payment Amount must be greater than zero. Please enter '
-                      'a valid amount.'))
+            # Skip validation if payment_amount is zero or not set
+            if not payment_amount or payment_amount <= 0:
+                continue
             
             # Validate individual deliverable amount doesn't exceed contract
             # value
-            if (contract.contract_value and
-                    payment_amount > contract.contract_value):
+            if contract.contract_value and payment_amount > contract.contract_value:
                 raise UserError(
-                    _('Payment Amount (%.2f) cannot exceed the contract value '
-                      '(%.2f). Please adjust the amount.')
+                    _('Deliverable amount (%.2f) cannot exceed the contract '
+                      'value (%.2f). Please adjust the amount.')
                     % (payment_amount, contract.contract_value))
             
             # Validate total of all deliverable amounts doesn't exceed contract
@@ -266,23 +281,162 @@ class ContractMilestone(models.Model):
                 # Check if total exceeds contract value
                 if total_milestone_amount > contract.contract_value:
                     raise UserError(
-                        _('The sum of all deliverable amounts (%.2f) cannot '
+                        _('The total of all deliverable amounts (%.2f) cannot '
                           'exceed the contract value (%.2f). Please adjust '
                           'the amounts.')
                         % (total_milestone_amount, contract.contract_value))
 
     @api.model_create_multi
     def create(self, vals_list):
-        """Override create to validate deliverable amounts"""
+        """Override create to validate deliverable amounts and contract state"""
+        # Check if contract is in draft state and validate date range
+        for vals in vals_list:
+            if 'contract_id' in vals:
+                contract = self.env['contract.management'].browse(
+                    vals['contract_id'])
+                if contract.state == 'draft':
+                    raise UserError(
+                        _('Cannot add deliverables to a contract in draft '
+                          'state. Please activate the contract first.'))
+                # Validate milestone date is within contract date range
+                if 'milestone_date' in vals and contract.effective_date and \
+                        contract.expiry_date:
+                    milestone_date = vals['milestone_date']
+                    # Convert string to date if needed
+                    if milestone_date:
+                        if isinstance(milestone_date, str):
+                            # Parse string date (format: YYYY-MM-DD)
+                            try:
+                                milestone_date = dt.strptime(
+                                    milestone_date, '%Y-%m-%d').date()
+                            except (ValueError, TypeError):
+                                # If parsing fails, skip validation
+                                milestone_date = None
+                        elif not isinstance(milestone_date, date):
+                            # Try to convert if it's a datetime
+                            if hasattr(milestone_date, 'date'):
+                                milestone_date = milestone_date.date()
+                            else:
+                                milestone_date = None
+                        # Now compare dates
+                        if milestone_date and isinstance(milestone_date, date):
+                            if (milestone_date < contract.effective_date or
+                                    milestone_date > contract.expiry_date):
+                                raise UserError(
+                                    _('Deliverable due date (%s) must fall '
+                                      'within the contract date range (%s to '
+                                      '%s).') % (
+                                        milestone_date,
+                                        contract.effective_date,
+                                        contract.expiry_date
+                                    ))
+        
+        # Validate payment amounts before creation
+        # Group by contract_id to handle batch creation properly
+        contracts_totals = {}
+        for vals in vals_list:
+            if 'contract_id' in vals:
+                contract_id = vals['contract_id']
+                contract = self.env['contract.management'].browse(contract_id)
+                payment_amount = vals.get('payment_amount', 0) or 0
+                
+                # Validate individual amount doesn't exceed contract value
+                if payment_amount > 0:
+                    if contract.contract_value and \
+                            payment_amount > contract.contract_value:
+                        raise UserError(
+                            _('Deliverable amount (%.2f) cannot exceed the '
+                              'contract value (%.2f). Please adjust the '
+                              'amount.')
+                            % (payment_amount, contract.contract_value))
+                    
+                    # Track totals per contract for batch validation
+                    if contract_id not in contracts_totals:
+                        # Get all existing milestones for this contract
+                        existing_milestones = contract.milestone_ids
+                        total_existing = sum(
+                            m.payment_amount or 0
+                            for m in existing_milestones
+                        )
+                        contracts_totals[contract_id] = {
+                            'contract': contract,
+                            'total_existing': total_existing,
+                            'total_new': 0
+                        }
+                    
+                    contracts_totals[contract_id]['total_new'] += \
+                        payment_amount
+        
+        # Validate totals for each contract
+        for contract_id, totals_info in contracts_totals.items():
+            contract = totals_info['contract']
+            total_existing = totals_info['total_existing']
+            total_new = totals_info['total_new']
+            total_with_new = total_existing + total_new
+            
+            if contract.contract_value and total_with_new > contract.contract_value:
+                raise UserError(
+                    _('The total of all deliverable amounts (%.2f) cannot '
+                      'exceed the contract value (%.2f). Current total: %.2f. '
+                      'Please adjust the amounts.')
+                    % (total_with_new, contract.contract_value,
+                       total_existing))
+        
         milestones = super().create(vals_list)
         
         for milestone in milestones:
+            # Double check contract state after creation
+            if milestone.contract_id.state == 'draft':
+                raise UserError(
+                    _('Cannot add deliverables to a contract in draft state. '
+                      'Please activate the contract first.'))
+            # Validate amounts after creation (in case payment_amount wasn't
+            # in vals)
             milestone._validate_deliverable_amounts({})
         
         return milestones
 
     def write(self, vals):
-        """Override write to validate deliverable amounts"""
+        """Override write to validate deliverable amounts and date range"""
+        # Validate milestone date is within contract date range if being updated
+        if 'milestone_date' in vals or 'contract_id' in vals:
+            for milestone in self:
+                # Get contract - use new one if contract_id is being changed
+                contract = self.env['contract.management'].browse(
+                    vals.get('contract_id', milestone.contract_id.id))
+                # Get milestone date - use new one if milestone_date is being changed
+                milestone_date = vals.get(
+                    'milestone_date', milestone.milestone_date)
+                
+                # Convert string to date if needed
+                if milestone_date:
+                    if isinstance(milestone_date, str):
+                        # Parse string date (format: YYYY-MM-DD)
+                        try:
+                            milestone_date = dt.strptime(
+                                milestone_date, '%Y-%m-%d').date()
+                        except (ValueError, TypeError):
+                            # If parsing fails, skip validation
+                            milestone_date = None
+                    elif not isinstance(milestone_date, date):
+                        # Try to convert if it's a datetime
+                        if hasattr(milestone_date, 'date'):
+                            milestone_date = milestone_date.date()
+                        else:
+                            milestone_date = None
+                
+                if contract and milestone_date and \
+                        contract.effective_date and contract.expiry_date:
+                    if isinstance(milestone_date, date):
+                        if (milestone_date < contract.effective_date or
+                                milestone_date > contract.expiry_date):
+                            raise UserError(
+                                _('Deliverable due date (%s) must fall within '
+                                  'the contract date range (%s to %s).') % (
+                                    milestone_date,
+                                    contract.effective_date,
+                                    contract.expiry_date
+                                ))
         # Validate payment amount if it's being changed
         if 'payment_amount' in vals:
             self._validate_deliverable_amounts(vals)
@@ -506,6 +660,13 @@ class ContractMilestone(models.Model):
             }
         else:
             raise UserError(_('Failed to send milestone expiration notification email. Please check the logs for details.'))
+
+
+
+
+
+
+
 
     def action_reset_alert_date(self):
         """Reset alert date for testing purposes"""

@@ -8,12 +8,6 @@
             <field name="model">contract.amendment.wizard</field>
             <field name="arch" type="xml">
                 <form string="Create Contract Amendment">
-                    <header>
-                        <button name="action_create_amendment" string="Create Amendment" 
-                                type="object" class="btn-primary"/>
-                        <button name="action_cancel" string="Cancel" 
-                                type="object" class="btn-secondary"/>
-                    </header>
                     <sheet>
                         <div class="oe_title">
                             <h1>
@@ -61,6 +55,11 @@
                             </page>
                         </notebook>
                     </sheet>
+                    <footer>
+                        <button name="action_create_amendment" string="Save" 
+                                type="object" class="btn-primary"/>
+                        <button string="Discard" special="cancel" class="btn-secondary"/>
+                    </footer>
                 </form>
             </field>
         </record>

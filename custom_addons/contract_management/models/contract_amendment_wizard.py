@@ -161,8 +161,9 @@ class ContractAmendmentWizard(models.TransientModel):
         
         return res
 
-    def action_create_amendment(self):
-        """Create amendment and update contract"""
+
+    def _create_amendment(self):
+        """Internal method to create amendment and update contract"""
         self.ensure_one()
         
         if not self.amendment_reason:
@@ -190,16 +191,13 @@ class ContractAmendmentWizard(models.TransientModel):
             amendment_type='amendment',
             amendment_reason=self.amendment_reason
         ).write(update_data)
+
+    def action_create_amendment(self):
+        """Create amendment and update contract"""
+        self._create_amendment()
         
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': _('Amendment Created'),
-                'message': _('Contract has been successfully amended. Previous version saved as amendment.'),
-                'type': 'success',
-            }
-        }
+        # Close the wizard - amendment is created, user will see updated contract
+        return {'type': 'ir.actions.act_window_close'}
 
     def action_cancel(self):
         """Cancel amendment creation"""
