@@ -14,10 +14,10 @@
                   action="action_contract_management"
                   sequence="10"/>
         
-        <menuitem id="menu_contract_management_milestones"
+        <menuitem id="menu_contract_management_deliverables"
                   name="Deliverable"
                   parent="menu_contract_management_root"
-                  action="action_contract_milestone"
+                  action="action_contract_deliverable"
                   sequence="15"/>
 
         <!-- Scheduled Actions Menu -->

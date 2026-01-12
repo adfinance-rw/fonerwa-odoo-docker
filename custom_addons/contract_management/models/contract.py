@@ -211,22 +211,22 @@ class Contract(models.Model):
         store=True
     )
     
-    # Enhanced Milestone Management (UR-06)
-    milestone_ids = fields.One2many(
-        'contract.milestone',
+    # Enhanced Deliverable Management (UR-06)
+    deliverable_ids = fields.One2many(
+        'contract.deliverable',
         'contract_id',
         string='Deliverables'
     )
     
-    milestone_count = fields.Integer(
-        string='Milestone Count',
-        compute='_compute_milestone_count',
+    deliverable_count = fields.Integer(
+        string='Deliverable Count',
+        compute='_compute_deliverable_count',
         store=True
     )
     
-    overdue_milestone_count = fields.Integer(
-        string='Overdue Milestones',
-        compute='_compute_overdue_milestone_count',
+    overdue_deliverable_count = fields.Integer(
+        string='Overdue Deliverables',
+        compute='_compute_overdue_deliverable_count',
         store=True
     )
     
@@ -303,6 +303,20 @@ class Contract(models.Model):
         tracking=True
     )
 
+    # Performance Guaranty Management
+    performance_guaranty_ids = fields.One2many(
+        'contract.performance.guaranty',
+        'contract_id',
+        string='Performance Guaranties',
+        context={'create': True}
+    )
+    
+    performance_guaranty_count = fields.Integer(
+        string='Performance Guaranty Count',
+        compute='_compute_performance_guaranty_count',
+        store=True
+    )
+
     @api.depends('contract_documents')
     def _compute_contract_document_size(self):
         for contract in self:
@@ -329,10 +343,10 @@ class Contract(models.Model):
                 count += 1
             contract.document_count = count
 
-    @api.depends('milestone_ids')
-    def _compute_milestone_count(self):
+    @api.depends('deliverable_ids')
+    def _compute_deliverable_count(self):
         for contract in self:
-            contract.milestone_count = len(contract.milestone_ids)
+            contract.deliverable_count = len(contract.deliverable_ids)
     
     @api.depends('amendment_ids')
     def _compute_amendment_count(self):
@@ -359,11 +373,11 @@ class Contract(models.Model):
             else:
                 contract.current_version = "v1"
 
-    @api.depends('milestone_ids', 'milestone_ids.is_overdue')
-    def _compute_overdue_milestone_count(self):
+    @api.depends('deliverable_ids', 'deliverable_ids.is_overdue')
+    def _compute_overdue_deliverable_count(self):
         for contract in self:
-            contract.overdue_milestone_count = len(
-                contract.milestone_ids.filtered('is_overdue'))
+            contract.overdue_deliverable_count = len(
+                contract.deliverable_ids.filtered('is_overdue'))
 
     def _compute_days_to_expiry(self):
         today = fields.Date.today()
@@ -407,6 +421,12 @@ class Contract(models.Model):
                 contract.is_expiring_soon = 0 <= days_to_expiry <= 30
             else:
                 contract.is_expiring_soon = False
+
+    @api.depends('performance_guaranty_ids')
+    def _compute_performance_guaranty_count(self):
+        """Compute performance guaranty count"""
+        for contract in self:
+            contract.performance_guaranty_count = len(contract.performance_guaranty_ids)
 
     @api.depends('classification_ids', 'category_ids', 'department_ids')
     def _compute_configuration_display(self):
@@ -586,19 +606,19 @@ class Contract(models.Model):
         # Validate deliverables amounts if contract value is being changed
         if 'contract_value' in vals:
             for contract in self:
-                total_milestone_amount = sum(
-                    m.payment_amount or 0
-                    for m in contract.milestone_ids
+                total_deliverable_amount = sum(
+                    d.payment_amount or 0
+                    for d in contract.deliverable_ids
                 )
                 new_contract_value = (
                     vals.get('contract_value', contract.contract_value) or 0)
                 
-                if total_milestone_amount > new_contract_value:
+                if total_deliverable_amount > new_contract_value:
                     raise UserError(
                         _('Cannot set contract value to %.2f. The sum of all '
                           'deliverable amounts (%.2f) exceeds this value. '
                           'Please adjust the deliverable amounts first.')
-                        % (new_contract_value, total_milestone_amount))
+                        % (new_contract_value, total_deliverable_amount))
         
         # Only create amendment if explicitly requested via context (from wizard)
         create_amendment = self.env.context.get('create_amendment', False)
@@ -801,12 +821,12 @@ class Contract(models.Model):
             'target': 'self',
         }
 
-    def action_view_milestones(self):
-        """View contract milestones"""
+    def action_view_deliverables(self):
+        """View contract deliverables"""
         return {
             'type': 'ir.actions.act_window',
-            'name': 'Contract Milestones',
-            'res_model': 'contract.milestone',
+            'name': 'Contract Deliverables',
+            'res_model': 'contract.deliverable',
             'view_mode': 'list,form',
             'domain': [('contract_id', '=', self.id)],
             'context': {'default_contract_id': self.id},
@@ -835,27 +855,27 @@ class Contract(models.Model):
             'target': 'current',
         }
 
-    def action_send_milestone_alerts(self):
-        """Send alerts for upcoming milestones (UR-05)"""
+    def action_send_deliverable_alerts(self):
+        """Send alerts for upcoming deliverables (UR-05)"""
         today = fields.Date.today()
-        upcoming_milestones = self.milestone_ids.filtered(
-            lambda m: (m.status == 'pending' and 
-                      m.milestone_date >= today and 
-                      m.milestone_date <= today + timedelta(
-                          days=m.alert_days_before) and
-                      not m.alert_sent)
+        upcoming_deliverables = self.deliverable_ids.filtered(
+            lambda d: (d.status == 'pending' and 
+                      d.deliverable_date >= today and 
+                      d.deliverable_date <= today + timedelta(
+                          days=d.alert_days_before) and
+                      not d.alert_sent)
         )
         
-        for milestone in upcoming_milestones:
-            milestone.action_send_alert()
+        for deliverable in upcoming_deliverables:
+            deliverable.action_send_alert()
         
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
-                'title': 'Milestone Alerts',
-                'message': f'Alerts sent for {len(upcoming_milestones)} '
-                           f'upcoming milestones.',
+                'title': 'Deliverable Alerts',
+                'message': f'Alerts sent for {len(upcoming_deliverables)} '
+                           f'upcoming deliverables.',
                 'type': 'success',
             }
         }

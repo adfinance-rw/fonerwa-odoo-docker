@@ -46,11 +46,15 @@
                                 <field string="Documents" name="document_count" widget="statinfo"/>
                             </button>
                             <button class="oe_stat_button" icon="fa-calendar">
-                                <field string="Milestones" name="milestone_count" widget="statinfo"/>
+                                <field string="Deliverables" name="deliverable_count" widget="statinfo"/>
                             </button>
                             <button class="oe_stat_button" icon="fa-history" 
                                     context="{'search_default_contract_id': id}">
                                 <field string="Amendments" name="amendment_count" widget="statinfo"/>
+                            </button>
+                            <button class="oe_stat_button" icon="fa-shield" 
+                                    context="{'search_default_contract_id': id}">
+                                <field string="Performance Guaranties" name="performance_guaranty_count" widget="statinfo"/>
                             </button>
                         </div>
                         <div class="oe_title">
@@ -113,12 +117,14 @@
                                 <div class="alert alert-warning" role="alert" invisible="state != 'draft'">
                                     <i class="fa fa-info-circle"/> Please activate the contract first before adding deliverables.
                                 </div>
-                                <field name="milestone_ids" widget="one2many" 
+                                <field name="deliverable_ids" widget="one2many" 
                                        context="{'default_contract_id': id}"
                                        readonly="state == 'draft'">
                                     <list>
                                         <field name="name"/>
-                                        <field name="milestone_date"/>
+                                        <field name="create_date" string="Created Date"/>
+                                        <field name="issue_date"/>
+                                        <field name="deliverable_date"/>
                                         <field name="status" decoration-success="status == 'completed'" decoration-danger="status == 'overdue'"/>
                                         <field name="payment_amount"/>
                                         <field name="days_until_due" decoration-danger="days_until_due &lt; 0"/>
@@ -172,6 +178,78 @@
                                 <div class="alert alert-info" role="alert" invisible="state == 'terminated'">
                                     <i class="fa fa-info-circle"/> Use the "Terminate Contract" button above to terminate this contract. Once terminated, termination details will be displayed here.
                                 </div>
+                            </page>
+                            <page string="Performance Guaranty">
+                                <div class="alert alert-warning" role="alert" invisible="state != 'draft'">
+                                    <i class="fa fa-info-circle"/> Please activate the contract first before adding performance guaranties.
+                                </div>
+                                <field name="performance_guaranty_ids" widget="one2many" 
+                                       context="{'default_contract_id': id}"
+                                       readonly="state == 'draft'">
+                                    <list>
+                                        <field name="name"/>
+                                        <field name="contract_number"/>
+                                        <field name="performance_guaranty_type"/>
+                                        <field name="performance_guaranty_provider"/>
+                                        <field name="performance_guaranty_amount"/>
+                                        <field name="issue_date"/>
+                                        <field name="expiry_date"/>
+                                        <field name="status" decoration-success="status == 'active'" 
+                                               decoration-danger="status == 'expired'"
+                                               decoration-muted="status in ['released', 'claimed']"/>
+                                        <field name="days_to_expiry" decoration-danger="days_to_expiry &lt; 0"/>
+                                        <button name="action_view_contract" string="View Contract" type="object" class="btn-primary" icon="fa-external-link"/>
+                                    </list>
+                                    <form>
+                                        <sheet>
+                                            <group>
+                                                <group string="Contract Information" readonly="1">
+                                                    <field name="contract_id" invisible="1"/>
+                                                    <field name="contract_number"/>
+                                                    <field name="contract_name"/>
+                                                    <field name="contract_manager_id"/>
+                                                </group>
+                                                <group string="Amount &amp; Dates">
+                                                    <field name="performance_guaranty_amount"/>
+                                                    <field name="currency_id" invisible="1"/>
+                                                    <field name="issue_date"/>
+                                                    <field name="expiry_date"/>
+                                                    <field name="status" widget="badge" readonly="1"
+                                                           decoration-success="status == 'active'"
+                                                           decoration-danger="status == 'expired'"
+                                                           decoration-muted="status in ['released', 'claimed']"/>
+                                                    <field name="days_to_expiry" readonly="1"/>
+                                                </group>
+                                            </group>
+                                            <group>
+                                                <group string="Alerts &amp; Notifications">
+                                                    <field name="alert_days_before"/>
+                                                    <field name="alert_sent" readonly="1"/>
+                                                    <field name="last_alert_date" readonly="1"/>
+                                                </group>
+                                            </group>
+                                            <group>
+                                                <group string="Performance Guaranty Details">
+                                                    <field name="name"/>
+                                                    <field name="performance_guaranty_type"/>
+                                                    <field name="performance_guaranty_provider"/>
+                                                </group>
+                                                <group string="Document">
+                                                    <field name="performance_guaranty_document" filename="performance_guaranty_document_name" widget="binary"/>
+                                                    <field name="performance_guaranty_document_name"/>
+                                                    <button name="action_download_document" string="Download Document" 
+                                                            type="object" class="btn-primary" 
+                                                            invisible="not performance_guaranty_document"/>
+                                                </group>
+                                            </group>
+                                            <group>
+                                                <group string="Notes">
+                                                    <field name="notes" nolabel="1" placeholder="Enter any additional notes..."/>
+                                                </group>
+                                            </group>
+                                        </sheet>
+                                    </form>
+                                </field>
                             </page>
                         </notebook>
                     </sheet>

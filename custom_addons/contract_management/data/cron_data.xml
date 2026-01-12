@@ -13,6 +13,32 @@
             <field name="user_id" ref="base.user_root"/>
             <field name="priority" eval="5"/>
         </record>
+
+        <!-- Cron Job: Check for Expiring Deliverables -->
+        <record id="ir_cron_check_expiring_deliverables" model="ir.cron">
+            <field name="name">Deliverables: Check Expiring Deliverables</field>
+            <field name="model_id" ref="model_deliverable_expiration_cron"/>
+            <field name="state">code</field>
+            <field name="code">model.cron_check_expiring_deliverables()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">minutes</field>
+            <field name="active" eval="True"/>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="priority" eval="5"/>
+        </record>
+
+        <!-- Cron Job: Check for Expiring Performance Guaranties -->
+        <record id="ir_cron_check_expiring_performance_guaranties" model="ir.cron">
+            <field name="name">Performance Guaranty: Check Expiring Guaranties</field>
+            <field name="model_id" ref="model_performance_guaranty_expiration_cron"/>
+            <field name="state">code</field>
+            <field name="code">model.cron_check_expiring_performance_guaranties()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">minutes</field>
+            <field name="active" eval="True"/>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="priority" eval="5"/>
+        </record>
     </data>
 </odoo>
 

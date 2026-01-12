@@ -188,14 +188,14 @@ class ContractReport(models.Model):
         """ % (self._table, query))
 
 
-class ContractMilestoneReport(models.Model):
-    _name = 'contract.milestone.report'
-    _description = 'Contract Milestone Report'
+class ContractDeliverableReport(models.Model):
+    _name = 'contract.deliverable.report'
+    _description = 'Contract Deliverable Report'
     _auto = False
 
-    milestone_id = fields.Many2one(
-        'contract.milestone',
-        string='Milestone'
+    deliverable_id = fields.Many2one(
+        'contract.deliverable',
+        string='Deliverable'
     )
     
     contract_id = fields.Many2one(
@@ -203,11 +203,11 @@ class ContractMilestoneReport(models.Model):
         string='Contract'
     )
     
-    milestone_name = fields.Char(
+    deliverable_name = fields.Char(
         string='Deliverable Name'
     )
     
-    milestone_date = fields.Date(
+    deliverable_date = fields.Date(
         string='Deliverable Date'
     )
     
@@ -233,14 +233,14 @@ class ContractMilestoneReport(models.Model):
             CREATE OR REPLACE VIEW %s AS (
                 SELECT 
                     m.id as id,
-                    m.id as milestone_id,
+                    m.id as deliverable_id,
                     m.contract_id,
-                    m.name as milestone_name,
-                    m.milestone_date,
+                    m.name as deliverable_name,
+                    m.deliverable_date,
                     m.status,
                     m.payment_amount,
                     c.currency_id
-                FROM contract_milestone m
+                FROM contract_deliverable m
                 JOIN contract_management c ON m.contract_id = c.id
             )
         """ % (self._table,))

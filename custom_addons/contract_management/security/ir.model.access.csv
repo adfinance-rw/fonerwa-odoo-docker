@@ -1,8 +1,8 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_contract_management_user,contract.management.user,model_contract_management,base.group_user,1,1,1,0
 access_contract_management_manager,contract.management.manager,model_contract_management,base.group_system,1,1,1,1
-access_contract_milestone_user,contract.milestone.user,model_contract_milestone,base.group_user,1,1,1,0
-access_contract_milestone_manager,contract.milestone.manager,model_contract_milestone,base.group_system,1,1,1,1
+access_contract_deliverable_user,contract.deliverable.user,model_contract_deliverable,base.group_user,1,1,1,0
+access_contract_deliverable_manager,contract.deliverable.manager,model_contract_deliverable,base.group_system,1,1,1,1
 access_contract_archive_wizard_user,contract.archive.wizard.user,model_contract_archive_wizard,base.group_user,1,1,1,0
 access_contract_expiration_cron_user,contract.expiration.cron.user,model_contract_expiration_cron,base.group_user,1,0,0,0
 access_contract_expiration_cron_manager,contract.expiration.cron.manager,model_contract_expiration_cron,base.group_system,1,1,1,1
@@ -15,3 +15,9 @@ access_contract_management_type_user,contract.management.type.user,model_contrac
 access_contract_management_classification_user,contract.management.classification.user,model_contract_management_classification,base.group_user,1,1,1,1
 access_contract_management_category_user,contract.management.category.user,model_contract_management_category,base.group_user,1,1,1,1
 access_contract_management_department_user,contract.management.department.user,model_contract_management_department,base.group_user,1,1,1,1
+access_contract_performance_guaranty_user,contract.performance.guaranty.user,model_contract_performance_guaranty,base.group_user,1,1,1,0
+access_contract_performance_guaranty_manager,contract.performance.guaranty.manager,model_contract_performance_guaranty,base.group_system,1,1,1,1
+access_deliverable_expiration_cron_user,deliverable.expiration.cron.user,model_deliverable_expiration_cron,base.group_user,1,0,0,0
+access_deliverable_expiration_cron_manager,deliverable.expiration.cron.manager,model_deliverable_expiration_cron,base.group_system,1,1,1,1
+access_performance_guaranty_expiration_cron_user,performance.guaranty.expiration.cron.user,model_performance_guaranty_expiration_cron,base.group_user,1,0,0,0
+access_performance_guaranty_expiration_cron_manager,performance.guaranty.expiration.cron.manager,model_performance_guaranty_expiration_cron,base.group_system,1,1,1,1

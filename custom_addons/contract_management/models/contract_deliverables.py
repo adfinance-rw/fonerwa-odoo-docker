@@ -5,22 +5,22 @@ from odoo.exceptions import UserError
 from datetime import date, datetime as dt
 
 
-class ContractMilestone(models.Model):
-    _name = 'contract.milestone'
-    _description = 'Contract Milestone'
+class ContractDeliverable(models.Model):
+    _name = 'contract.deliverable'
+    _description = 'Contract Deliverable'
     _inherit = ['mail.thread', 'mail.activity.mixin']
-    _order = 'milestone_date asc'
+    _order = 'issue_date desc, deliverable_date asc'
 
     # Basic Information
     name = fields.Char(
         string='Deliverable Name',
         required=True,
-        help='Short description of the milestone (e.g., "Phase 1 Completion")'
+        help='Short description of the deliverable (e.g., "Phase 1 Completion")'
     )
 
     description = fields.Text(
         string='Description',
-        help='Detailed explanation of the milestone'
+        help='Detailed explanation of the deliverable'
     )
 
     contract_id = fields.Many2one(
@@ -32,10 +32,17 @@ class ContractMilestone(models.Model):
     )
 
     # Dates and Status
-    milestone_date = fields.Date(
+    issue_date = fields.Date(
+        string='Issue Date',
+        required=True,
+        default=fields.Date.today,
+        help='Date when the deliverable was issued/created'
+    )
+    
+    deliverable_date = fields.Date(
         string='Due Date',
         required=True,
-        help='Deadline for milestone completion'
+        help='Deadline for deliverable completion'
     )
 
     status = fields.Selection([
@@ -55,7 +62,7 @@ class ContractMilestone(models.Model):
     payment_amount = fields.Monetary(
         string='Payment Amount',
         currency_field='currency_id',
-        help='Amount to be released upon milestone completion'
+        help='Amount to be released upon deliverable completion'
     )
 
     currency_id = fields.Many2one(
@@ -69,9 +76,9 @@ class ContractMilestone(models.Model):
     alert_days_before = fields.Integer(
         string='Alert Days Before',
         default=7,
-        help='Number of days before milestone due date to start sending '
+        help='Number of days before deliverable due date to start sending '
              'daily email alerts. Emails will be sent daily until the '
-             'milestone is completed or overdue.'
+             'deliverable is completed or overdue.'
     )
 
     alert_sent = fields.Boolean(
@@ -88,17 +95,17 @@ class ContractMilestone(models.Model):
     # Completion Tracking
     completion_date = fields.Date(
         string='Completion Date',
-        help='Actual date when milestone was completed'
+        help='Actual date when deliverable was completed'
     )
 
     completion_notes = fields.Text(
         string='Completion Notes',
-        help='Notes about milestone completion'
+        help='Notes about deliverable completion'
     )
 
     proof_of_completion = fields.Binary(
         string='Proof of Completion',
-        help='Upload proof/documentation of milestone completion'
+        help='Upload proof/documentation of deliverable completion'
     )
 
     proof_of_completion_filename = fields.Char(
@@ -137,53 +144,63 @@ class ContractMilestone(models.Model):
         store=True
     )
 
-    @api.depends('milestone_date', 'status')
+    @api.depends('deliverable_date', 'status')
     def _compute_is_overdue(self):
-        """Compute if milestone is overdue"""
+        """Compute if deliverable is overdue"""
         today = fields.Date.today()
-        for milestone in self:
-            if (milestone.milestone_date and
-                    isinstance(milestone.milestone_date, date)):
-                milestone.is_overdue = (
-                    milestone.status == 'pending' and
-                    milestone.milestone_date < today
+        for deliverable in self:
+            if (deliverable.deliverable_date and
+                    isinstance(deliverable.deliverable_date, date)):
+                deliverable.is_overdue = (
+                    deliverable.status == 'pending' and
+                    deliverable.deliverable_date < today
                 )
             else:
-                milestone.is_overdue = False
+                deliverable.is_overdue = False
 
-    @api.constrains('milestone_date', 'contract_id')
-    def _check_milestone_date_range(self):
-        """Validate that milestone date falls within contract date range"""
-        for milestone in self:
-            if milestone.contract_id and milestone.milestone_date:
-                contract = milestone.contract_id
+    @api.constrains('deliverable_date', 'issue_date', 'contract_id')
+    def _check_deliverable_date_range(self):
+        """Validate that deliverable date falls within contract date range and is after issue date"""
+        for deliverable in self:
+            # Validate issue_date is before deliverable_date
+            if deliverable.issue_date and deliverable.deliverable_date:
+                if deliverable.deliverable_date < deliverable.issue_date:
+                    raise UserError(
+                        _('Deliverable due date (%s) cannot be before the issue date (%s).') % (
+                            deliverable.deliverable_date,
+                            deliverable.issue_date
+                        ))
+            
+            # Validate deliverable date falls within contract date range
+            if deliverable.contract_id and deliverable.deliverable_date:
+                contract = deliverable.contract_id
                 if not contract.effective_date or not contract.expiry_date:
                     continue  # Skip validation if contract dates not set
-                if (milestone.milestone_date < contract.effective_date or
-                        milestone.milestone_date > contract.expiry_date):
+                if (deliverable.deliverable_date < contract.effective_date or
+                        deliverable.deliverable_date > contract.expiry_date):
                     raise UserError(
                         _('Deliverable due date (%s) must fall within the '
                           'contract date range (%s to %s).') % (
-                            milestone.milestone_date,
+                            deliverable.deliverable_date,
                             contract.effective_date,
                             contract.expiry_date
                         ))
 
-    @api.depends('milestone_date')
+    @api.depends('deliverable_date')
     def _compute_days_until_due(self):
-        """Compute days until milestone is due"""
+        """Compute days until deliverable is due"""
         today = fields.Date.today()
-        for milestone in self:
-            if (milestone.milestone_date and
-                    isinstance(milestone.milestone_date, date)):
-                delta = milestone.milestone_date - today
-                milestone.days_until_due = delta.days
+        for deliverable in self:
+            if (deliverable.deliverable_date and
+                    isinstance(deliverable.deliverable_date, date)):
+                delta = deliverable.deliverable_date - today
+                deliverable.days_until_due = delta.days
             else:
-                milestone.days_until_due = 0
+                deliverable.days_until_due = 0
 
     # Action Methods
     def action_mark_completed(self):
-        """Mark milestone as completed"""
+        """Mark deliverable as completed"""
         self.ensure_one()
         self.write({
             'status': 'completed',
@@ -203,11 +220,11 @@ class ContractMilestone(models.Model):
         }
 
     def action_mark_cancelled(self):
-        """Mark milestone as cancelled"""
+        """Mark deliverable as cancelled"""
         self.write({'status': 'cancelled'})
 
     def action_send_alert(self):
-        """Send milestone alert (UR-05)"""
+        """Send deliverable alert (UR-05)"""
         now = fields.Datetime.now()
         self.write({
             'alert_sent': True,
@@ -218,10 +235,10 @@ class ContractMilestone(models.Model):
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
-                'title': 'Milestone Alert Sent',
+                'title': 'Deliverable Alert Sent',
                 'message': (
-                    f'Alert sent for milestone "{self.name}" '
-                    f'due on {self.milestone_date}.'
+                    f'Alert sent for deliverable "{self.name}" '
+                    f'due on {self.deliverable_date}.'
                 ),
                 'type': 'success',
             }
@@ -240,14 +257,14 @@ class ContractMilestone(models.Model):
 
     def _validate_deliverable_amounts(self, vals):
         """Validate deliverable amounts stay within the contract value"""
-        for milestone in self:
-            contract = milestone.contract_id
+        for deliverable in self:
+            contract = deliverable.contract_id
             if not contract:
                 continue
             
-            # Get the payment amount from vals or existing milestone
+            # Get the payment amount from vals or existing deliverable
             payment_amount = (
-                vals.get('payment_amount', milestone.payment_amount) or 0)
+                vals.get('payment_amount', deliverable.payment_amount) or 0)
             
             # Skip validation if payment_amount is zero or not set
             if not payment_amount or payment_amount <= 0:
@@ -264,31 +281,36 @@ class ContractMilestone(models.Model):
             # Validate total of all deliverable amounts doesn't exceed contract
             # value
             if contract.contract_value:
-                # Calculate sum of all milestone amounts for this contract
-                all_milestones = contract.milestone_ids
+                # Calculate sum of all deliverable amounts for this contract
+                all_deliverables = contract.deliverable_ids
                 
-                # Sum all milestone amounts (excluding current milestone if
+                # Sum all deliverable amounts (excluding current deliverable if
                 # updating)
-                total_milestone_amount = sum(
-                    m.payment_amount or 0
-                    for m in all_milestones
-                    if m.id != milestone.id
+                total_deliverable_amount = sum(
+                    d.payment_amount or 0
+                    for d in all_deliverables
+                    if d.id != deliverable.id
                 )
                 
-                # Add the new/updated milestone amount
-                total_milestone_amount += payment_amount
+                # Add the new/updated deliverable amount
+                total_deliverable_amount += payment_amount
                 
                 # Check if total exceeds contract value
-                if total_milestone_amount > contract.contract_value:
+                if total_deliverable_amount > contract.contract_value:
                     raise UserError(
                         _('The total of all deliverable amounts (%.2f) cannot '
                           'exceed the contract value (%.2f). Please adjust '
                           'the amounts.')
-                        % (total_milestone_amount, contract.contract_value))
+                        % (total_deliverable_amount, contract.contract_value))
 
     @api.model_create_multi
     def create(self, vals_list):
         """Override create to validate deliverable amounts and contract state"""
+        # Set default issue_date if not provided
+        for vals in vals_list:
+            if 'issue_date' not in vals:
+                vals['issue_date'] = fields.Date.today()
+        
         # Check if contract is in draft state and validate date range
         for vals in vals_list:
             if 'contract_id' in vals:
@@ -298,35 +320,35 @@ class ContractMilestone(models.Model):
                     raise UserError(
                         _('Cannot add deliverables to a contract in draft '
                           'state. Please activate the contract first.'))
-                # Validate milestone date is within contract date range
-                if 'milestone_date' in vals and contract.effective_date and \
+                # Validate deliverable date is within contract date range
+                if 'deliverable_date' in vals and contract.effective_date and \
                         contract.expiry_date:
-                    milestone_date = vals['milestone_date']
+                    deliverable_date = vals['deliverable_date']
                     # Convert string to date if needed
-                    if milestone_date:
-                        if isinstance(milestone_date, str):
+                    if deliverable_date:
+                        if isinstance(deliverable_date, str):
                             # Parse string date (format: YYYY-MM-DD)
                             try:
-                                milestone_date = dt.strptime(
-                                    milestone_date, '%Y-%m-%d').date()
+                                deliverable_date = dt.strptime(
+                                    deliverable_date, '%Y-%m-%d').date()
                             except (ValueError, TypeError):
                                 # If parsing fails, skip validation
-                                milestone_date = None
-                        elif not isinstance(milestone_date, date):
+                                deliverable_date = None
+                        elif not isinstance(deliverable_date, date):
                             # Try to convert if it's a datetime
-                            if hasattr(milestone_date, 'date'):
-                                milestone_date = milestone_date.date()
+                            if hasattr(deliverable_date, 'date'):
+                                deliverable_date = deliverable_date.date()
                             else:
-                                milestone_date = None
+                                deliverable_date = None
                         # Now compare dates
-                        if milestone_date and isinstance(milestone_date, date):
-                            if (milestone_date < contract.effective_date or
-                                    milestone_date > contract.expiry_date):
+                        if deliverable_date and isinstance(deliverable_date, date):
+                            if (deliverable_date < contract.effective_date or
+                                    deliverable_date > contract.expiry_date):
                                 raise UserError(
                                     _('Deliverable due date (%s) must fall '
                                       'within the contract date range (%s to '
                                       '%s).') % (
-                                        milestone_date,
+                                        deliverable_date,
                                         contract.effective_date,
                                         contract.expiry_date
                                     ))
@@ -352,11 +374,11 @@ class ContractMilestone(models.Model):
                     
                     # Track totals per contract for batch validation
                     if contract_id not in contracts_totals:
-                        # Get all existing milestones for this contract
-                        existing_milestones = contract.milestone_ids
+                        # Get all existing deliverables for this contract
+                        existing_deliverables = contract.deliverable_ids
                         total_existing = sum(
-                            m.payment_amount or 0
-                            for m in existing_milestones
+                            d.payment_amount or 0
+                            for d in existing_deliverables
                         )
                         contracts_totals[contract_id] = {
                             'contract': contract,
@@ -382,58 +404,58 @@ class ContractMilestone(models.Model):
                     % (total_with_new, contract.contract_value,
                        total_existing))
         
-        milestones = super().create(vals_list)
+        deliverables = super().create(vals_list)
         
-        for milestone in milestones:
+        for deliverable in deliverables:
             # Double check contract state after creation
-            if milestone.contract_id.state == 'draft':
+            if deliverable.contract_id.state == 'draft':
                 raise UserError(
                     _('Cannot add deliverables to a contract in draft state. '
                       'Please activate the contract first.'))
             # Validate amounts after creation (in case payment_amount wasn't
             # in vals)
-            milestone._validate_deliverable_amounts({})
+            deliverable._validate_deliverable_amounts({})
         
-        return milestones
+        return deliverables
 
     def write(self, vals):
         """Override write to validate deliverable amounts and date range"""
-        # Validate milestone date is within contract date range if being updated
-        if 'milestone_date' in vals or 'contract_id' in vals:
-            for milestone in self:
+        # Validate deliverable date is within contract date range if being updated
+        if 'deliverable_date' in vals or 'contract_id' in vals:
+            for deliverable in self:
                 # Get contract - use new one if contract_id is being changed
                 contract = self.env['contract.management'].browse(
-                    vals.get('contract_id', milestone.contract_id.id))
-                # Get milestone date - use new one if milestone_date is being changed
-                milestone_date = vals.get(
-                    'milestone_date', milestone.milestone_date)
+                    vals.get('contract_id', deliverable.contract_id.id))
+                # Get deliverable date - use new one if deliverable_date is being changed
+                deliverable_date = vals.get(
+                    'deliverable_date', deliverable.deliverable_date)
                 
                 # Convert string to date if needed
-                if milestone_date:
-                    if isinstance(milestone_date, str):
+                if deliverable_date:
+                    if isinstance(deliverable_date, str):
                         # Parse string date (format: YYYY-MM-DD)
                         try:
-                            milestone_date = dt.strptime(
-                                milestone_date, '%Y-%m-%d').date()
+                            deliverable_date = dt.strptime(
+                                deliverable_date, '%Y-%m-%d').date()
                         except (ValueError, TypeError):
                             # If parsing fails, skip validation
-                            milestone_date = None
-                    elif not isinstance(milestone_date, date):
+                            deliverable_date = None
+                    elif not isinstance(deliverable_date, date):
                         # Try to convert if it's a datetime
-                        if hasattr(milestone_date, 'date'):
-                            milestone_date = milestone_date.date()
+                        if hasattr(deliverable_date, 'date'):
+                            deliverable_date = deliverable_date.date()
                         else:
-                            milestone_date = None
+                            deliverable_date = None
                 
-                if contract and milestone_date and \
+                if contract and deliverable_date and \
                         contract.effective_date and contract.expiry_date:
-                    if isinstance(milestone_date, date):
-                        if (milestone_date < contract.effective_date or
-                                milestone_date > contract.expiry_date):
+                    if isinstance(deliverable_date, date):
+                        if (deliverable_date < contract.effective_date or
+                                deliverable_date > contract.expiry_date):
                             raise UserError(
                                 _('Deliverable due date (%s) must fall within '
                                   'the contract date range (%s to %s).') % (
-                                    milestone_date,
+                                    deliverable_date,
                                     contract.effective_date,
                                     contract.expiry_date
                                 ))
@@ -443,8 +465,8 @@ class ContractMilestone(models.Model):
         
         return super().write(vals)
 
-    def send_milestone_expiration_notification(self, force_send=True):
-        """Send email notification when milestone/deliverable is about to expire"""
+    def send_deliverable_expiration_notification(self, force_send=True):
+        """Send email notification when deliverable is about to expire"""
         self.ensure_one()
         import logging
         _logger = logging.getLogger(__name__)
@@ -457,38 +479,38 @@ class ContractMilestone(models.Model):
         
         if not assigned_user:
             _logger.warning(
-                'Milestone %s: No contract manager assigned',
+                'Deliverable %s: No contract manager assigned',
                 self.name or 'N/A'
             )
             return False
         
         if not assigned_user.email:
             _logger.warning(
-                'Milestone %s: Contract manager %s has no email address',
+                'Deliverable %s: Contract manager %s has no email address',
                 self.name or 'N/A',
                 assigned_user.name
             )
             return False
         
         _logger.info(
-            'Milestone %s: Attempting to send notification to %s',
+            'Deliverable %s: Attempting to send notification to %s',
             self.name or 'N/A',
             assigned_user.email
         )
         
         # Get email template
         template = self.env.ref(
-            'contract_management.email_template_milestone_expiration', False)
+            'contract_management.email_template_deliverable_expiration', False)
         if not template:
             _logger.warning(
-                'Milestone %s: Email template not found, using fallback',
+                'Deliverable %s: Email template not found, using fallback',
                 self.name or 'N/A'
             )
             # Fallback: send email manually if template doesn't exist
-            result = self._send_milestone_email_manual(assigned_user)
+            result = self._send_deliverable_email_manual(assigned_user)
         else:
             _logger.info(
-                'Milestone %s: Using email template %s',
+                'Deliverable %s: Using email template %s',
                 self.name or 'N/A',
                 template.name
             )
@@ -497,12 +519,12 @@ class ContractMilestone(models.Model):
                 template.send_mail(self.id, force_send=force_send)
                 result = True
                 _logger.info(
-                    'Milestone %s: Email sent via template',
+                    'Deliverable %s: Email sent via template',
                     self.name or 'N/A'
                 )
             except Exception as e:
                 _logger.error(
-                    'Milestone %s: Failed to send email via template: %s',
+                    'Deliverable %s: Failed to send email via template: %s',
                     self.name or 'N/A',
                     str(e),
                     exc_info=True
@@ -516,24 +538,24 @@ class ContractMilestone(models.Model):
                 'last_alert_date': fields.Datetime.now()
             })
             _logger.info(
-                'Milestone %s: Notification marked as sent',
+                'Deliverable %s: Notification marked as sent',
                 self.name or 'N/A'
             )
         
         return result
 
-    def _send_milestone_email_manual(self, assigned_user):
-        """Send milestone expiration email manually if template is not available"""
+    def _send_deliverable_email_manual(self, assigned_user):
+        """Send deliverable expiration email manually if template is not available"""
         self.ensure_one()
 
         if not assigned_user or not assigned_user.email:
             return False
 
         # Prepare email content
-        subject = _('Milestone/Deliverable Expiration Notice: %s') % self.name
-        milestone_date_str = (
-            self.milestone_date.strftime('%Y-%m-%d')
-            if self.milestone_date else 'N/A'
+        subject = _('Deliverable Expiration Notice: %s') % self.name
+        deliverable_date_str = (
+            self.deliverable_date.strftime('%Y-%m-%d')
+            if self.deliverable_date else 'N/A'
         )
         contract_name = (
             self.contract_id.name if self.contract_id else 'N/A'
@@ -547,15 +569,15 @@ class ContractMilestone(models.Model):
         
         body_html = f"""
         <div style="font-family: Arial, sans-serif;">
-            <h2 style="color: #875A7B;">Milestone/Deliverable Expiration Notice</h2>
+            <h2 style="color: #875A7B;">Deliverable Expiration Notice</h2>
             <p>Dear {assigned_user.name},</p>
-            <p>This is to notify you that the following milestone/deliverable is
+            <p>This is to notify you that the following deliverable is
             expiring soon:</p>
             <table style="border-collapse: collapse; width: 100%;
             margin: 20px 0;">
                 <tr>
                     <td style="padding: 8px; border: 1px solid #ddd;
-                    font-weight: bold;">Milestone Name:</td>
+                    font-weight: bold;">Deliverable Name:</td>
                     <td style="padding: 8px; border: 1px solid #ddd;">
                     {self.name or 'N/A'}</td>
                 </tr>
@@ -576,7 +598,7 @@ class ContractMilestone(models.Model):
                     font-weight: bold;">Due Date:</td>
                     <td style="padding: 8px; border: 1px solid #ddd;
                     color: #d9534f; font-weight: bold;">
-                    {milestone_date_str}</td>
+                    {deliverable_date_str}</td>
                 </tr>
                 <tr>
                     <td style="padding: 8px; border: 1px solid #ddd;
@@ -599,7 +621,7 @@ class ContractMilestone(models.Model):
                 </tr>
             </table>
             <p style="color: #d9534f; font-weight: bold;">Please take
-            necessary action to complete this milestone/deliverable before it
+            necessary action to complete this deliverable before it
             expires.</p>
             <p>Best regards,<br/>Contract Management System</p>
         </div>
@@ -620,8 +642,8 @@ class ContractMilestone(models.Model):
         
         return True
 
-    def action_test_send_milestone_email(self):
-        """Manually test sending milestone expiration email (for testing purposes)"""
+    def action_test_send_deliverable_email(self):
+        """Manually test sending deliverable expiration email (for testing purposes)"""
         self.ensure_one()
         
         # Get the responsible user
@@ -631,7 +653,7 @@ class ContractMilestone(models.Model):
         )
         
         if not assigned_user:
-            raise UserError(_('No contract manager assigned to this milestone.'))
+            raise UserError(_('No contract manager assigned to this deliverable.'))
         
         if not assigned_user.email:
             raise UserError(_('Contract manager %s has no email address.') % assigned_user.name)
@@ -645,7 +667,7 @@ class ContractMilestone(models.Model):
             })
         
         # Send the email
-        result = self.send_milestone_expiration_notification()
+        result = self.send_deliverable_expiration_notification()
         
         if result:
             return {
@@ -653,16 +675,13 @@ class ContractMilestone(models.Model):
                 'tag': 'display_notification',
                 'params': {
                     'title': _('Email Sent Successfully'),
-                    'message': _('Milestone expiration notification email has been sent to %s') % assigned_user.email,
+                    'message': _('Deliverable expiration notification email has been sent to %s') % assigned_user.email,
                     'type': 'success',
                     'sticky': False,
                 }
             }
         else:
-            raise UserError(_('Failed to send milestone expiration notification email. Please check the logs for details.'))
-
-
-
+            raise UserError(_('Failed to send deliverable expiration notification email. Please check the logs for details.'))
 
 
 
@@ -685,3 +704,4 @@ class ContractMilestone(models.Model):
                 'sticky': False,
             }
         }
+

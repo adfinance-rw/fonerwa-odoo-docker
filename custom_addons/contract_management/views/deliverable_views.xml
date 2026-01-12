@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-        <!-- Contract Milestone Tree View -->
-        <record id="view_contract_milestone_tree" model="ir.ui.view">
-            <field name="name">contract.milestone.tree</field>
-            <field name="model">contract.milestone</field>
+        <!-- Contract Deliverable Tree View -->
+        <record id="view_contract_deliverable_tree" model="ir.ui.view">
+            <field name="name">contract.deliverable.tree</field>
+            <field name="model">contract.deliverable</field>
             <field name="arch" type="xml">
                 <list string="Deliverables">
                     <field name="contract_number"/>
                     <field name="contract_name"/>
                     <field name="name"/>
-                    <field name="milestone_date"/>
+                    <field name="issue_date"/>
+                    <field name="deliverable_date"/>
                     <field name="status" decoration-success="status == 'completed'" decoration-danger="status == 'overdue'"/>
                     <field name="payment_amount"/>
                     <field name="days_until_due" decoration-danger="days_until_due &lt; 0"/>
@@ -20,10 +21,10 @@
             </field>
         </record>
 
-        <!-- Contract Milestone Form View -->
-        <record id="view_contract_milestone_form" model="ir.ui.view">
-            <field name="name">contract.milestone.form</field>
-            <field name="model">contract.milestone</field>
+        <!-- Contract Deliverable Form View -->
+        <record id="view_contract_deliverable_form" model="ir.ui.view">
+            <field name="name">contract.deliverable.form</field>
+            <field name="model">contract.deliverable</field>
             <field name="arch" type="xml">
                 <form string="Deliverables">
                     <header>
@@ -34,10 +35,10 @@
                                 invisible="not id or status in ('completed', 'cancelled')"/>
                         <button name="action_send_alert" string="Send Alert" type="object" class="btn-info" 
                                 invisible="not id or alert_sent"/>
-                        <button name="action_test_send_milestone_email" string="Test Send Email" 
+                        <button name="action_test_send_deliverable_email" string="Test Send Email" 
                                 type="object" class="btn-info" icon="fa-envelope"
                                 invisible="not id or not contract_manager_id or not contract_manager_id.email"
-                                confirm="This will send a test milestone expiration email to the contract manager. Continue?"/>
+                                confirm="This will send a test deliverable expiration email to the contract manager. Continue?"/>
                         <button name="action_reset_alert_date" string="Reset Alert Date" 
                                 type="object" class="btn-secondary" icon="fa-refresh"
                                 invisible="not id or not last_alert_date"
@@ -65,7 +66,9 @@
                                 <field name="contract_manager_id"/>
                             </group>
                             <group string="Dates &amp; Status">
-                                <field name="milestone_date"/>
+                                <field name="create_date" string="Created Date" readonly="1"/>
+                                <field name="issue_date"/>
+                                <field name="deliverable_date"/>
                                 <field name="days_until_due" readonly="1"/>
                                 <field name="is_overdue" readonly="1"/>
                                 <field name="completion_date" invisible="status != 'completed'"/>
@@ -107,12 +110,12 @@
             </field>
         </record>
 
-        <!-- Contract Milestone Search View -->
-        <record id="view_contract_milestone_search" model="ir.ui.view">
-            <field name="name">contract.milestone.search</field>
-            <field name="model">contract.milestone</field>
+        <!-- Contract Deliverable Search View -->
+        <record id="view_contract_deliverable_search" model="ir.ui.view">
+            <field name="name">contract.deliverable.search</field>
+            <field name="model">contract.deliverable</field>
             <field name="arch" type="xml">
-                <search string="Search Milestones">
+                <search string="Search Deliverables">
                     <field name="name"/>
                     <field name="contract_id"/>
                     <field name="contract_number"/>
@@ -123,25 +126,34 @@
                     <filter string="Pending" name="pending" domain="[('status', '=', 'pending')]"/>
                     <filter string="Completed" name="completed" domain="[('status', '=', 'completed')]"/>
                     <filter string="Overdue" name="overdue" domain="[('is_overdue', '=', True)]"/>
-                    <filter string="Due This Week" name="due_this_week" domain="[('milestone_date', '&gt;=', datetime.datetime.now().date()), ('milestone_date', '&lt;=', datetime.datetime.now().date() + datetime.timedelta(days=7))]"/>
+                    <filter string="Due This Week" name="due_this_week" domain="[('deliverable_date', '&gt;=', datetime.datetime.now().date()), ('deliverable_date', '&lt;=', datetime.datetime.now().date() + datetime.timedelta(days=7))]"/>
                     <separator/>
                     <group expand="0" string="Group By">
                         <filter string="Contract" name="group_contract" context="{'group_by': 'contract_id'}"/>
                         <filter string="Contract Number" name="group_contract_number" context="{'group_by': 'contract_number'}"/>
                         <filter string="Status" name="group_status" context="{'group_by': 'status'}"/>
-                        <filter string="Milestone Date" name="group_date" context="{'group_by': 'milestone_date'}"/>
+                        <filter string="Due Date" name="group_date" context="{'group_by': 'deliverable_date'}"/>
                     </group>
                 </search>
             </field>
         </record>
 
-        <!-- Contract Milestone Action -->
-        <record id="action_contract_milestone" model="ir.actions.act_window">
+        <!-- Contract Deliverable Action -->
+        <record id="action_contract_deliverable" model="ir.actions.act_window">
             <field name="name">Deliverables</field>
-            <field name="res_model">contract.milestone</field>
+            <field name="res_model">contract.deliverable</field>
             <field name="view_mode">list,form</field>
-            <field name="search_view_id" ref="view_contract_milestone_search"/>
+            <field name="search_view_id" ref="view_contract_deliverable_search"/>
             <field name="context">{}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Create your first deliverable!
+                </p>
+                <p>
+                    Track and manage all deliverables for your contracts.
+                </p>
+            </field>
         </record>
     </data>
 </odoo>
+
