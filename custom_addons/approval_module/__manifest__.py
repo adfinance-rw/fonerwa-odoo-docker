@@ -22,6 +22,7 @@
     "assets": {
         "web.assets_backend": [
             "approval_module/static/src/css/contract_price_table.css",
+            "approval_module/static/src/js/approvals_category_kanban_controller.js",
         ],
     },
     "installable": True,

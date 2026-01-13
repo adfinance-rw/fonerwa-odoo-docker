@@ -10,6 +10,9 @@
           <field name="senior_approver_id"/>
           <field name="ceo_id"/>
         </group>
+        <group string="Approval Defaults">
+          <field name="default_approval_category_id" options="{'no_create': True}"/>
+        </group>
       </xpath>
     </field>
   </record>
