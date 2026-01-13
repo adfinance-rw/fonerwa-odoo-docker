@@ -74,20 +74,17 @@ class Contract(models.Model):
     
     classification_display = fields.Char(
         string='Classifications',
-        compute='_compute_configuration_display',
-        store=True
+        compute='_compute_configuration_display'
     )
     
     category_display = fields.Char(
         string='Categories',
-        compute='_compute_configuration_display',
-        store=True
+        compute='_compute_configuration_display'
     )
     
     department_display = fields.Char(
         string='Departments',
-        compute='_compute_configuration_display',
-        store=True
+        compute='_compute_configuration_display'
     )
     
     facility_project = fields.Char(
@@ -184,8 +181,7 @@ class Contract(models.Model):
     
     contract_document_size = fields.Integer(
         string='Contract Document Size (bytes)',
-        compute='_compute_contract_document_size',
-        store=True
+        compute='_compute_contract_document_size'
     )
     
     # Additional Documents
@@ -200,15 +196,13 @@ class Contract(models.Model):
     
     additional_document_size = fields.Integer(
         string='Additional Document Size (bytes)',
-        compute='_compute_additional_document_size',
-        store=True
+        compute='_compute_additional_document_size'
     )
     
     # Document Count for UI
     document_count = fields.Integer(
         string='Document Count',
-        compute='_compute_document_count',
-        store=True
+        compute='_compute_document_count'
     )
     
     # Enhanced Deliverable Management (UR-06)
@@ -220,14 +214,12 @@ class Contract(models.Model):
     
     deliverable_count = fields.Integer(
         string='Deliverable Count',
-        compute='_compute_deliverable_count',
-        store=True
+        compute='_compute_deliverable_count'
     )
     
     overdue_deliverable_count = fields.Integer(
         string='Overdue Deliverables',
-        compute='_compute_overdue_deliverable_count',
-        store=True
+        compute='_compute_overdue_deliverable_count'
     )
     
     # Compliance and Evidence
@@ -266,14 +258,12 @@ class Contract(models.Model):
     
     amendment_count = fields.Integer(
         string='Amendment Count',
-        compute='_compute_amendment_count',
-        store=True
+        compute='_compute_amendment_count'
     )
     
     current_version = fields.Char(
         string='Current Version',
-        compute='_compute_current_version',
-        store=True
+        compute='_compute_current_version'
     )
     
     # Termination Information
@@ -313,8 +303,7 @@ class Contract(models.Model):
     
     performance_guaranty_count = fields.Integer(
         string='Performance Guaranty Count',
-        compute='_compute_performance_guaranty_count',
-        store=True
+        compute='_compute_performance_guaranty_count'
     )
 
     @api.depends('contract_documents')
