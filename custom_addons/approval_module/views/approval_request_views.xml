@@ -21,6 +21,7 @@
         <xpath expr="//header/widget[@name='attach_document']" position="replace">
             <button name="action_confirm" string="Submit" type="object" class="btn-primary" invisible="not approver_ids or request_status != 'new'" data-hotkey="q"/>
             <button name="%(approvals.action_report_approval_request)d" string="PDF" type="action" class="btn-primary" invisible="request_status != 'approved'"/>
+            <button name="action_resubmit" string="Resubmit" type="object" class="btn-primary" invisible="request_status not in ['refused', 'canceled'] or request_owner_id != uid" data-hotkey="r"/>
         </xpath>
         <xpath expr="//header/button[@name='action_confirm']" position="attributes">
             <attribute name="invisible">1</attribute>
@@ -40,7 +41,9 @@
             <field name="contract_id" 
                    invisible="not category_requires_contract"
                    options="{'no_create': True}" 
-                   placeholder="Select related contract"/>
+                   placeholder="Select related contract"
+                   readonly="request_status != 'new'"
+                   />
             <label for="contract_id" string="Contract Expiry" invisible="not category_requires_contract"/>
             <div invisible="not category_requires_contract">
                 <field name="contract_expiry_date" readonly="1"/>
@@ -53,7 +56,8 @@
                    invisible="category_type != 'invoice_payment'"
                    context="{'search_default_approved': 1, 'search_default_purchase_orders': 1}"
                    options="{'no_create': True}"
-                   domain="[('category_type', '=', 'purchase_order'), ('request_status', '=', 'approved')]"/>
+                   domain="[('category_type', '=', 'purchase_order'), ('request_status', '=', 'approved')]"
+                   readonly="request_status != 'new'"/>
             
             <!-- Generic type option field with dynamic domain -->
             <label for="type_option_id" string="Type" invisible="not category_available_type_option_ids"/>
@@ -63,7 +67,8 @@
                        placeholder="Select type..."
                        options="{'no_create': True}"
                        domain="[('id', 'in', category_available_type_option_ids)]"
-                       required="category_available_type_option_ids"/>
+                       required="category_available_type_option_ids"
+                       readonly="request_status != 'new'"/>
             </div>
             
             <field name="po_exceeds_10m" invisible="1"/>
@@ -124,11 +129,12 @@
         </xpath>
         <xpath expr="//notebook" position="inside">
             <page string="Checklist" name="payment_checklist">
-                <field name="checklist_line_ids" nolabel="1" context="{'list_view_ref': 'approval_module.approval_checklist_line_view_list', 'form_view_ref': 'approval_module.approval_checklist_line_view_form'}" options="{'no_create_edit': True, 'no_open': True}"/>
+                <field name="checklist_line_ids" nolabel="1" context="{'list_view_ref': 'approval_module.approval_checklist_line_view_list', 'form_view_ref': 'approval_module.approval_checklist_line_view_form'}" options="{'no_create_edit': True, 'no_open': True}" readonly="request_status != 'new'"/>
             </page>
             <page string="Reviewers" name="optional_approvers" invisible="request_status != 'new'">
                 <field name="optional_approver_ids" nolabel="1"
-                       context="{'tree_view_ref': 'approval_module.approval_optional_approver_tree'}"/>
+                       context="{'tree_view_ref': 'approval_module.approval_optional_approver_tree'}"
+                       readonly="request_status != 'new'"/>
                 <label for="optional_approver_ids" string="Users added here will review the request before default approvers."/>
             </page>
         </xpath>

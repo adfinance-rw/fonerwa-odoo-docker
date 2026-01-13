@@ -823,6 +823,35 @@ class ApprovalRequest(models.Model):
         
         return super().action_withdraw()
 
+    def action_resubmit(self):
+        """Allow requester to resubmit a rejected request"""
+        for request in self:
+            # Check if request is in refused status
+            if request.request_status not in ['refused', 'canceled']:
+                raise UserError(_("Only rejected or canceled requests can be resubmitted."))
+            
+            # Check if current user is the requester
+            current_user = self.env.user
+            requester = request.request_owner_id or request.create_uid
+            if current_user != requester:
+                raise UserError(_("Only the requester can resubmit a rejected or canceled request."))
+            
+            # Reset request status to 'new' so requester can edit and resubmit
+            request.sudo().write({'request_status': 'new'})
+            
+            # Reset all approver statuses to 'new' to clear previous approvals
+            if request.approver_ids:
+                request.approver_ids.sudo().write({'status': 'new'})
+            
+            # Post message in chatter
+            message_body = _('%s has reopened this request for resubmission.') % current_user.name
+            request.message_post(
+                body=message_body,
+                subject=_('Request Reopened for Resubmission'),
+                message_type='notification',
+                subtype_xmlid='mail.mt_comment'
+            )
+
     def action_approve(self, approver=None):
         """Override to send notifications when fully approved and handle delegations"""
         # Prevent approval when digital signature is not set for the approving user
