@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Rwanda Green Fund Branding',
-    'version': '1.0',
+    'version': '2.1',
     'category': 'Customizations',
     'summary': 'Custom branding and color scheme for Rwanda Green Fund',
     'description': """
@@ -25,11 +25,21 @@
     'depends': ['web', 'base'],
     'data': [],
     'assets': {
-        'web.assets_backend': [
-            'rgf_branding/static/src/css/rgf_backend.css',
+        # Dark mode variable overrides (loaded first in compilation chain)
+        'web.dark_mode_variables': [
+            'rgf_branding/static/src/scss/dark_mode_variables.scss',
         ],
+        # Light mode variable overrides (loaded early in compilation chain)
+        'web._assets_primary_variables': [
+            'rgf_branding/static/src/scss/light_mode_variables.scss',
+        ],
+        # Backend styling (loaded after variables are compiled)
+        'web.assets_backend': [
+            'rgf_branding/static/src/scss/rgf_backend.scss',
+        ],
+        # Frontend styling
         'web.assets_frontend': [
-            'rgf_branding/static/src/css/rgf_frontend.css',
+            'rgf_branding/static/src/scss/rgf_frontend.scss',
         ],
     },
     'installable': True,

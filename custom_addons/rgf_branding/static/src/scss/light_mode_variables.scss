@@ -1,0 +1,16 @@
+// Rwanda Green Fund - Light Mode Variable Overrides
+// These variables are loaded into the primary variables bundle
+
+// Primary Brand Colors
+$rgf-rich-black: #013f41;
+$rgf-garden-glow: #7faf81;
+$rgf-bleached-jade: #e0e5d1;
+
+// Odoo Variable Overrides for Light Mode
+// IMPORTANT: do NOT use !default here, we want to override Odoo's values.
+$o-brand-odoo: $rgf-rich-black;
+$o-enterprise-color: $rgf-rich-black;
+$o-brand-primary: $rgf-rich-black;
+$o-brand-secondary: $rgf-garden-glow;
+$o-brand-lightsecondary: $rgf-bleached-jade;
+

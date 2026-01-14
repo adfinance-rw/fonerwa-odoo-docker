@@ -1,18 +1,30 @@
 /*
  * Rwanda Green Fund - Backend Branding Styles
- * 
+ *
+ * NOTE:
+ * - This file is intentionally SCSS so it participates in Odoo's SCSS compilation pipeline.
+ * - It currently contains plain CSS (valid SCSS) so existing styles keep working.
+ * - Brand variables are defined in `light_mode_variables.scss` / `dark_mode_variables.scss`.
+ */
+
+/*
  * Official RGF Brand Colors:
  * - Rich Black: #013f41 (Primary - 60%)
  * - Garden Glow: #7faf81 (Secondary - 20%)
  * - Bleached Jade: #e0e5d1 (Accent - 20%)
  */
 
+// Most of our branding rules are light-mode oriented (they force whites, light borders, etc.).
+// In dark mode, you explicitly asked to keep the dark theme, only replacing the purple accent color.
+// So: compile these rules ONLY for light mode.
+@if (not variable-exists(o-webclient-color-scheme)) or ($o-webclient-color-scheme != dark) {
+
 :root {
     /* Primary Brand Colors */
     --rgf-rich-black: #013f41;
     --rgf-garden-glow: #7faf81;
     --rgf-bleached-jade: #e0e5d1;
-    
+
     /* Supporting Colors */
     --rgf-black: #000000;
     --rgf-black-box: #102c2d;
@@ -21,13 +33,13 @@
     --rgf-sagebrush: #947352;
     --rgf-tetsu-iron: #465765;
     --rgf-birch-beige: #dac3a2;
-    
-    /* Odoo Variable Overrides */
+
+    /* Odoo Variable Overrides (CSS variables) */
     --o-brand-odoo: var(--rgf-rich-black);
     --o-brand-primary: var(--rgf-rich-black);
     --o-brand-secondary: var(--rgf-garden-glow);
     --o-brand-lightsecondary: var(--rgf-bleached-jade);
-    
+
     /* Bootstrap Override Variables */
     --primary: var(--rgf-rich-black);
     --secondary: var(--rgf-garden-glow);
@@ -529,4 +541,7 @@ a:hover {
 ::-webkit-scrollbar-thumb:hover {
     background-color: var(--rgf-garden-glow) !important;
 }
+
+} // end light-mode-only
+
 

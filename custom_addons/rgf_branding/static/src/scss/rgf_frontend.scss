@@ -1,18 +1,28 @@
 /*
  * Rwanda Green Fund - Frontend/Portal Branding Styles
- * 
+ *
+ * NOTE:
+ * - This file is intentionally SCSS so it participates in Odoo's SCSS compilation pipeline.
+ * - It currently contains plain CSS (valid SCSS) so existing styles keep working.
+ */
+
+/*
  * Official RGF Brand Colors:
  * - Rich Black: #013f41 (Primary - 60%)
  * - Garden Glow: #7faf81 (Secondary - 20%)
  * - Bleached Jade: #e0e5d1 (Accent - 20%)
  */
 
+// Frontend rules are also heavily light-mode oriented.
+// Keep dark mode intact; only the brand color is overridden via variables.
+@if (not variable-exists(o-webclient-color-scheme)) or ($o-webclient-color-scheme != dark) {
+
 :root {
     /* Primary Brand Colors */
     --rgf-rich-black: #013f41;
     --rgf-garden-glow: #7faf81;
     --rgf-bleached-jade: #e0e5d1;
-    
+
     /* Supporting Colors */
     --rgf-black: #000000;
     --rgf-black-box: #102c2d;
@@ -398,4 +408,7 @@ footer a:hover {
 .card-body a:hover {
     text-decoration: none !important;
 }
+
+} // end light-mode-only
+
 

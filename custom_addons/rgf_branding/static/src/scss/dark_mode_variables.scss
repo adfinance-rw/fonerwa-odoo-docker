@@ -1,0 +1,10 @@
+// Rwanda Green Fund - Dark Mode Variable Overrides
+// These variables are loaded BEFORE Odoo's dark mode compilation
+// This ensures they're properly integrated into the SCSS build chain
+
+// Dark mode: ONLY replace the default enterprise purple with RGF Rich Black.
+// IMPORTANT: do NOT use !default here, we want to override Odoo's values.
+$o-brand-odoo: #013f41;
+$o-enterprise-color: #013f41;
+$o-brand-primary: #013f41;
+
