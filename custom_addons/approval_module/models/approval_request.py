@@ -40,6 +40,45 @@ class ApprovalRequest(models.Model):
         compute='_compute_delegate_user_ids',
         help='Users who can approve on behalf of approvers via delegation'
     )
+
+    @api.depends_context('uid')
+    @api.depends('approver_ids.status')
+    def _compute_user_status(self):
+        """
+        Make approvals resilient when the same user appears on multiple approver lines.
+
+        Standard Odoo (approvals) assumes a single approver line per user and does:
+            approver_ids.filtered(...).status
+        which crashes with:
+            ValueError: Expected singleton: approval.approver(x, y)
+
+        This can legitimately happen in our setup when a delegate is assigned for multiple approvers
+        on the same request (delegate user becomes the approver on multiple lines).
+        """
+        current_user = self.env.user
+        for approval in self:
+            lines = approval.approver_ids.filtered(lambda a: a.user_id == current_user)
+            if not lines:
+                approval.user_status = False
+                continue
+
+            # If multiple lines exist, pick the most restrictive / actionable status for UI.
+            statuses = set(lines.mapped('status'))
+            if 'pending' in statuses:
+                approval.user_status = 'pending'
+            elif 'waiting' in statuses:
+                approval.user_status = 'waiting'
+            elif 'refused' in statuses:
+                approval.user_status = 'refused'
+            elif 'cancel' in statuses:
+                approval.user_status = 'cancel'
+            elif 'approved' in statuses:
+                approval.user_status = 'approved'
+            elif 'new' in statuses:
+                approval.user_status = 'new'
+            else:
+                # fallback for any unexpected values
+                approval.user_status = next(iter(statuses))
     
     # Computed & stored field to identify category type based on category name
     category_type = fields.Selection(

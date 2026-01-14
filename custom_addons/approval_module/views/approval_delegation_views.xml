@@ -27,6 +27,7 @@
                             string="Apply to Pending Approvals" 
                             type="object"
                             class="btn-primary"
+                            invisible="1"
                             help="Update pending approval requests to use this delegate"/>
                 </header>
                 <sheet>

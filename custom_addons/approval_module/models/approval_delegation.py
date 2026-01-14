@@ -94,11 +94,16 @@ class ApprovalDelegation(models.Model):
     def create(self, vals_list):
         """Override create - delegations work automatically through _can_approve() logic"""
         delegations = super().create(vals_list)
+        # Ensure delegates can immediately access/approve pending requests by updating approver lines.
+        # This avoids relying on non-stored computed fields in record rules.
+        delegations.sudo()._update_pending_approvers()
         return delegations
 
     def write(self, vals):
         """Override write - delegations work automatically through _can_approve() logic"""
         result = super().write(vals)
+        # Re-apply/restore delegation on pending approvers after any change.
+        self.sudo()._update_pending_approvers()
         return result
 
     def _update_pending_approvers(self):
@@ -157,6 +162,24 @@ class ApprovalDelegation(models.Model):
 
     def unlink(self):
         """Override unlink - delegations automatically stop working when deleted"""
+        # Restore any pending approver lines previously delegated by these delegations
+        # before deleting the records.
+        approver_model = self.env['approval.approver'].sudo()
+        for delegation in self:
+            restore_domain = [
+                ('delegated_by_id', '=', delegation.delegator_id.id),
+                ('status', 'in', ['pending', 'waiting']),
+            ]
+            delegated_records = approver_model.search(restore_domain)
+            if delegation.category_ids:
+                delegated_records = delegated_records.filtered(
+                    lambda a: a.request_id.category_id in delegation.category_ids
+                )
+            if delegated_records:
+                delegated_records.write({
+                    'user_id': delegation.delegator_id.id,
+                    'delegated_by_id': False
+                })
         return super().unlink()
 
     def action_update_pending_approvers(self):

@@ -1,37 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data noupdate="1">
-        <!-- Record Rules for Approval Requests -->
-        
-        <!-- Rule 1: Regular users can see their own requests OR requests they need to approve -->
-        <!-- This includes optional approvers and delegates - when added, they automatically get access -->
-        <record id="approval_request_rule_user_own_or_approver" model="ir.rule">
-            <field name="name">Approval Request: User can see own requests or requests to approve</field>
-            <field name="model_id" ref="approvals.model_approval_request"/>
-            <field name="domain_force">[
-                '|',
-                '|',
-                '|',
-                '|',
-                ('request_owner_id', '=', user.id),
-                ('create_uid', '=', user.id),
-                ('approver_ids.user_id', '=', user.id),
-                ('optional_approver_ids.user_id', '=', user.id),
-                ('delegate_user_ids', 'in', [user.id])
-            ]</field>
-            <field name="groups" eval="[(4, ref('base.group_user'))]"/>
-            <field name="perm_read" eval="True"/>
-            <field name="perm_write" eval="True"/>
-            <field name="perm_create" eval="True"/>
-            <field name="perm_unlink" eval="False"/>
-        </record>
 
         <!-- Rule 2: Finance and Management Team can see all approved requests -->
         <!-- This is OR'd with the base rule, so these users see: their own + all approved -->
         <record id="approval_request_rule_view_all_approved" model="ir.rule">
             <field name="name">Approval Request: Finance and Management can view all approved requests</field>
             <field name="model_id" ref="approvals.model_approval_request"/>
-            <field name="domain_force">[('request_status', '=', 'approved')]</field>
+            <field name="domain_force">[(1, '=', 1)]</field>
             <field name="groups" eval="[(4, ref('approval_module.group_approval_finance_team')), (4, ref('approval_module.group_approval_management_team'))]"/>
             <field name="perm_read" eval="True"/>
             <field name="perm_write" eval="False"/>
@@ -65,6 +41,203 @@
                 ('delegate_id', '=', user.id)
             ]</field>
             <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+    </data>
+
+    <!-- ============================================ -->
+    <!-- Override Base Module Rules for ALL User Groups -->
+    <!-- These rules override the base approvals module -->
+    <!-- Note: noupdate is NOT set here so these rules update properly -->
+    <!-- ============================================ -->
+    <data>
+        <!-- Rule 1: Regular users can see their own requests OR requests they need to approve -->
+        <!-- This includes optional approvers and delegates - when added, they automatically get access -->
+        <record id="approval_request_rule_user_own_or_approver" model="ir.rule">
+            <field name="name">Approval Request: User can see own requests or requests to approve</field>
+            <field name="model_id" ref="approvals.model_approval_request"/>
+            <field name="domain_force">['|','|',('request_owner_id','=',user.id),('approver_ids.user_id','=',user.id),('optional_approver_ids.user_id','=',user.id)]</field>
+            <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <!-- Rule 4: Override base.group_user to include optional approvers -->
+        <!-- IMPORTANT: Do NOT use delegate_user_ids in record rules (it is a non-stored computed M2M) -->
+        <!-- Delegation access is handled by updating pending approvers to the delegate user_id -->
+        <!-- This overrides approvals.approval_request_request_approver_rule from base module -->
+        <record id="approvals.approval_request_request_approver_rule" model="ir.rule">
+            <field name="name">Approval Request: Regular users with optional approvers</field>
+            <field name="model_id" ref="approvals.model_approval_request"/>
+            <field name="domain_force">['|','|',('request_owner_id','=',user.id),('approver_ids.user_id','=',user.id),('optional_approver_ids.user_id','=',user.id)]</field>
+            <field name="groups" eval="[(6, 0, [ref('base.group_user')])]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <!-- Rule 4b: Override product line access for base.group_user -->
+        <record id="approvals.approval_request_product_line_approver_rule" model="ir.rule">
+            <field name="name">Approval Product Line: Regular users with optional approvers</field>
+            <field name="model_id" ref="approvals.model_approval_product_line"/>
+            <field name="domain_force">[
+                '|',
+                '|',
+                ('approval_request_id.request_owner_id', '=', user.id),
+                ('approval_request_id.approver_ids.user_id', '=', user.id),
+                ('approval_request_id.optional_approver_ids.user_id', '=', user.id)
+            ]</field>
+            <field name="groups" eval="[(6, 0, [ref('base.group_user')])]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <!-- Rule 5: Override approval_user to restrict access (no "see all") -->
+        <!-- Approval Officers can only see requests they're involved in -->
+        <record id="approvals.approval_request_user" model="ir.rule">
+            <field name="name">Approval Request: Officer restricted access</field>
+            <field name="model_id" ref="approvals.model_approval_request"/>
+            <field name="domain_force">['|','|','|',('request_owner_id','=',user.id),('approver_ids.user_id','=',user.id),('optional_approver_ids.user_id','=',user.id),('request_owner_id.parent_id.user_id','=',user.id)]</field>
+            <field name="groups" eval="[(6, 0, [ref('approvals.group_approval_user')])]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <!-- Rule 6: Override approval_manager to restrict access + allow subordinates -->
+        <!-- Approval Managers can see: own, as approver, optional approver, delegate, and direct subordinates -->
+        <record id="approvals.approval_request_manager" model="ir.rule">
+            <field name="name">Approval Request: Manager restricted access with subordinates</field>
+            <field name="model_id" ref="approvals.model_approval_request"/>
+            <field name="domain_force">['|','|','|',('request_owner_id','=',user.id),('approver_ids.user_id','=',user.id),('optional_approver_ids.user_id','=',user.id),('request_owner_id.parent_id.user_id','=',user.id)]</field>
+            <field name="groups" eval="[(6, 0, [ref('approvals.group_approval_manager')])]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <!-- Rule 7: Override product line rule for approval_user -->
+        <record id="approvals.approval_product_line_user" model="ir.rule">
+            <field name="name">Approval Product Line: Officer restricted access</field>
+            <field name="model_id" ref="approvals.model_approval_product_line"/>
+            <field name="domain_force">[
+                '|',
+                '|',
+                ('approval_request_id.request_owner_id', '=', user.id),
+                ('approval_request_id.approver_ids.user_id', '=', user.id),
+                ('approval_request_id.optional_approver_ids.user_id', '=', user.id)
+            ]</field>
+            <field name="groups" eval="[(6, 0, [ref('approvals.group_approval_user')])]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <!-- Rule 8: Override approver management for approval_user (no subordinates) -->
+        <record id="approvals.approval_approver_manager" model="ir.rule">
+            <field name="name">Approval Approver: Officer restricted access</field>
+            <field name="model_id" ref="approvals.model_approval_approver"/>
+            <field name="domain_force">[
+                '|',
+                '|',
+                ('request_id.request_owner_id', '=', user.id),
+                ('request_id.approver_ids.user_id', '=', user.id),
+                ('request_id.optional_approver_ids.user_id', '=', user.id)
+            ]</field>
+            <field name="groups" eval="[(6, 0, [ref('approvals.group_approval_user')])]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+        
+        <!-- Rule 8b: Approver management for managers (with subordinates) -->
+        <record id="approval_approver_rule_for_manager_group" model="ir.rule">
+            <field name="name">Approval Approver: Manager access with subordinates</field>
+            <field name="model_id" ref="approvals.model_approval_approver"/>
+            <field name="domain_force">[
+                '|',
+                '|',
+                '|',
+                ('request_id.request_owner_id', '=', user.id),
+                ('request_id.approver_ids.user_id', '=', user.id),
+                ('request_id.optional_approver_ids.user_id', '=', user.id),
+                ('request_id.request_owner_id.parent_id.user_id', '=', user.id)
+            ]</field>
+            <field name="groups" eval="[(6, 0, [ref('approvals.group_approval_manager')])]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <!-- Rule 9: Keep unlink rules for canceled requests (approval_user) -->
+        <record id="approvals.approval_request_user_unlink" model="ir.rule">
+            <field name="name">Approval Request: Officer can unlink canceled</field>
+            <field name="model_id" ref="approvals.model_approval_request"/>
+            <field name="domain_force">[('request_status', '=', 'cancel')]</field>
+            <field name="groups" eval="[(6, 0, [ref('approvals.group_approval_user')])]"/>
+            <field name="perm_read" eval="False"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <!-- Rule 10: Unlink rule for product lines (approval_user) -->
+        <record id="approvals.approval_product_line_user_unlink" model="ir.rule">
+            <field name="name">Approval Product Line: Officer can unlink from canceled</field>
+            <field name="model_id" ref="approvals.model_approval_product_line"/>
+            <field name="domain_force">[('approval_request_id.request_status', '=', 'cancel')]</field>
+            <field name="groups" eval="[(6, 0, [ref('approvals.group_approval_user')])]"/>
+            <field name="perm_read" eval="False"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <!-- Rule 11: Unlink rule for approvers (approval_user only - officers can only unlink from unapproved) -->
+        <record id="approvals.approval_approver_manager_unlink" model="ir.rule">
+            <field name="name">Approval Approver: Officer can unlink unapproved</field>
+            <field name="model_id" ref="approvals.model_approval_approver"/>
+            <field name="domain_force">[('request_id.request_status', 'in', ['new', 'pending', 'cancel'])]</field>
+            <field name="groups" eval="[(6, 0, [ref('approvals.group_approval_user')])]"/>
+            <field name="perm_read" eval="False"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <!-- ============================================ -->
+        <!-- Additional rules for Manager group -->
+        <!-- Note: approval_manager implies approval_user -->
+        <!-- Managers need access to subordinate requests and full unlink permissions -->
+        <!-- ============================================ -->
+
+        <!-- Rule 12: Product line access for managers with subordinates -->
+        <record id="approval_product_line_rule_for_manager_group" model="ir.rule">
+            <field name="name">Approval Product Line: Manager access to subordinates</field>
+            <field name="model_id" ref="approvals.model_approval_product_line"/>
+            <field name="domain_force">[
+                '|',
+                '|',
+                '|',
+                ('approval_request_id.request_owner_id', '=', user.id),
+                ('approval_request_id.approver_ids.user_id', '=', user.id),
+                ('approval_request_id.optional_approver_ids.user_id', '=', user.id),
+                ('approval_request_id.request_owner_id.parent_id.user_id', '=', user.id)
+            ]</field>
+            <field name="groups" eval="[(6, 0, [ref('approvals.group_approval_manager')])]"/>
             <field name="perm_read" eval="True"/>
             <field name="perm_write" eval="True"/>
             <field name="perm_create" eval="True"/>

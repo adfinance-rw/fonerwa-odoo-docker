@@ -14,12 +14,12 @@
 
     <!-- Override "All Approvals" action to restrict visibility to specific groups -->
     <record id="approvals.approval_request_action_all" model="ir.actions.act_window">
-        <field name="groups_id" eval="[(6, 0, [ref('approvals.group_approval_user'), ref('approvals.group_approval_manager')])]"/>
+        <field name="groups_id" eval="[(6, 0, [ref('base.group_user')])]"/>
     </record>
 
     <!-- Also restrict the "All Approvals" menu item -->
     <record id="approvals.approvals_approval_menu_all" model="ir.ui.menu">
-        <field name="groups_id" eval="[(6, 0, [ref('approvals.group_approval_user'), ref('approvals.group_approval_manager')])]"/>
+        <field name="groups_id" eval="[(6, 0, [ref('base.group_user')])]"/>
     </record>
 </odoo>
 
