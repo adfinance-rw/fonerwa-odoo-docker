@@ -1890,7 +1890,7 @@ class ApprovalOptionalApprover(models.Model):
     request_id = fields.Many2one('approval.request', string='Request', required=True, ondelete='cascade')
     user_id = fields.Many2one('res.users', string='User', required=True)
     sequence = fields.Integer(string='Sequence', default=10)
-    required = fields.Boolean(string='Required', default=False, help='If checked, this approver must approve before the request can be approved')
+    required = fields.Boolean(string='Required', default=True, help='If checked, this approver must approve before the request can be approved')
 
 
 class ApprovalContractPriceLine(models.Model):
