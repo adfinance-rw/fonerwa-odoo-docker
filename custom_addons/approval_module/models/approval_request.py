@@ -515,6 +515,15 @@ class ApprovalRequest(models.Model):
             if not self.date and self.purchase_request_number.date:
                 self.date = self.purchase_request_number.date
 
+            # Auto-populate budget line if not already set
+            if (self.purchase_request_number.description_budget_line):
+                self.description_budget_line = self.purchase_request_number.description_budget_line
+            else:
+                self.description_budget_line = False
+        else:
+            # If purchase request is cleared, also clear dependent fields that come from it.
+            self.description_budget_line = False
+
     @api.onchange('category_id')
     def _onchange_category_id(self):
         # Reset dependent fields and approvers
@@ -842,25 +851,60 @@ class ApprovalRequest(models.Model):
         """Override to prevent cancel after at least one approval if configured"""
         for request in self:
             # Check if category prevents withdrawal after approval
+            if not (
+                request.category_id
+                and hasattr(request.category_id, 'prevent_withdrawal_after_approval')
+                and request.category_id.prevent_withdrawal_after_approval
+            ):
+                return super().action_cancel()
             status_lst = request.mapped('approver_ids.status')
             if status_lst.count('approved') >= 1:
                 raise UserError(_("This request cannot be canceled as it has been approved. "
                                 "Please contact your administrator if you need to cancel this request."))
         
-        return super().action_cancel()
 
-    def action_withdraw(self):
-        """Override to prevent withdrawal after final approval if configured"""
+    def action_withdraw(self, approver=None):
+        """
+        Restrict "withdraw approval" when configured on the category.
+
+        Rule requested: an approver can withdraw their approval only if the next approver(s)
+        in the list have NOT already approved.
+        """
+        # Keep signature compatible with enterprise `approvals` (action_withdraw(self, approver=None)).
+        if not isinstance(approver, models.BaseModel):
+            approver = self.mapped('approver_ids').filtered(lambda a: a.user_id == self.env.user)
+
         for request in self:
-            # Check if category prevents withdrawal after approval
-            if (request.category_id and 
-                hasattr(request.category_id, 'prevent_withdrawal_after_approval') and 
-                request.category_id.prevent_withdrawal_after_approval and 
-                request.request_status == 'approved'):
-                raise UserError(_("This request cannot be withdrawn as it has been fully approved. "
-                                "Please contact your administrator if you need to cancel this request."))
-        
-        return super().action_withdraw()
+            if not (
+                request.category_id
+                and hasattr(request.category_id, 'prevent_withdrawal_after_approval')
+                and request.category_id.prevent_withdrawal_after_approval
+            ):
+                continue
+
+            current_approvers = request.approver_ids & approver
+            if not current_approvers:
+                continue
+
+            # Block withdraw if any later approver is already approved.
+            for cur in current_approvers:
+                later_approved = request.approver_ids.filtered(
+                    lambda a: a.status == 'approved' and (
+                        (hasattr(a, 'sequence') and hasattr(cur, 'sequence') and (
+                            a.sequence > cur.sequence or (a.sequence == cur.sequence and a.id > cur.id)
+                        )) or (
+                            # Defensive fallback if `sequence` is missing for any reason.
+                            (not hasattr(a, 'sequence') or not hasattr(cur, 'sequence')) and a.id > cur.id
+                        )
+                    )
+                )
+                if later_approved:
+                    raise UserError(_(
+                        "You cannot withdraw your approval because a next approver has already approved.\n\n"
+                        "Please contact your administrator if you need to revert this approval."
+                    ))
+
+        return super().action_withdraw(approver=approver)
 
     def action_resubmit(self):
         """Allow requester to resubmit a rejected request"""
