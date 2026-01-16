@@ -4,19 +4,19 @@
 
     <!-- Purchase Order Category -->
     <record id="approval_category_purchase_order" model="approval.category">
-        <field name="name">Purchase Order</field>
+        <field name="name">Purchase Order Request</field>
         <field name="active">True</field>
     </record>
 
     <!-- Invoice Payment Category -->
     <record id="approval_category_invoice_payment" model="approval.category">
-        <field name="name">Invoice Payment</field>
+        <field name="name">Invoice Payment Request</field>
         <field name="active">True</field>
     </record>
 
     <!-- Other Payment Category -->
     <record id="approval_category_other_payment" model="approval.category">
-        <field name="name">Other Payment</field>
+        <field name="name">Other Payment Request</field>
         <field name="active">True</field>
     </record>
 
