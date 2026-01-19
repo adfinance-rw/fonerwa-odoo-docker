@@ -8,17 +8,27 @@
                   web_icon="contract_management,static/description/icon.png"/>
 
         <!-- Sub Menus -->
+        <!-- Contracts menu for Procurement and Manager (can create) -->
         <menuitem id="menu_contract_management_contracts"
                   name="Contracts"
                   parent="menu_contract_management_root"
                   action="action_contract_management"
-                  sequence="10"/>
+                  sequence="10"
+                  groups="contract_management.group_contract_procurement,contract_management.group_contract_manager"/>
         
-        <menuitem id="menu_contract_management_deliverables"
-                  name="Deliverable"
+        <!-- Contracts menu for Contract Users (read-only) -->
+        <menuitem id="menu_contract_management_contracts_user"
+                  name="Contracts"
                   parent="menu_contract_management_root"
-                  action="action_contract_deliverable"
-                  sequence="15"/>
+                  action="action_contract_management_user"
+                  sequence="10"
+                  groups="contract_management.group_contract_user"/>
+        
+<!--        <menuitem id="menu_contract_management_deliverables"-->
+<!--                  name="Deliverable"-->
+<!--                  parent="menu_contract_management_root"-->
+<!--                  action="action_contract_deliverable"-->
+<!--                  sequence="15"/>-->
 
         <!-- Scheduled Actions Menu -->
         <record id="action_contract_scheduled_actions" model="ir.actions.act_window">

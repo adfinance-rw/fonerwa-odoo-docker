@@ -4,12 +4,329 @@ from odoo import models, fields, api, _
 from odoo.exceptions import UserError, ValidationError
 from datetime import timedelta
 import time
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 class Contract(models.Model):
     _name = 'contract.management'
     _description = 'Contract Management'
     _order = 'create_date desc'
+
+    # Note: We override search() method, not _search()
+    # The _search() method should not be overridden as it's an internal method
+
+    @api.model
+    def _apply_ir_rules(self, query, mode='read'):
+        """Override to bypass record rules for Contract Users so they see ALL contracts"""
+        user = self.env.user
+        has_contract_user = user.has_group('contract_management.group_contract_user')
+        has_contract_manager = user.has_group('contract_management.group_contract_manager')
+        has_contract_procurement = user.has_group('contract_management.group_contract_procurement')
+        
+        _logger.info('=' * 80)
+        _logger.info('_apply_ir_rules CALLED')
+        _logger.info('User: %s (ID: %s)', user.name, user.id)
+        _logger.info('Mode: %s', mode)
+        _logger.info('Has Contract User: %s', has_contract_user)
+        _logger.info('Has Contract Manager: %s', has_contract_manager)
+        _logger.info('Has Contract Procurement: %s', has_contract_procurement)
+        _logger.info('Is Admin: %s', user._is_admin())
+        
+        # For Contract Users, bypass ALL record rules to see all contracts
+        if mode == 'read' and has_contract_user:
+            if not has_contract_manager and not has_contract_procurement:
+                _logger.info('BYPASSING RECORD RULES for Contract User - returning query as-is')
+                _logger.info('Query before bypass: %s', str(query)[:500])
+                # Don't apply any record rules - return query as-is
+                # This ensures Contract Users see ALL contracts
+                result = query
+                _logger.info('Query after bypass: %s', str(result)[:500])
+                _logger.info('=' * 80)
+                return result
+        
+        _logger.info('APPLYING NORMAL RECORD RULES')
+        _logger.info('Query before applying rules: %s', str(query)[:500])
+        
+        # Log active rules that might affect this query
+        try:
+            rules = self.env['ir.rule'].sudo().search([
+                ('model_id.model', '=', 'contract.management'),
+                ('active', '=', True)
+            ])
+            _logger.info('Active record rules for contract.management: %s',
+                        len(rules))
+            for rule in rules:
+                user_groups = set(user.groups_id.ids)
+                rule_groups = set(rule.groups.ids) if rule.groups else set()
+                applies = False
+                if rule.groups:
+                    # Rule applies if user has any of the rule's groups
+                    applies = bool(user_groups & rule_groups)
+                else:
+                    # Global rule applies to everyone
+                    applies = True
+                
+                _logger.info('  Rule: %s (ID: %s)', rule.name, rule.id)
+                _logger.info('    Domain: %s', rule.domain_force)
+                # Check if rule is global (no groups means global)
+                is_global = not rule.groups
+                _logger.info('    Global: %s', is_global)
+                _logger.info('    Groups: %s', [g.name for g in rule.groups])
+                _logger.info('    User Groups: %s',
+                            [g.name for g in user.groups_id])
+                _logger.info('    Applies to user: %s', applies)
+                _logger.info('    Perm Read: %s, Write: %s, Create: %s, '
+                           'Unlink: %s',
+                           rule.perm_read, rule.perm_write, rule.perm_create,
+                           rule.perm_unlink)
+        except Exception as e:
+            _logger.error('Error logging record rules: %s', str(e))
+        
+        result = super()._apply_ir_rules(query, mode)
+        if result is None:
+            _logger.warning('ACCESS DENIED: Query returned None after '
+                          'applying rules')
+            _logger.warning('This means record rules blocked access to '
+                          'the contract(s)')
+        else:
+            _logger.info('Query after applying rules: %s',
+                        str(result)[:500])
+        _logger.info('=' * 80)
+        return result
+    
+    @api.model
+    def _log_active_record_rules(self):
+        """Log all active record rules for contract.management model"""
+        try:
+            rules = self.env['ir.rule'].sudo().search([
+                ('model_id.model', '=', 'contract.management'),
+                ('active', '=', True)
+            ])
+            _logger.info('=' * 80)
+            _logger.info('ACTIVE RECORD RULES for contract.management')
+            _logger.info('Total active rules: %s', len(rules))
+            for rule in rules:
+                _logger.info('  Rule ID: %s', rule.id)
+                _logger.info('    Name: %s', rule.name)
+                _logger.info('    Domain: %s', rule.domain_force)
+                # Check if rule is global (no groups means global)
+                is_global = not rule.groups
+                _logger.info('    Global: %s', is_global)
+                _logger.info('    Groups: %s', [g.name for g in rule.groups])
+                _logger.info('    Perm Read: %s, Write: %s, Create: %s, Unlink: %s', 
+                           rule.perm_read, rule.perm_write, rule.perm_create, rule.perm_unlink)
+            _logger.info('=' * 80)
+        except Exception as e:
+            _logger.error('Error logging record rules: %s', str(e))
+    
+    @api.model
+    def search(self, domain, offset=0, limit=None, order=None):
+        """Override search to ensure Contract Users can see ALL contracts"""
+        user = self.env.user
+        has_contract_user = user.has_group('contract_management.group_contract_user')
+        has_contract_manager = user.has_group('contract_management.group_contract_manager')
+        has_contract_procurement = user.has_group('contract_management.group_contract_procurement')
+        
+        _logger.info('=' * 80)
+        _logger.info('SEARCH METHOD CALLED')
+        _logger.info('User: %s (ID: %s)', user.name, user.id)
+        _logger.info('Is Admin: %s', user._is_admin())
+        _logger.info('Has Contract User: %s', has_contract_user)
+        _logger.info('Has Contract Manager: %s', has_contract_manager)
+        _logger.info('Has Contract Procurement: %s', has_contract_procurement)
+        _logger.info('Original Domain: %s', domain)
+        _logger.info('Offset: %s, Limit: %s, Order: %s', offset, limit, order)
+        
+        # Log active record rules
+        self._log_active_record_rules()
+        
+        # For Contract Users, ensure they see ALL contracts regardless of admin status
+        if has_contract_user:
+            if not has_contract_manager and not has_contract_procurement:
+                # Remove create_uid filters from domain
+                filtered_domain = []
+                removed_filters = []
+                for d in domain:
+                    if isinstance(d, (list, tuple)) and len(d) == 3:
+                        if d[0] == 'create_uid':
+                            removed_filters.append(d)
+                            _logger.info('REMOVED create_uid filter: %s', d)
+                            continue
+                    filtered_domain.append(d)
+                domain = filtered_domain
+                
+                _logger.info('Filtered Domain (after removing create_uid): %s', domain)
+                _logger.info('Removed %s create_uid filter(s)', len(removed_filters))
+                
+                # Search with current user - _apply_ir_rules override will bypass rules
+                _logger.info('Calling super().search() - _apply_ir_rules will bypass rules')
+                result = super().search(domain, offset=offset, limit=limit, order=order)
+                _logger.info('Search Result: Found %s contract(s)', len(result))
+                _logger.info('Contract IDs: %s', result.ids[:20] if len(result) > 20 else result.ids)
+                _logger.info('=' * 80)
+                return result
+        
+        _logger.info('Using normal search (not Contract User only)')
+        result = super().search(domain, offset=offset, limit=limit, order=order)
+        _logger.info('Search Result: Found %s contract(s)', len(result))
+        _logger.info('Contract IDs: %s', result.ids[:20] if len(result) > 20 else result.ids)
+        _logger.info('=' * 80)
+        return result
+    
+    @api.model
+    def get_view(self, view_id=None, view_type='form', **options):
+        """Override get_view (Odoo 18) to hide New button for Contract Users"""
+        # ALWAYS log to verify method is called
+        _logger.info('=' * 80)
+        _logger.info('get_view CALLED (Odoo 18 method)')
+        _logger.info('Model: %s, View Type: %s, User: %s (ID: %s)', 
+                     self._name, view_type, self.env.user.name, self.env.user.id)
+        _logger.info('View ID: %s, Options: %s', view_id, options)
+        _logger.info('=' * 80)
+        
+        result = super().get_view(view_id=view_id, view_type=view_type, **options)
+        
+        # Also call fields_view_get for backward compatibility
+        return self._modify_view_for_create_button(result, view_type)
+    
+    @api.model
+    def fields_view_get(self, view_id=None, view_type='form', toolbar=False, submenu=False):
+        """Override fields_view_get (legacy method) to hide New button for Contract Users"""
+        # ALWAYS log to verify method is called
+        _logger.info('=' * 80)
+        _logger.info('fields_view_get CALLED (legacy method)')
+        _logger.info('Model: %s, View Type: %s, User: %s (ID: %s)', 
+                     self._name, view_type, self.env.user.name, self.env.user.id)
+        _logger.info('View ID: %s, Toolbar: %s', view_id, toolbar)
+        _logger.info('=' * 80)
+        
+        result = super().fields_view_get(view_id=view_id, view_type=view_type, toolbar=toolbar, submenu=submenu)
+        return self._modify_view_for_create_button(result, view_type)
+    
+    def _modify_view_for_create_button(self, result, view_type):
+        """Modify view XML to control New button visibility"""
+        # Check if user is Contract User ONLY (without Manager/Procurement)
+        has_contract_user = self.env.user.has_group('contract_management.group_contract_user')
+        has_contract_manager = self.env.user.has_group('contract_management.group_contract_manager')
+        has_contract_procurement = self.env.user.has_group('contract_management.group_contract_procurement')
+        
+        is_contract_user_only = has_contract_user and not has_contract_manager and not has_contract_procurement
+        
+        _logger.info('Group Check - User: %s, Contract User: %s, Manager: %s, Procurement: %s', 
+                     self.env.user.name, has_contract_user, has_contract_manager, has_contract_procurement)
+        _logger.info('is_contract_user_only: %s', is_contract_user_only)
+        
+        # Control New button visibility based on user groups
+        if view_type in ('list', 'tree', 'form'):
+            arch = result.get('arch', '')
+            if arch:
+                import re
+                # Map view_type to XML tag name
+                if view_type in ('list', 'tree'):
+                    tag_name = 'list'
+                else:
+                    tag_name = 'form'
+                
+                # Determine create attribute value
+                if is_contract_user_only:
+                    # Contract User ONLY: Hide New button
+                    create_value = '0'
+                    _logger.info('HIDING NEW BUTTON for Contract User')
+                elif has_contract_manager or has_contract_procurement:
+                    # Contract Manager or Procurement: Show New button
+                    create_value = '1'
+                    _logger.info('SHOWING NEW BUTTON for Manager/Procurement')
+                else:
+                    # Other users: Keep default (usually hidden)
+                    create_value = '0'
+                    _logger.info('HIDING NEW BUTTON for other users')
+                
+                # Determine delete attribute value
+                # Only Contract Procurement can delete contracts
+                if has_contract_procurement:
+                    delete_value = '1'
+                    _logger.info('SHOWING DELETE OPTION for Procurement')
+                else:
+                    # Contract User and Contract Manager cannot delete
+                    delete_value = '0'
+                    _logger.info('HIDING DELETE OPTION for User/Manager')
+                
+                # Determine duplicate attribute value
+                # Only Contract Procurement can duplicate contracts
+                if has_contract_procurement:
+                    duplicate_value = '1'
+                    _logger.info('SHOWING DUPLICATE OPTION for Procurement')
+                else:
+                    # Contract User and Contract Manager cannot duplicate
+                    duplicate_value = '0'
+                    _logger.info('HIDING DUPLICATE OPTION for User/Manager')
+                
+                _logger.info('Setting create="%s", delete="%s", duplicate="%s" for %s view', 
+                           create_value, delete_value, duplicate_value, tag_name)
+                
+                # FORCE remove ALL existing create, delete, and duplicate attributes
+                # Match both numeric (0, 1) and boolean (true, false) values, with or without quotes
+                # Be very aggressive - match any value after the equals sign until space or >
+                arch = re.sub(
+                    r'\s+create\s*=\s*["\']?[^"\'>\s]+["\']?',
+                    '',
+                    arch,
+                    flags=re.IGNORECASE
+                )
+                arch = re.sub(
+                    r'\s+delete\s*=\s*["\']?[^"\'>\s]+["\']?',
+                    '',
+                    arch,
+                    flags=re.IGNORECASE
+                )
+                arch = re.sub(
+                    r'\s+duplicate\s*=\s*["\']?[^"\'>\s]+["\']?',
+                    '',
+                    arch,
+                    flags=re.IGNORECASE
+                )
+                
+                # Find the opening tag and FORCE add create, delete, and duplicate attributes
+                # Try multiple patterns to ensure we catch it
+                attrs = f'create="{create_value}" delete="{delete_value}" duplicate="{duplicate_value}"'
+                patterns = [
+                    (r'(<' + tag_name + r')(\s+[^>]*?)(>)', 
+                     r'\1\2 ' + attrs + r'\3'),  # With attributes
+                    (r'(<' + tag_name + r')(\s+)(>)', 
+                     r'\1\2' + attrs + r'\3'),  # With whitespace only
+                    (r'(<' + tag_name + r')(>)', 
+                     r'\1 ' + attrs + r'\2'),  # No attributes
+                ]
+                
+                modified = False
+                for pattern, replacement in patterns:
+                    if re.search(pattern, arch):
+                        arch = re.sub(pattern, replacement, arch, count=1)
+                        modified = True
+                        _logger.info('Pattern matched and replaced!')
+                        break
+                
+                if modified:
+                    result['arch'] = arch
+                    # Double-check it's there
+                    if (f'create="{create_value}"' in arch and 
+                        f'delete="{delete_value}"' in arch and
+                        f'duplicate="{duplicate_value}"' in arch):
+                        _logger.info('SUCCESS: create="%s", delete="%s", duplicate="%s" added', 
+                                   create_value, delete_value, duplicate_value)
+                    else:
+                        _logger.warning('ERROR: Attributes not found after modification!')
+                        _logger.warning('Expected: create="%s", delete="%s", duplicate="%s"', 
+                                      create_value, delete_value, duplicate_value)
+                        _logger.warning('Arch after: %s', arch[:300])
+                else:
+                    _logger.warning('ERROR: Could not find %s tag to modify!', tag_name)
+                    _logger.warning('Arch: %s', arch[:500])
+        
+        _logger.info('=' * 80)
+        return result
 
     # Basic Information
     name = fields.Char(
@@ -30,7 +347,9 @@ class Contract(models.Model):
         'res.partner',
         string='Contractor/Vendor',
         required=True,
-        tracking=True
+        tracking=True,
+        domain=[('is_contract', '=', True)],
+        help='Select a contractor/vendor. Only partners marked as contractors/vendors are shown.'
     )
     
     # Contract Classification (UR-02)
@@ -114,11 +433,11 @@ class Contract(models.Model):
     
     notice_period_days = fields.Integer(
         string='Expiration notice (Days)',
-        default=7,
+        default=30,
         tracking=True,
         help='Number of days before expiry to start sending daily notification '
              'emails. Emails will be sent daily from this day until expiration '
-             'date (default: 7 days)'
+             'date (default: 30 days)'
     )
     
     expiration_notification_sent = fields.Boolean(
@@ -148,7 +467,9 @@ class Contract(models.Model):
     currency_id = fields.Many2one(
         'res.currency',
         string='Currency',
-        default=lambda self: self.env.company.currency_id
+        default=lambda self: self.env.company.currency_id,
+        domain=[('active', '=', True)],
+        help='Select the currency for the contract value (RWF, USD, or EUR)'
     )
     
     # Status and Lifecycle
@@ -337,6 +658,53 @@ class Contract(models.Model):
         for contract in self:
             contract.deliverable_count = len(contract.deliverable_ids)
     
+    can_edit_as_manager = fields.Boolean(
+        string='Can Edit as Manager',
+        compute='_compute_can_edit_as_manager',
+        store=False,
+        help='True if current user is Contract Manager and is assigned as this contract\'s manager'
+    )
+    
+    is_contract_user_only = fields.Boolean(
+        string='Is Contract User Only',
+        compute='_compute_is_contract_user_only',
+        store=False,
+        help='True if current user is Contract User but NOT Manager and NOT Procurement'
+    )
+    
+    @api.depends('contract_manager_id')
+    def _compute_can_edit_as_manager(self):
+        """Compute if current user can edit as Contract Manager"""
+        for contract in self:
+            # Procurement users can always edit (full access)
+            if self.env.user.has_group('contract_management.group_contract_procurement'):
+                contract.can_edit_as_manager = True
+            # Contract Manager users can only edit if they are the assigned Contract Manager
+            elif self.env.user.has_group('contract_management.group_contract_manager'):
+                contract.can_edit_as_manager = contract.contract_manager_id == self.env.user
+            else:
+                # Contract Users and others cannot edit
+                contract.can_edit_as_manager = False
+    
+    @api.depends(lambda self: [])  # No field dependencies - depends on current user
+    def _compute_is_contract_user_only(self):
+        """Compute if current user is Contract User ONLY (without Manager/Procurement)"""
+        has_contract_user = self.env.user.has_group('contract_management.group_contract_user')
+        has_contract_manager = self.env.user.has_group('contract_management.group_contract_manager')
+        has_contract_procurement = self.env.user.has_group('contract_management.group_contract_procurement')
+        
+        is_contract_user_only = has_contract_user and not has_contract_manager and not has_contract_procurement
+        
+        # Log for debugging
+        _logger.info('Computing is_contract_user_only for user: %s', self.env.user.name)
+        _logger.info('Has Contract User: %s, Manager: %s, Procurement: %s', 
+                    has_contract_user, has_contract_manager, has_contract_procurement)
+        _logger.info('is_contract_user_only = %s', is_contract_user_only)
+        
+        # Set for all records (this is a context-based field)
+        for record in self:
+            record.is_contract_user_only = is_contract_user_only
+    
     @api.depends('amendment_ids')
     def _compute_amendment_count(self):
         for contract in self:
@@ -493,6 +861,53 @@ class Contract(models.Model):
 
     @api.model
     def create(self, vals):
+        """Override create to prevent Contract Users from creating contracts"""
+        # Security check: Contract Users cannot create contracts
+        # Button is visible but clicking it will show this error message
+        # Check user groups explicitly
+        has_contract_user = self.env.user.has_group('contract_management.group_contract_user')
+        has_contract_manager = self.env.user.has_group('contract_management.group_contract_manager')
+        has_contract_procurement = self.env.user.has_group('contract_management.group_contract_procurement')
+        is_admin = self.env.user._is_admin()
+        
+        # Log for debugging
+        _logger.info('=' * 60)
+        _logger.info('CREATE METHOD CALLED')
+        _logger.info('User: %s (ID: %s)', self.env.user.name, self.env.user.id)
+        _logger.info('Is Admin: %s', is_admin)
+        _logger.info('Has Contract User: %s', has_contract_user)
+        _logger.info('Has Contract Manager: %s', has_contract_manager)
+        _logger.info('Has Contract Procurement: %s', has_contract_procurement)
+        _logger.info('=' * 60)
+        
+        # If user has Contract User group but NOT Manager and NOT Procurement, deny access
+        # This applies even if user is admin (as per user requirement)
+        if has_contract_user and not has_contract_manager and not has_contract_procurement:
+            _logger.error('=' * 60)
+            _logger.error('CREATE BLOCKED - Contract User attempted to create contract')
+            _logger.error('User: %s (ID: %s) - BLOCKED', self.env.user.name, self.env.user.id)
+            _logger.error('=' * 60)
+            raise UserError(
+                _('Access Denied!\n\n'
+                  'You do not have permission to create contracts.\n\n'
+                  'Only Contract Managers and Contract Procurement users can create contracts.\n\n'
+                  'Please contact your administrator if you need to create a contract.')
+            )
+        
+        _logger.info('CREATE ALLOWED - User has Manager or Procurement group')
+        _logger.info('Proceeding with contract creation...')
+        
+        # Security check: Contract Managers can only assign themselves as Contract Manager
+        if self.env.user.has_group('contract_management.group_contract_manager'):
+            if not self.env.user.has_group('contract_management.group_contract_procurement'):
+                if 'contract_manager_id' in vals and vals.get('contract_manager_id') != self.env.user.id:
+                    raise UserError(
+                        _('You can only assign yourself as the Contract Manager when creating contracts.')
+                    )
+                # Ensure contract_manager_id is set to current user if not provided
+                if 'contract_manager_id' not in vals:
+                    vals['contract_manager_id'] = self.env.user.id
+        
         # Always assign contract number during creation
         if not vals.get('contract_number') or vals.get('contract_number') == _('New'):
             sequence = self.env['ir.sequence'].search([('code', '=', 'contract.management')])
@@ -534,7 +949,9 @@ class Contract(models.Model):
             raise UserError(_('Contract Document is required. Please upload the contract document.'))
         
         # Create the contract
+        _logger.info('Calling super().create() now...')
         contract = super(Contract, self).create(vals)
+        _logger.info('Contract created successfully: ID %s', contract.id)
         
         return contract
     
@@ -592,6 +1009,23 @@ class Contract(models.Model):
     def write(self, vals):
         """Override write to handle amendment tracking and validate
         deliverables"""
+        # Security check: Contract Managers can only edit contracts where they are the Contract Manager
+        if self.env.user.has_group('contract_management.group_contract_manager'):
+            if not self.env.user.has_group('contract_management.group_contract_procurement'):
+                for contract in self:
+                    if contract.contract_manager_id != self.env.user:
+                        raise UserError(
+                            _('You can only edit contracts where you are assigned as the Contract Manager. '
+                              'Please contact a Contract Procurement user to '
+                              'modify contracts assigned to other managers.')
+                        )
+                    # Prevent Contract Managers from changing contract_manager_id
+                    if 'contract_manager_id' in vals and vals.get('contract_manager_id') != self.env.user.id:
+                        raise UserError(
+                            _('You cannot change the Contract Manager assignment. '
+                              'Please contact a Contract Procurement user to reassign contracts.')
+                        )
+        
         # Validate deliverables amounts if contract value is being changed
         if 'contract_value' in vals:
             for contract in self:
@@ -706,6 +1140,16 @@ class Contract(models.Model):
     def action_terminate(self):
         """Open termination wizard"""
         self.ensure_one()
+        
+        # Security check: Contract Managers can only terminate contracts they manage
+        if self.env.user.has_group('contract_management.group_contract_manager'):
+            if not self.env.user.has_group('contract_management.group_contract_procurement'):
+                if self.contract_manager_id != self.env.user:
+                    raise UserError(
+                        _('You can only terminate contracts where you are assigned as the Contract Manager. '
+                          'Please contact a Contract Procurement user to '
+                          'terminate contracts assigned to other managers.')
+                    )
         
         return {
             'type': 'ir.actions.act_window',
@@ -872,6 +1316,15 @@ class Contract(models.Model):
     def action_create_amendment_from_line(self):
         """Handle 'Add a line' action for amendment_ids field"""
         self.ensure_one()
+        
+        # Security check: Contract Managers can only create amendments for contracts where they are the Contract Manager
+        if self.env.user.has_group('contract_management.group_contract_manager'):
+            if not self.env.user.has_group('contract_management.group_contract_procurement'):
+                if self.contract_manager_id != self.env.user:
+                    raise UserError(
+                        _('You can only create amendments for contracts where you are assigned as the Contract Manager. '
+                          'Please contact a Contract Procurement user to amend contracts assigned to other managers.')
+                    )
         
         return {
             'type': 'ir.actions.act_window',

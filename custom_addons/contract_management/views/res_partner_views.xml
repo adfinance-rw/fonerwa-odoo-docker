@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Inherit Partner Form View to Add is_contract Field -->
+        <record id="view_partner_form_inherit_contract_management" model="ir.ui.view">
+            <field name="name">res.partner.form.inherit.contract.management</field>
+            <field name="model">res.partner</field>
+            <field name="inherit_id" ref="base.view_partner_form"/>
+            <field name="arch" type="xml">
+                <!-- Add is_contract field after Tags (category_id) field -->
+                <xpath expr="//field[@name='category_id']" position="after">
+                    <field name="is_contract" 
+                           widget="boolean_toggle"
+                           string="Is Contractor/Vendor"
+                           help="Check this box if this partner is a contractor/vendor that can be used in contracts"/>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>
+

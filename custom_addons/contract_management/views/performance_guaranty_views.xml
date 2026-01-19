@@ -57,8 +57,8 @@
                                 <field name="contract_manager_id"/>
                             </group>
                             <group string="Amount &amp; Dates">
+                                <field name="currency_id"/>
                                 <field name="performance_guaranty_amount"/>
-                                <field name="currency_id" invisible="1"/>
                                 <field name="issue_date"/>
                                 <field name="expiry_date"/>
                                 <field name="status" readonly="1"/>

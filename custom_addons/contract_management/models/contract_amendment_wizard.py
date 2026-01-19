@@ -34,7 +34,9 @@ class ContractAmendmentWizard(models.TransientModel):
     partner_id = fields.Many2one(
         'res.partner',
         string='Contractor/Vendor',
-        required=True
+        required=True,
+        domain=[('is_contract', '=', True)],
+        help='Select a contractor/vendor. Only partners marked as contractors/vendors are shown.'
     )
     
     contract_type_id = fields.Many2one(
@@ -99,7 +101,9 @@ class ContractAmendmentWizard(models.TransientModel):
     
     currency_id = fields.Many2one(
         'res.currency',
-        string='Currency'
+        string='Currency',
+        domain=[('name', 'in', ['RWF', 'USD', 'EUR'])],
+        help='Select the currency for the contract value (RWF, USD, or EUR)'
     )
 
     

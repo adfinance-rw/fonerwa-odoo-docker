@@ -57,9 +57,19 @@ class ContractPerformanceGuaranty(models.Model):
     currency_id = fields.Many2one(
         'res.currency',
         string='Currency',
-        related='contract_id.currency_id',
-        store=True
+        domain=[('name', 'in', ['RWF', 'USD', 'EUR'])],
+        default=lambda self: self._get_default_currency(),
+        help='Select the currency for the performance guaranty amount (RWF, USD, or EUR)'
     )
+    
+    @api.model
+    def _get_default_currency(self):
+        """Get default currency from contract if available"""
+        if self.env.context.get('default_contract_id'):
+            contract = self.env['contract.management'].browse(
+                self.env.context['default_contract_id'])
+            return contract.currency_id.id if contract.currency_id else False
+        return False
     
     # Dates
     issue_date = fields.Date(
@@ -102,7 +112,7 @@ class ContractPerformanceGuaranty(models.Model):
     # Alert Configuration
     alert_days_before = fields.Integer(
         string='Alert Days Before',
-        default=7,
+        default=30,
         help='Number of days before performance guaranty expiry date to start sending '
              'daily email alerts. Emails will be sent daily until the '
              'performance guaranty expires or is released/claimed.'
@@ -140,6 +150,12 @@ class ContractPerformanceGuaranty(models.Model):
         related='contract_id.contract_manager_id',
         store=True
     )
+
+    @api.onchange('contract_id')
+    def _onchange_contract_id(self):
+        """Set default currency when contract is selected"""
+        if self.contract_id and self.contract_id.currency_id:
+            self.currency_id = self.contract_id.currency_id
 
     # Computed Fields
     days_to_expiry = fields.Integer(

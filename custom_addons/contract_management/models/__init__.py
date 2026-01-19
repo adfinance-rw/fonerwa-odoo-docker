@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 from . import contract
 from . import contract_deliverables
 from . import contract_reports
@@ -11,3 +10,4 @@ from . import contract_configuration
 from . import contract_performance_guaranty
 from . import deliverable_expiration_cron
 from . import performance_guaranty_expiration_cron
+from . import res_partner

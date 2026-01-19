@@ -34,6 +34,7 @@
         'views/wizard_views.xml',
         'views/menu.xml',
         'views/contract_configuration_views.xml',
+        'views/res_partner_views.xml',
     ],
     'demo': [],
     'installable': True,

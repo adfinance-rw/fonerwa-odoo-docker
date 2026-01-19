@@ -37,8 +37,8 @@
                                         <field name="effective_date"/>
                                         <field name="expiry_date"/>
                                         <field name="notice_period_days"/>
+                                        <field name="currency_id"/>
                                         <field name="contract_value"/>
-                                        <field name="currency_id" invisible="1"/>
                                         <field name="version_number"/>
                                     </group>
                                 </group>

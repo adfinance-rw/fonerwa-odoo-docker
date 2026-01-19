@@ -50,7 +50,7 @@ class ContractEmailExpirationCron(models.Model):
             try:
                 # Calculate days to expiry
                 days_to_expiry = (contract.expiry_date - today).days
-                notice_period = contract.notice_period_days or 7
+                notice_period = contract.notice_period_days or 30
                 
                 # Check if contract is within notice period
                 if days_to_expiry > notice_period:

@@ -49,7 +49,7 @@ class DeliverableExpirationCron(models.Model):
             try:
                 # Calculate days until due
                 days_until_due = (deliverable.deliverable_date - today).days
-                alert_days_before = deliverable.alert_days_before or 7
+                alert_days_before = deliverable.alert_days_before or 30
                 
                 # Check if deliverable is within alert period
                 if days_until_due > alert_days_before:

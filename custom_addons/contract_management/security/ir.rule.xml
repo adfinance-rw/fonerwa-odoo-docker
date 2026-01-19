@@ -1,53 +1,235 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <data noupdate="1">
-        <!-- Record Rule: Regular users can only see their own contracts -->
-        <record id="contract_management_user_rule" model="ir.rule">
+    <data noupdate="0">
+        <!-- Contract Management Record Rules -->
+        
+        <!-- Deactivate conflicting rules that restrict "Internal User" group -->
+        <!-- These rules conflict with Contract User access requirements -->
+        <record id="deactivate_user_own_contracts_rule" model="ir.rule" forcecreate="0">
             <field name="name">Contract Management: User can only see own contracts</field>
             <field name="model_id" ref="model_contract_management"/>
-            <field name="domain_force">[('contract_manager_id', '=', user.id)]</field>
-            <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+            <field name="active" eval="False"/>
         </record>
-
-        <!-- Record Rule: Admin users can see all contracts -->
-        <record id="contract_management_admin_rule" model="ir.rule">
-            <field name="name">Contract Management: Admin can see all contracts</field>
-            <field name="model_id" ref="model_contract_management"/>
-            <field name="domain_force">[(1, '=', 1)]</field>
-            <field name="groups" eval="[(4, ref('base.group_system'))]"/>
-        </record>
-
-        <!-- Record Rule: Regular users can only see deliverables of their own contracts -->
-        <record id="contract_deliverable_user_rule" model="ir.rule">
-            <field name="name">Contract Deliverable: User can only see deliverables of own contracts</field>
-            <field name="model_id" ref="model_contract_deliverable"/>
-            <field name="domain_force">[('contract_id.contract_manager_id', '=', user.id)]</field>
-            <field name="groups" eval="[(4, ref('base.group_user'))]"/>
-        </record>
-
-        <!-- Record Rule: Admin users can see all deliverables -->
-        <record id="contract_deliverable_admin_rule" model="ir.rule">
-            <field name="name">Contract Deliverable: Admin can see all deliverables</field>
-            <field name="model_id" ref="model_contract_deliverable"/>
-            <field name="domain_force">[(1, '=', 1)]</field>
-            <field name="groups" eval="[(4, ref('base.group_system'))]"/>
-        </record>
-
-        <!-- Record Rule: Regular users can only see amendments of their own contracts -->
-        <record id="contract_amendment_user_rule" model="ir.rule">
+        
+        <record id="deactivate_user_own_amendments_rule" model="ir.rule" forcecreate="0">
             <field name="name">Contract Amendment: User can only see amendments of own contracts</field>
             <field name="model_id" ref="model_contract_management_amendment"/>
-            <field name="domain_force">[('contract_id.contract_manager_id', '=', user.id)]</field>
-            <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+            <field name="active" eval="False"/>
+        </record>
+        
+        <record id="deactivate_user_own_deliverables_rule" model="ir.rule" forcecreate="0">
+            <field name="name">Contract Deliverable: User can only see deliverables of own contracts</field>
+            <field name="model_id" ref="model_contract_deliverable"/>
+            <field name="active" eval="False"/>
+        </record>
+        
+        <!-- ============================================ -->
+        <!-- CONTRACT MANAGEMENT RULES -->
+        <!-- ============================================ -->
+        
+        <!-- Contract Procurement: Full access to all contracts -->
+        <record id="contract_management_procurement_rule" model="ir.rule">
+            <field name="name">Contract Management: Procurement Full Access</field>
+            <field name="model_id" ref="model_contract_management"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('contract_management.group_contract_procurement'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
         </record>
 
-        <!-- Record Rule: Admin users can see all amendments -->
-        <record id="contract_amendment_admin_rule" model="ir.rule">
-            <field name="name">Contract Amendment: Admin can see all amendments</field>
+        <!-- Contract Manager: Can view all contracts -->
+        <record id="contract_management_manager_read_rule" model="ir.rule">
+            <field name="name">Contract Management: Manager View All</field>
+            <field name="model_id" ref="model_contract_management"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('contract_management.group_contract_manager'))]"/>
+            <field name="perm_read" eval="True"/>
+        </record>
+        
+        <!-- Contract Manager: Can create any contract -->
+        <record id="contract_management_manager_create_rule" model="ir.rule">
+            <field name="name">Contract Management: Manager Create Any</field>
+            <field name="model_id" ref="model_contract_management"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('contract_management.group_contract_manager'))]"/>
+            <field name="perm_create" eval="True"/>
+        </record>
+        
+        <!-- Contract Manager: Can only write to contracts where they are the Contract Manager -->
+        <record id="contract_management_manager_write_rule" model="ir.rule">
+            <field name="name">Contract Management: Manager Write Own</field>
+            <field name="model_id" ref="model_contract_management"/>
+            <field name="domain_force">[('contract_manager_id', '=', user.id)]</field>
+            <field name="groups" eval="[(4, ref('contract_management.group_contract_manager'))]"/>
+            <field name="perm_write" eval="True"/>
+        </record>
+
+        <!-- Contract User: Can view all contracts (read-only) -->
+        <record id="contract_management_user_rule" model="ir.rule">
+            <field name="name">Contract Management: User View All</field>
+            <field name="model_id" ref="model_contract_management"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('contract_management.group_contract_user'))]"/>
+            <field name="perm_read" eval="True"/>
+        </record>
+
+        <!-- ============================================ -->
+        <!-- CONTRACT DELIVERABLES RULES -->
+        <!-- ============================================ -->
+        
+        <!-- Contract Procurement: Full access to all deliverables -->
+        <record id="contract_deliverable_procurement_rule" model="ir.rule">
+            <field name="name">Contract Deliverable: Procurement Full Access</field>
+            <field name="model_id" ref="model_contract_deliverable"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('contract_management.group_contract_procurement'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <!-- Contract Manager: Can view all deliverables -->
+        <record id="contract_deliverable_manager_read_rule" model="ir.rule">
+            <field name="name">Contract Deliverable: Manager View All</field>
+            <field name="model_id" ref="model_contract_deliverable"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('contract_management.group_contract_manager'))]"/>
+            <field name="perm_read" eval="True"/>
+        </record>
+        
+        <!-- Contract Manager: Can create deliverables for any contract -->
+        <record id="contract_deliverable_manager_create_rule" model="ir.rule">
+            <field name="name">Contract Deliverable: Manager Create Any</field>
+            <field name="model_id" ref="model_contract_deliverable"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('contract_management.group_contract_manager'))]"/>
+            <field name="perm_create" eval="True"/>
+        </record>
+        
+        <!-- Contract Manager: Can only write to deliverables of contracts where they are the Contract Manager -->
+        <record id="contract_deliverable_manager_write_rule" model="ir.rule">
+            <field name="name">Contract Deliverable: Manager Write Own</field>
+            <field name="model_id" ref="model_contract_deliverable"/>
+            <field name="domain_force">[('contract_id.contract_manager_id', '=', user.id)]</field>
+            <field name="groups" eval="[(4, ref('contract_management.group_contract_manager'))]"/>
+            <field name="perm_write" eval="True"/>
+        </record>
+
+        <!-- Contract User: Can view all deliverables (read-only) -->
+        <record id="contract_deliverable_user_rule" model="ir.rule">
+            <field name="name">Contract Deliverable: User View All</field>
+            <field name="model_id" ref="model_contract_deliverable"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('contract_management.group_contract_user'))]"/>
+            <field name="perm_read" eval="True"/>
+        </record>
+
+        <!-- ============================================ -->
+        <!-- CONTRACT AMENDMENTS RULES -->
+        <!-- ============================================ -->
+        
+        <!-- Contract Procurement: Full access to all amendments -->
+        <record id="contract_amendment_procurement_rule" model="ir.rule">
+            <field name="name">Contract Amendment: Procurement Full Access</field>
             <field name="model_id" ref="model_contract_management_amendment"/>
             <field name="domain_force">[(1, '=', 1)]</field>
-            <field name="groups" eval="[(4, ref('base.group_system'))]"/>
+            <field name="groups" eval="[(4, ref('contract_management.group_contract_procurement'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
         </record>
+
+        <!-- Contract Manager: Can view all amendments -->
+        <record id="contract_amendment_manager_read_rule" model="ir.rule">
+            <field name="name">Contract Amendment: Manager View All</field>
+            <field name="model_id" ref="model_contract_management_amendment"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('contract_management.group_contract_manager'))]"/>
+            <field name="perm_read" eval="True"/>
+        </record>
+        
+        <!-- Contract Manager: Can create amendments for any contract -->
+        <record id="contract_amendment_manager_create_rule" model="ir.rule">
+            <field name="name">Contract Amendment: Manager Create Any</field>
+            <field name="model_id" ref="model_contract_management_amendment"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('contract_management.group_contract_manager'))]"/>
+            <field name="perm_create" eval="True"/>
+        </record>
+        
+        <!-- Contract Manager: Can only write to amendments of contracts where they are the Contract Manager -->
+        <record id="contract_amendment_manager_write_rule" model="ir.rule">
+            <field name="name">Contract Amendment: Manager Write Own</field>
+            <field name="model_id" ref="model_contract_management_amendment"/>
+            <field name="domain_force">[('contract_id.contract_manager_id', '=', user.id)]</field>
+            <field name="groups" eval="[(4, ref('contract_management.group_contract_manager'))]"/>
+            <field name="perm_write" eval="True"/>
+        </record>
+
+        <!-- Contract User: Can view all amendments (read-only) -->
+        <record id="contract_amendment_user_rule" model="ir.rule">
+            <field name="name">Contract Amendment: User View All</field>
+            <field name="model_id" ref="model_contract_management_amendment"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('contract_management.group_contract_user'))]"/>
+            <field name="perm_read" eval="True"/>
+        </record>
+
+        <!-- ============================================ -->
+        <!-- CONTRACT PERFORMANCE GUARANTY RULES -->
+        <!-- ============================================ -->
+        
+        <!-- Contract Procurement: Full access to all performance guaranties -->
+        <record id="contract_performance_guaranty_procurement_rule" model="ir.rule">
+            <field name="name">Contract Performance Guaranty: Procurement Full Access</field>
+            <field name="model_id" ref="model_contract_performance_guaranty"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('contract_management.group_contract_procurement'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <!-- Contract Manager: Can view all performance guaranties -->
+        <record id="contract_performance_guaranty_manager_read_rule" model="ir.rule">
+            <field name="name">Contract Performance Guaranty: Manager View All</field>
+            <field name="model_id" ref="model_contract_performance_guaranty"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('contract_management.group_contract_manager'))]"/>
+            <field name="perm_read" eval="True"/>
+        </record>
+        
+        <!-- Contract Manager: Can create performance guaranties for any contract -->
+        <record id="contract_performance_guaranty_manager_create_rule" model="ir.rule">
+            <field name="name">Contract Performance Guaranty: Manager Create Any</field>
+            <field name="model_id" ref="model_contract_performance_guaranty"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('contract_management.group_contract_manager'))]"/>
+            <field name="perm_create" eval="True"/>
+        </record>
+        
+        <!-- Contract Manager: Can only write to performance guaranties of contracts where they are the Contract Manager -->
+        <record id="contract_performance_guaranty_manager_write_rule" model="ir.rule">
+            <field name="name">Contract Performance Guaranty: Manager Write Own</field>
+            <field name="model_id" ref="model_contract_performance_guaranty"/>
+            <field name="domain_force">[('contract_id.contract_manager_id', '=', user.id)]</field>
+            <field name="groups" eval="[(4, ref('contract_management.group_contract_manager'))]"/>
+            <field name="perm_write" eval="True"/>
+        </record>
+
+        <!-- Contract User: Can view all performance guaranties (read-only) -->
+        <record id="contract_performance_guaranty_user_rule" model="ir.rule">
+            <field name="name">Contract Performance Guaranty: User View All</field>
+            <field name="model_id" ref="model_contract_performance_guaranty"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('contract_management.group_contract_user'))]"/>
+            <field name="perm_read" eval="True"/>
+        </record>
+
     </data>
 </odoo>
-

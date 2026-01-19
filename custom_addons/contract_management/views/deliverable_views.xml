@@ -80,8 +80,8 @@
                                 <field name="deliverable" placeholder="Describe the deliverable..."/>
                             </group>
                             <group string="Payment &amp; Alerts">
+                                <field name="currency_id"/>
                                 <field name="payment_amount" required="1"/>
-                                <field name="currency_id" invisible="1"/>
                                 <field name="alert_days_before"/>
                                 <field name="alert_sent" readonly="1"/>
                                 <field name="last_alert_date" readonly="1"/>
@@ -126,7 +126,7 @@
                     <filter string="Pending" name="pending" domain="[('status', '=', 'pending')]"/>
                     <filter string="Completed" name="completed" domain="[('status', '=', 'completed')]"/>
                     <filter string="Overdue" name="overdue" domain="[('is_overdue', '=', True)]"/>
-                    <filter string="Due This Week" name="due_this_week" domain="[('deliverable_date', '&gt;=', datetime.datetime.now().date()), ('deliverable_date', '&lt;=', datetime.datetime.now().date() + datetime.timedelta(days=7))]"/>
+                    <filter string="Due This Week" name="due_this_week" domain="[('deliverable_date', '&gt;=', datetime.datetime.now().date()), ('deliverable_date', '&lt;=', datetime.datetime.now().date() + datetime.timedelta(days=30))]"/>
                     <separator/>
                     <group expand="0" string="Group By">
                         <filter string="Contract" name="group_contract" context="{'group_by': 'contract_id'}"/>

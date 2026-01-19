@@ -68,14 +68,24 @@ class ContractDeliverable(models.Model):
     currency_id = fields.Many2one(
         'res.currency',
         string='Currency',
-        related='contract_id.currency_id',
-        store=True
+        domain=[('name', 'in', ['RWF', 'USD', 'EUR'])],
+        default=lambda self: self._get_default_currency(),
+        help='Select the currency for the payment amount (RWF, USD, or EUR)'
     )
+    
+    @api.model
+    def _get_default_currency(self):
+        """Get default currency from contract if available"""
+        if self.env.context.get('default_contract_id'):
+            contract = self.env['contract.management'].browse(
+                self.env.context['default_contract_id'])
+            return contract.currency_id.id if contract.currency_id else False
+        return False
 
     # Alert Configuration
     alert_days_before = fields.Integer(
         string='Alert Days Before',
-        default=7,
+        default=30,
         help='Number of days before deliverable due date to start sending '
              'daily email alerts. Emails will be sent daily until the '
              'deliverable is completed or overdue.'
@@ -143,6 +153,12 @@ class ContractDeliverable(models.Model):
         related='contract_id.contract_manager_id',
         store=True
     )
+
+    @api.onchange('contract_id')
+    def _onchange_contract_id(self):
+        """Set default currency when contract is selected"""
+        if self.contract_id and self.contract_id.currency_id:
+            self.currency_id = self.contract_id.currency_id
 
     @api.depends('deliverable_date', 'status')
     def _compute_is_overdue(self):

@@ -146,7 +146,9 @@ class ContractAmendment(models.Model):
     
     currency_id = fields.Many2one(
         'res.currency',
-        string='Currency'
+        string='Currency',
+        domain=[('name', 'in', ['RWF', 'USD', 'EUR'])],
+        help='Select the currency for the contract value (RWF, USD, or EUR)'
     )
     
     # Status and Lifecycle

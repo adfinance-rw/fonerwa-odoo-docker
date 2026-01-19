@@ -49,7 +49,7 @@ class PerformanceGuarantyExpirationCron(models.Model):
             try:
                 # Calculate days to expiry
                 days_to_expiry = (guaranty.expiry_date - today).days
-                alert_days_before = guaranty.alert_days_before or 7
+                alert_days_before = guaranty.alert_days_before or 30
                 
                 # Check if guaranty is within alert period
                 if days_to_expiry > alert_days_before:
