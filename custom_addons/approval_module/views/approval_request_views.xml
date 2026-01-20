@@ -146,7 +146,10 @@
                    invisible="not delegated_by_id"/>
         </xpath>
         
-        <!-- Approvers page is visible to all users (removed group restriction) -->
+        <!-- Make the approvers page visible only to Approval Managers -->
+        <xpath expr="//page[@name='approvers']" position="attributes">
+            <attribute name="groups">approvals.group_approval_manager</attribute>
+        </xpath>
       </field>
     </record>
 
