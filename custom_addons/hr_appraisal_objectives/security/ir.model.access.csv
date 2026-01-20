@@ -43,3 +43,4 @@ access_hr_appraisal_revert_wizard_hr,hr.appraisal.revert.wizard hr,hr_appraisal_
 access_hr_appraisal_rating_scale_hr,hr.appraisal.rating.scale hr,hr_appraisal_objectives.model_hr_appraisal_rating_scale,hr_appraisal_objectives.group_hr_appraisal,1,1,1,1
 access_hr_appraisal_rating_scale_manager,hr.appraisal.rating.scale manager,hr_appraisal_objectives.model_hr_appraisal_rating_scale,hr_appraisal_objectives.group_appraisal_line_manager,1,0,0,0
 access_hr_appraisal_rating_scale_employee,hr.appraisal.rating.scale employee,hr_appraisal_objectives.model_hr_appraisal_rating_scale,base.group_user,1,0,0,0
+access_hr_employee_appraisal_user,hr.employee appraisal user,hr.model_hr_employee,base.group_user,1,0,0,0

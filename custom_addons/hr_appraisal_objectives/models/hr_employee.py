@@ -25,12 +25,13 @@ class HrEmployee(models.Model):
         ('not_started', 'Not Started'),
         ('in_progress', 'In Progress'),
         ('approved', 'Approved'),
-    ], string="Objective Status", compute="_compute_objective_status", store=True, search='_search_objective_status')
+    ], string="Objective Status", compute="_compute_objective_status", store=True, compute_sudo=True, search='_search_objective_status')
     
     objective_status_color = fields.Char(
         string="Status Color",
         compute="_compute_objective_status",
-        store=False
+        store=True,
+        compute_sudo=True,
     )
     
     objective_draft_count = fields.Integer(
@@ -240,6 +241,7 @@ class EmployeePublic(models.Model):
         ],
         compute='_compute_objective_status_public',
         store=True,
+        compute_sudo=True,
         string="Objective Status",
     )
 
