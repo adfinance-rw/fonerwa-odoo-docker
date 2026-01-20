@@ -21,7 +21,7 @@
                                     string="Notify on Approval"
                                     placeholder="Select users to notify..."/>
                         </group>
-                        <group string="Description Structure">
+                        <group string="Description &amp; Deadlines">
                             <field name="description_show_subject" 
                                 string="Show Subject"
                                 help="Enable Subject field in the Description section"/>
@@ -34,6 +34,9 @@
                             <field name="description_show_contract_price" 
                                 string="Show Contract Price"
                                 help="Enable Contract Price table in the Description section"/>
+                            <field name="approval_deadline_days"
+                                   string="Approval Activity Deadline (days)"
+                                   help="Number of days from assignment until an Approval activity is due for this category."/>
                         </group>
                     </group>
                     <group>

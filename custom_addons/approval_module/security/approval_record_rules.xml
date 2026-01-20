@@ -67,6 +67,18 @@
             <field name="perm_unlink" eval="False"/>
         </record>
 
+        <!-- Rule 1b: Regular users can see approvers for requests they can access -->
+        <record id="approval_approver_rule_user" model="ir.rule">
+            <field name="name">Approval Approver: Visible to request viewers</field>
+            <field name="model_id" ref="approvals.model_approval_approver"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
         <!-- Rule 4: Override base.group_user to include optional approvers -->
         <!-- IMPORTANT: Do NOT use delegate_user_ids in record rules (it is a non-stored computed M2M) -->
         <!-- Delegation access is handled by updating pending approvers to the delegate user_id -->
@@ -144,17 +156,12 @@
             <field name="perm_unlink" eval="False"/>
         </record>
 
-        <!-- Rule 8: Override approver management for approval_user (no subordinates) -->
+        <!-- Rule 8: Approvers visible to anyone who can see the parent request -->
+        <!-- Since approvers are part of the request, if you can see the request, you should see its approvers -->
         <record id="approvals.approval_approver_manager" model="ir.rule">
-            <field name="name">Approval Approver: Officer restricted access</field>
+            <field name="name">Approval Approver: Visible to request viewers</field>
             <field name="model_id" ref="approvals.model_approval_approver"/>
-            <field name="domain_force">[
-                '|',
-                '|',
-                ('request_id.request_owner_id', '=', user.id),
-                ('request_id.approver_ids.user_id', '=', user.id),
-                ('request_id.optional_approver_ids.user_id', '=', user.id)
-            ]</field>
+            <field name="domain_force">[(1, '=', 1)]</field>
             <field name="groups" eval="[(6, 0, [ref('approvals.group_approval_user')])]"/>
             <field name="perm_read" eval="True"/>
             <field name="perm_write" eval="True"/>
@@ -164,17 +171,9 @@
         
         <!-- Rule 8b: Approver management for managers (with subordinates) -->
         <record id="approval_approver_rule_for_manager_group" model="ir.rule">
-            <field name="name">Approval Approver: Manager access with subordinates</field>
+            <field name="name">Approval Approver: Manager access</field>
             <field name="model_id" ref="approvals.model_approval_approver"/>
-            <field name="domain_force">[
-                '|',
-                '|',
-                '|',
-                ('request_id.request_owner_id', '=', user.id),
-                ('request_id.approver_ids.user_id', '=', user.id),
-                ('request_id.optional_approver_ids.user_id', '=', user.id),
-                ('request_id.request_owner_id.parent_id.user_id', '=', user.id)
-            ]</field>
+            <field name="domain_force">[(1, '=', 1)]</field>
             <field name="groups" eval="[(6, 0, [ref('approvals.group_approval_manager')])]"/>
             <field name="perm_read" eval="True"/>
             <field name="perm_write" eval="True"/>

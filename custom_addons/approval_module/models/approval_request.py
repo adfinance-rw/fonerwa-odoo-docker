@@ -2,6 +2,7 @@
 
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError, UserError, AccessError
+from datetime import timedelta
 
 
 class ApprovalRequest(models.Model):
@@ -296,6 +297,13 @@ class ApprovalRequest(models.Model):
         readonly=True,
         store=False
     )
+    # Computed deadline from approval activities (for list view, stored so it can be ordered in SQL)
+    activity_deadline = fields.Date(
+        string='Deadline',
+        compute='_compute_activity_deadline',
+        store=True,
+        help='Shows the nearest approval activity deadline for this request.'
+    )
     contract_id = fields.Many2one(
         'contract.management',
         string='Contract',
@@ -306,7 +314,28 @@ class ApprovalRequest(models.Model):
     contract_partner_id = fields.Many2one(related='contract_id.partner_id', store=False)
     contract_value = fields.Monetary(related='contract_id.contract_value', store=False, string='Contract Value', currency_field='currency_id')
     currency_id = fields.Many2one('res.currency', string='Currency', default=lambda self: self.env.company.currency_id)
-    
+
+    @api.depends('activity_ids.date_deadline', 'activity_ids.activity_type_id', 'activity_ids.user_id')
+    def _compute_activity_deadline(self):
+        """Compute the nearest approval activity deadline for this request."""
+        ApprovalActivityType = self.env.ref('approvals.mail_activity_data_approval', raise_if_not_found=False)
+        for request in self:
+            deadline = False
+            if not ApprovalActivityType:
+                request.activity_deadline = False
+                continue
+            # Activities of type "Approval" for this request
+            activities = request.activity_ids.filtered(lambda a: a.activity_type_id.id == ApprovalActivityType.id)
+            if not activities:
+                request.activity_deadline = False
+                continue
+            # Prefer activities assigned to the current user; fallback to any
+            user_activities = activities.filtered(lambda a: a.user_id == self.env.user)
+            target_activities = user_activities or activities
+            dates = [a.date_deadline for a in target_activities if a.date_deadline]
+            deadline = dates and min(dates) or False
+            request.activity_deadline = deadline
+
     
     @api.onchange('category_id', 'category_require_unexpired_contract')
     def _onchange_category_contract_domain(self):
@@ -1085,7 +1114,9 @@ class ApprovalRequest(models.Model):
         approver_name = self.env.user.name
         approver_role = approver.approval_role if approver.approval_role else 'Approver'
         
-        # Post message in chatter (plain text; avoid raw HTML tags)
+        # Post message in chatter (plain text; avoid raw HTML tags).
+        # This single notification email (generated from the chatter message)
+        # is the only email that should go to the requester at each approval step.
         message_body = _('%s has approved your request "%s".') % (approver_name, self.name)
 
         # Add pending approvers info if any (use newlines instead of <br/>)
@@ -1101,34 +1132,6 @@ class ApprovalRequest(models.Model):
             subtype_xmlid='mail.mt_comment',
             partner_ids=[requester.partner_id.id] if requester.partner_id else []
         )
-        
-        # Send email notification if requester has email
-        if requester.partner_id and requester.partner_id.email and self.request_status != 'approved':
-            try:
-                # Prepare pending approvers list for email
-                pending_info = ''
-                if pending_approvers:
-                    pending_names_html = '<ul>' + ''.join([f'<li>{a.user_id.name} ({a.approval_role or "Approver"})</li>' for a in pending_approvers]) + '</ul>'
-                    pending_info = _('<p><strong>Pending Approvers:</strong></p>%s') % pending_names_html
-                
-                template_values = {
-                    'subject': _('Approval Update: %s approved - %s') % (approver_role, self.name),
-                    'body_html': _(
-                        '<p>Dear %s,</p>'
-                        '<p><strong>%s</strong> has approved your request <strong>"%s"</strong>.</p>'
-                        '%s'
-                        '<p>You will be notified once the request is fully approved.</p>'
-                        '<p>Best regards,<br/>Approval System</p>'
-                    ) % (requester.name, approver_name, self.name, pending_info),
-                    'email_to': requester.partner_id.email,
-                    'email_from': self.env.company.email or self.env.user.email,
-                    'auto_delete': True,
-                }
-                
-                mail = self.env['mail.mail'].sudo().create(template_values)
-                mail.send()
-            except Exception:
-                pass  # Don't block workflow if email sending fails
     
     def _activate_waiting_batch_approvers(self):
         """
@@ -1264,7 +1267,7 @@ class ApprovalRequest(models.Model):
                     summary=_('Action Required: Performance Guarantee Required'),
                     # Use newlines instead of <br/> to avoid raw HTML tags in the UI
                     note=_(
-                        'Your approval request "%s" has been approved, but requires a Performance Guarantee document '
+                        'The approval request "%s" has been approved, but requires a Performance Guarantee document '
                         'because the amount exceeds %s.\n\n'
                         'Please attach the Performance Guarantee document in the Checklist section and resubmit the request.'
                     ) % (self.name, threshold_text),
@@ -1279,7 +1282,7 @@ class ApprovalRequest(models.Model):
                         'subject': _('Action Required: Performance Guarantee Required - %s') % self.name,
                         'body_html': _(
                             '<p>Dear %s,</p>'
-                            '<p>Your approval request <strong>"%s"</strong> has been approved, but requires a Performance Guarantee document '
+                            '<p>The approval request <strong>"%s"</strong> has been approved, but requires a Performance Guarantee document '
                             'because the amount exceeds %s.</p>'
                             '<p><strong>Action Required:</strong></p>'
                             '<ul>'
@@ -1438,10 +1441,14 @@ class ApprovalRequest(models.Model):
             ], limit=1)
             if existing:
                 continue
+            # Use category-specific deadline when configured, otherwise default to 1 day
+            days = getattr(self.category_id, 'approval_deadline_days', 0) or 0
+            deadline = fields.Date.today() + timedelta(days=days)
             self.activity_schedule(
                 activity_xmlid,
                 user_id=user.id,
-                summary=_('Approved request requires your attention')
+                summary=_('Approved request requires your attention'),
+                date_deadline=deadline,
             )
 
     def _build_default_approver_commands(self):
@@ -1495,9 +1502,22 @@ class ApprovalRequest(models.Model):
                 continue
 
             # Get company CFO, Senior Approver, and CEO
+            # These will be added at the end in order: CFO, Senior Approver, CEO
             cfo = request.company_id.cfo_id if hasattr(request.company_id, 'cfo_id') else False
             senior_approver = request.company_id.senior_approver_id if hasattr(request.company_id, 'senior_approver_id') else False
             ceo = request.company_id.ceo_id if hasattr(request.company_id, 'ceo_id') else False
+            
+            # Track executive users to ensure they're added at the end
+            executive_users = []
+            if cfo:
+                executive_users.append(('cfo', cfo))
+            if senior_approver:
+                executive_users.append(('senior', senior_approver))
+            if ceo:
+                executive_users.append(('ceo', ceo))
+            executive_user_ids = {u.id for _, u in executive_users}
+            # Track required status for executive users from their original configuration
+            executive_required_status = {}
 
             # Determine reviewer: Department manager user, fallback to employee's parent manager
             dept_manager_user = False
@@ -1534,6 +1554,9 @@ class ApprovalRequest(models.Model):
                     reviewer_users.append((reviewer, manager_required))
                 for user_rec_opt, is_required in reviewer_users:
                     if user_rec_opt and user_rec_opt.id not in added_user_ids:
+                        # Skip executive users here - they'll be added at the end
+                        if user_rec_opt.id in executive_user_ids:
+                            continue
                         vals_r = approver_line(user_rec_opt, seq, required=is_required, category_id=category_id)
                         if vals_r and vals_r.get('user_id'):
                             commands.append(fields.Command.create(vals_r))
@@ -1547,6 +1570,12 @@ class ApprovalRequest(models.Model):
                     for cat_approver in request.category_id.approver_ids.sorted(lambda r: getattr(r, 'sequence', 0) or 0):
                         cat_user = getattr(cat_approver, 'user_id', False)
                         if cat_user and cat_user.id not in added_user_ids:
+                            # Skip executive users here - they'll be added at the end
+                            if cat_user.id in executive_user_ids:
+                                # Store their required status for later
+                                cat_required = getattr(cat_approver, 'required', True)
+                                executive_required_status[cat_user.id] = cat_required
+                                continue
                             cat_required = getattr(cat_approver, 'required', True)
                             vals_cat = approver_line(cat_user, seq, required=cat_required, category_id=category_id)
                             if vals_cat and vals_cat.get('user_id'):
@@ -1579,6 +1608,11 @@ class ApprovalRequest(models.Model):
                         for user_rec in tmpl.user_ids:
                             if user_rec.id in added_user_ids:
                                 continue
+                            # Skip executive users here - they'll be added at the end
+                            if user_rec.id in executive_user_ids:
+                                # Store their required status for later
+                                executive_required_status[user_rec.id] = tmpl.required
+                                continue
                             vals = approver_line(user_rec, seq, required=tmpl.required, category_id=category_id)
                             if vals and vals.get('user_id'):
                                 commands.append(fields.Command.create(vals))
@@ -1600,6 +1634,11 @@ class ApprovalRequest(models.Model):
                         user_rec = role_to_user.get(tmpl.role)
                         if not user_rec or user_rec.id in added_user_ids:
                             continue
+                        # Skip executive users here - they'll be added at the end
+                        if user_rec.id in executive_user_ids:
+                            # Store their required status for later
+                            executive_required_status[user_rec.id] = tmpl.required
+                            continue
                         vals = approver_line(user_rec, seq, required=tmpl.required, category_id=category_id)
                         if vals and vals.get('user_id'):
                             commands.append(fields.Command.create(vals))
@@ -1607,6 +1646,25 @@ class ApprovalRequest(models.Model):
                             # Only increment sequence if this is a required approver
                             if tmpl.required:
                                 seq += 1
+                
+                # Remove any executive users that were added earlier (from templates or category approvers)
+                commands = [cmd for cmd in commands if not (isinstance(cmd, (list, tuple)) and len(cmd) > 2 and isinstance(cmd[2], dict) and cmd[2].get('user_id') in executive_user_ids)]
+                # Also remove them from added_user_ids so they can be re-added at the end
+                added_user_ids -= executive_user_ids
+                
+                # Add executive users at the end in order: CFO, Senior Approver, CEO
+                for role_name, exec_user in executive_users:
+                    if exec_user and exec_user.id not in added_user_ids:
+                        # Use stored required status, default to True if not found
+                        exec_required = executive_required_status.get(exec_user.id, True)
+                        vals = approver_line(exec_user, seq, required=exec_required, category_id=category_id)
+                        if vals and vals.get('user_id'):
+                            commands.append(fields.Command.create(vals))
+                            added_user_ids.add(exec_user.id)
+                            # Only increment sequence if this is a required approver
+                            if exec_required:
+                                seq += 1
+                
                 if commands:
                     return [fields.Command.clear()] + commands
                 return []
@@ -1628,6 +1686,9 @@ class ApprovalRequest(models.Model):
             for user_rec, is_required in reviewer_users:
                 if not user_rec or user_rec.id in added_user_ids:
                     continue
+                # Skip executive users here - they'll be added at the end
+                if user_rec.id in executive_user_ids:
+                    continue
                 lm_vals = approver_line(user_rec, seq, required=is_required, category_id=category_id)
                 if lm_vals and lm_vals.get('user_id'):
                     commands.append(fields.Command.create(lm_vals))
@@ -1641,6 +1702,12 @@ class ApprovalRequest(models.Model):
                 for cat_approver in request.category_id.approver_ids.sorted(lambda r: getattr(r, 'sequence', 0) or 0):
                     cat_user = getattr(cat_approver, 'user_id', False)
                     if cat_user and cat_user.id not in added_user_ids:
+                        # Skip executive users here - they'll be added at the end
+                        if cat_user.id in executive_user_ids:
+                            # Store their required status for later
+                            cat_required = getattr(cat_approver, 'required', True)
+                            executive_required_status[cat_user.id] = cat_required
+                            continue
                         cat_required = getattr(cat_approver, 'required', True)
                         vals_cat = approver_line(cat_user, seq, required=cat_required, category_id=category_id)
                         if vals_cat and vals_cat.get('user_id'):
@@ -1649,6 +1716,24 @@ class ApprovalRequest(models.Model):
                             # Only increment sequence if this is a required approver
                             if cat_required:
                                 seq += 1
+
+            # Remove any executive users that were added earlier
+            commands = [cmd for cmd in commands if not (isinstance(cmd, (list, tuple)) and len(cmd) > 2 and isinstance(cmd[2], dict) and cmd[2].get('user_id') in executive_user_ids)]
+            # Also remove them from added_user_ids so they can be re-added at the end
+            added_user_ids -= executive_user_ids
+            
+            # Add executive users at the end in order: CFO, Senior Approver, CEO
+            for role_name, exec_user in executive_users:
+                if exec_user and exec_user.id not in added_user_ids:
+                    # Use stored required status, default to True if not found
+                    exec_required = executive_required_status.get(exec_user.id, True)
+                    vals = approver_line(exec_user, seq, required=exec_required, category_id=category_id)
+                    if vals and vals.get('user_id'):
+                        commands.append(fields.Command.create(vals))
+                        added_user_ids.add(exec_user.id)
+                        # Only increment sequence if this is a required approver
+                        if exec_required:
+                            seq += 1
 
             if commands:
                 return [fields.Command.clear()] + commands
@@ -1688,6 +1773,22 @@ class ApprovalApprover(models.Model):
         string='Delegated By',
         help='If this approval was made via delegation, shows who delegated the authority'
     )
+
+    def _create_activity(self):
+        """Create approval activities with a deadline based on category configuration."""
+        activity_xmlid = 'approvals.mail_activity_data_approval'
+        for approver in self:
+            if not approver.user_id or not approver.request_id:
+                continue
+            # Use the category's configured deadline when available, fallback to 2 days
+            category = approver.request_id.category_id
+            days = getattr(category, 'approval_deadline_days', 0) or 0
+            deadline = fields.Date.today() + timedelta(days=days)
+            approver.request_id.activity_schedule(
+                activity_xmlid,
+                user_id=approver.user_id.id,
+                date_deadline=deadline,
+            )
     
     def write(self, vals):
         """Override to manage activities for both delegate and delegator"""
@@ -1726,12 +1827,29 @@ class ApprovalApprover(models.Model):
             ], limit=1)
             
             if not existing_activity:
-                # Create activity
+                # Create activity with a deadline based on category configuration
+                days = getattr(self.request_id.category_id, 'approval_deadline_days', 0) or 0
+                deadline = fields.Date.today() + timedelta(days=days)
                 self.request_id.activity_schedule(
                     'approvals.mail_activity_data_approval',
                     user_id=user_id,
-                    summary=_('Approval Request')
+                    summary=_('Approval Request'),
+                    date_deadline=deadline,
                 )
+
+        # Additionally, send an assignment email to the active approver (delegate/assigned user)
+        if self.user_id and self.user_id.partner_id:
+            partner = self.user_id.partner_id
+            request = self.request_id
+            # Use a chatter message targeted only to this partner so they get
+            # the standard "View Approval Request" style email once.
+            request.message_post(
+                body=_('You have been assigned to approve the request "%s".') % (request.name,),
+                subject=_('Approval Request Assigned: %s') % (request.name,),
+                message_type='notification',
+                subtype_xmlid='mail.mt_comment',
+                partner_ids=[partner.id],
+            )
     
     def action_approve(self, approver=None):
         """Override to clear activities for both delegate and delegator and handle batching"""

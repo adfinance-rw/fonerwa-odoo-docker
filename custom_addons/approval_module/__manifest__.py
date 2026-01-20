@@ -18,6 +18,7 @@
         "views/approval_request_views.xml",
         "views/res_company_views.xml",
         "views/res_users_views.xml",
+        "views/approval_request_tree_views.xml",
     ],
     "assets": {
         "web.assets_backend": [

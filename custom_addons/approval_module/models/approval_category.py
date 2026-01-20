@@ -68,6 +68,13 @@ class ApprovalCategory(models.Model):
         default=False,
         help='Enable Subject field in the Description section'
     )
+
+    # Default number of days before Approval activities are due
+    approval_deadline_days = fields.Integer(
+        string='Approval Activity Deadline (days)',
+        default=2,
+        help='Number of days from assignment until an Approval activity is due for this category.'
+    )
     description_show_background = fields.Boolean(
         string='Show Background Section',
         default=False,

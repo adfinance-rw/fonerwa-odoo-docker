@@ -1,0 +1,30 @@
+<odoo>
+    <!-- Inherit the main approval request tree view to hide date_start/date_end and show activity_deadline -->
+    <record id="view_approval_request_tree_inherit_deadline" model="ir.ui.view">
+        <field name="name">approval.request.view.list.inherit.deadline</field>
+        <field name="model">approval.request</field>
+        <field name="inherit_id" ref="approvals.approval_request_view_tree"/>
+        <field name="arch" type="xml">
+            <!-- Order by deadline (most recent first) -->
+            <xpath expr="//list" position="attributes">
+                <attribute name="default_order">activity_deadline</attribute>
+            </xpath>
+            <!-- Hide Request Start column -->
+            <xpath expr="//field[@name='date_start']" position="attributes">
+                <attribute name="invisible">1</attribute>
+                <attribute name="optional">hide</attribute>
+            </xpath>
+            <!-- Hide Request To column -->
+            <xpath expr="//field[@name='date_end']" position="attributes">
+                <attribute name="invisible">1</attribute>
+                <attribute name="optional">hide</attribute>
+            </xpath>
+            <!-- Add Created On and Deadline columns after category -->
+            <xpath expr="//field[@name='category_id']" position="after">
+                <field name="create_date" string="Created On" optional="show"/>
+                <field name="activity_deadline" string="Deadline" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
+
