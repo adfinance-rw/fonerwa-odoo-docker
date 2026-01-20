@@ -88,60 +88,61 @@
                         </div>
                         <div class="oe_title">
                             <h1>
-                                <field name="name" placeholder="Contract Title" readonly="1"/>
+                                <field name="name" placeholder="Contract Title" readonly="is_contract_user_only or not can_edit_as_manager"/>
                             </h1>
                         </div>
+                        <field name="can_edit_as_manager" invisible="1"/>
+                        <field name="is_contract_user_only" invisible="1"/>
                         <notebook>
                             <page string="Basic Information">
-                                <div class="alert alert-warning" role="alert" invisible="state == 'draft'">
+                                <div class="alert alert-warning" role="alert" invisible="can_edit_as_manager">
                                     <i class="fa fa-info-circle"/> Contract information can only be modified through the Amendment process to maintain version tracking. Please use the "Add Amendment" button below to make changes.
                                 </div>
                                 <group>
                                     <group string="Contract Details">
-                                        <field name="contract_number"/>
-                                        <field name="partner_id" readonly="1"/>
-                                        <field name="contract_type_id" readonly="1"/>
-                                        <field name="classification_ids" widget="many2many_tags" readonly="1"
+                                        <field name="contract_number" readonly="1"/>
+                                        <field name="partner_id" readonly="is_contract_user_only or not can_edit_as_manager"/>
+                                        <field name="contract_type_id" readonly="is_contract_user_only or not can_edit_as_manager"/>
+                                        <field name="classification_ids" widget="many2many_tags" readonly="is_contract_user_only or not can_edit_as_manager"
                                                domain="[('contract_type_ids', 'in', [contract_type_id])]"
                                                options="{'no_create': True}"/>
-                                        <field name="category_ids" widget="many2many_tags" readonly="1"
+                                        <field name="category_ids" widget="many2many_tags" readonly="is_contract_user_only or not can_edit_as_manager"
                                                domain="[('contract_type_ids', 'in', [contract_type_id])]"
                                                options="{'no_create': True}"/>
-                                        <field name="department_ids" widget="many2many_tags" readonly="1"
+                                        <field name="department_ids" widget="many2many_tags" readonly="is_contract_user_only or not can_edit_as_manager"
                                                domain="[('contract_type_ids', 'in', [contract_type_id])]"
                                                options="{'no_create': True}"/>
-                                        <field name="contract_manager_id" readonly="1"/>
+                                        <field name="contract_manager_id" readonly="is_contract_user_only or not can_edit_as_manager"/>
                                     </group>
                                     <group string="Contract Dates &amp; Value">
-                                        <field name="effective_date" readonly="1"/>
-                                        <field name="expiry_date" readonly="1"/>
+                                        <field name="effective_date" readonly="is_contract_user_only or not can_edit_as_manager"/>
+                                        <field name="expiry_date" readonly="is_contract_user_only or not can_edit_as_manager"/>
                                         <field name="days_to_expiry"/>
-                                        <field name="notice_period_days" readonly="1"/>
-                                        <field name="currency_id" readonly="1"/>
-                                        <field name="contract_value" readonly="1"/>
-                                        <field name="version"/>
-                                        <field name="expiration_notification_sent" readonly="1"/>
+                                        <field name="notice_period_days" readonly="is_contract_user_only or not can_edit_as_manager"/>
+                                        <field name="currency_id" readonly="is_contract_user_only or not can_edit_as_manager"/>
+                                        <field name="contract_value" readonly="is_contract_user_only or not can_edit_as_manager"/>
+                                        <field name="version" readonly="1"/>
                                     </group>
                                 </group>
                                 
                                 <group>
                                     <group string="Contract Document">
-                                        <field name="contract_documents" filename="contract_document_name" widget="binary" readonly="1"/>
-                                        <field name="contract_document_name" readonly="1"/>
+                                        <field name="contract_documents" filename="contract_document_name" widget="binary" readonly="is_contract_user_only or not can_edit_as_manager"/>
+                                        <field name="contract_document_name" readonly="is_contract_user_only or not can_edit_as_manager"/>
                                         <button name="action_download_contract_document" string="Download Contract Document" 
                                                 type="object" class="btn-primary" 
                                                 invisible="not contract_documents"/>
                                     </group>
                                     <group string="Additional Document">
-                                        <field name="additional_documents" filename="additional_document_name" widget="binary" readonly="1"/>
-                                        <field name="additional_document_name" readonly="1"/>
+                                        <field name="additional_documents" filename="additional_document_name" widget="binary" readonly="is_contract_user_only or not can_edit_as_manager"/>
+                                        <field name="additional_document_name" readonly="is_contract_user_only or not can_edit_as_manager"/>
                                         <button name="action_download_additional_document" string="Download Additional Document" 
                                                 type="object" class="btn-secondary" 
                                                 invisible="not additional_documents"/>
                                     </group>
                                 </group>
                             </page>
-                            <page string="Deliverable">
+                            <page string="Deliverable" invisible="is_contract_user_only">
                                 <field name="deliverable_ids" widget="one2many" readonly="1">
                                     <list create="0" delete="0" edit="0">
                                         <field name="name"/>
@@ -156,7 +157,7 @@
                                     </list>
                                 </field>
                             </page>
-                            <page string="Amendments">
+                            <page string="Amendments" invisible="is_contract_user_only">
                                 <field name="amendment_ids" widget="one2many" readonly="1">
                                     <list create="0" delete="0" edit="0">
                                         <field name="version"/>
@@ -170,7 +171,7 @@
                                     </list>
                                 </field>
                             </page>
-                            <page string="Termination">
+                            <page string="Termination" invisible="is_contract_user_only">
                                 <group invisible="state != 'terminated'">
                                     <group string="Termination Information">
                                         <field name="termination_date" readonly="1"/>
@@ -179,7 +180,7 @@
                                     </group>
                                 </group>
                             </page>
-                            <page string="Performance Guaranty">
+                            <page string="Performance Guaranty" invisible="is_contract_user_only">
                                 <field name="performance_guaranty_ids" widget="one2many" readonly="1">
                                     <list create="0" delete="0" edit="0">
                                         <field name="name"/>
@@ -236,63 +237,62 @@
                         </div>
                         <div class="oe_title">
                             <h1>
-                                <field name="name" placeholder="Contract Title" readonly="state != 'draft' or not can_edit_as_manager"/>
+                                <field name="name" placeholder="Contract Title" readonly="is_contract_user_only or not can_edit_as_manager"/>
                             </h1>
                         </div>
                         <field name="is_contract_user_only" invisible="1"/>
                         <field name="can_edit_as_manager" invisible="1"/>
                         <notebook>
                             <page string="Basic Information" invisible="is_contract_user_only">
-                                <div class="alert alert-warning" role="alert" invisible="state == 'draft'">
-                                    <i class="fa fa-info-circle"/> Contract information can only be modified through the Amendment process to maintain version tracking. Please use the "Add Amendment" button below to make changes.
+                                <div class="alert alert-warning" role="alert" invisible="can_edit_as_manager">
+                                    <i class="fa fa-info-circle"/> You are not allowed to edit this contract contact the admin .
                                 </div>
                                 <group>
                                     <group string="Contract Details">
-                                        <field name="contract_number" readonly="state != 'draft' or not can_edit_as_manager"/>
-                                        <field name="partner_id" readonly="state != 'draft' or not can_edit_as_manager"/>
-                                        <field name="contract_type_id" readonly="state != 'draft' or not can_edit_as_manager"/>
-                                        <field name="classification_ids" widget="many2many_tags" readonly="state != 'draft' or not can_edit_as_manager"
+                                        <field name="contract_number" readonly="1"/>
+                                        <field name="partner_id" readonly="is_contract_user_only or not can_edit_as_manager"/>
+                                        <field name="contract_type_id" readonly="is_contract_user_only or not can_edit_as_manager"/>
+                                        <field name="classification_ids" widget="many2many_tags" readonly="is_contract_user_only or not can_edit_as_manager"
                                                domain="[('contract_type_ids', 'in', [contract_type_id])]"
                                                options="{'no_create': True}"/>
-                                        <field name="category_ids" widget="many2many_tags" readonly="state != 'draft' or not can_edit_as_manager"
+                                        <field name="category_ids" widget="many2many_tags" readonly="is_contract_user_only or not can_edit_as_manager"
                                                domain="[('contract_type_ids', 'in', [contract_type_id])]"
                                                options="{'no_create': True}"/>
-                                        <field name="department_ids" widget="many2many_tags" readonly="state != 'draft' or not can_edit_as_manager"
+                                        <field name="department_ids" widget="many2many_tags" readonly="is_contract_user_only or not can_edit_as_manager"
                                                domain="[('contract_type_ids', 'in', [contract_type_id])]"
                                                options="{'no_create': True}"/>
-                                        <field name="contract_manager_id" readonly="state != 'draft' or not can_edit_as_manager"/>
+                                        <field name="contract_manager_id" readonly="is_contract_user_only or not can_edit_as_manager"/>
                                     </group>
                                     <group string="Contract Dates &amp; Value">
-                                        <field name="effective_date" readonly="state != 'draft' or not can_edit_as_manager"/>
-                                        <field name="expiry_date" readonly="state != 'draft' or not can_edit_as_manager"/>
+                                        <field name="effective_date" readonly="is_contract_user_only or not can_edit_as_manager"/>
+                                        <field name="expiry_date" readonly="is_contract_user_only or not can_edit_as_manager"/>
                                         <field name="days_to_expiry"/>
-                                        <field name="notice_period_days" readonly="state != 'draft' or not can_edit_as_manager"/>
-                                        <field name="currency_id" readonly="state != 'draft' or not can_edit_as_manager"/>
-                                        <field name="contract_value" readonly="state != 'draft' or not can_edit_as_manager"/>
-                                        <field name="version"/>
+                                        <field name="notice_period_days" readonly="is_contract_user_only or not can_edit_as_manager"/>
+                                        <field name="currency_id" readonly="is_contract_user_only or not can_edit_as_manager"/>
+                                        <field name="contract_value" readonly="is_contract_user_only or not can_edit_as_manager"/>
+                                        <field name="version" readonly="1"/>
                                         <!-- <field name="send_recurring_reminders" readonly="state != 'draft'"/> -->
-                                        <field name="expiration_notification_sent" readonly="1"/>
                                     </group>
                                 </group>
                                 
                                 <group>
                                     <group string="Contract Document">
-                                        <field name="contract_documents" filename="contract_document_name" widget="binary" readonly="state != 'draft' or not can_edit_as_manager"/>
-                                        <field name="contract_document_name" readonly="state != 'draft' or not can_edit_as_manager"/>
+                                        <field name="contract_documents" filename="contract_document_name" widget="binary" readonly="is_contract_user_only or not can_edit_as_manager"/>
+                                        <field name="contract_document_name" readonly="is_contract_user_only or not can_edit_as_manager"/>
                                         <button name="action_download_contract_document" string="Download Contract Document" 
                                                 type="object" class="btn-primary" 
                                                 invisible="not contract_documents"/>
                                     </group>
                                     <group string="Additional Document">
-                                        <field name="additional_documents" filename="additional_document_name" widget="binary" readonly="state != 'draft' or not can_edit_as_manager"/>
-                                        <field name="additional_document_name" readonly="state != 'draft' or not can_edit_as_manager"/>
+                                        <field name="additional_documents" filename="additional_document_name" widget="binary" readonly="is_contract_user_only or not can_edit_as_manager"/>
+                                        <field name="additional_document_name" readonly="is_contract_user_only or not can_edit_as_manager"/>
                                         <button name="action_download_additional_document" string="Download Additional Document" 
                                                 type="object" class="btn-secondary" 
                                                 invisible="not additional_documents"/>
                                     </group>
                                 </group>
                             </page>
-                            <page string="Deliverable">
+                            <page string="Deliverable" invisible="is_contract_user_only">
                                 <div class="alert alert-warning" role="alert" invisible="state != 'draft'">
                                     <i class="fa fa-info-circle"/> Please activate the contract first before adding deliverables.
                                 </div>
@@ -314,7 +314,7 @@
                                     </list>
                                 </field>
                             </page>
-                            <page string="Amendments">
+                            <page string="Amendments" invisible="is_contract_user_only">
                                 <div class="alert alert-warning" role="alert" invisible="state != 'draft'">
                                     <i class="fa fa-info-circle"/> Please activate the contract first before adding amendments.
                                 </div>
@@ -339,7 +339,7 @@
                                     </list>
                                 </field>
                             </page>
-                            <page string="Termination">
+                            <page string="Termination" invisible="is_contract_user_only">
                                 <div class="oe_button_box" name="termination_button_box">
                                     <field name="can_edit_as_manager" invisible="1"/>
                                     <button name="action_terminate" string="Terminate Contract" type="object" 
@@ -362,7 +362,7 @@
                                     <i class="fa fa-info-circle"/> Use the "Terminate Contract" button above to terminate this contract. Once terminated, termination details will be displayed here.
                                 </div>
                             </page>
-                            <page string="Performance Guaranty">
+                            <page string="Performance Guaranty" invisible="is_contract_user_only">
                                 <div class="alert alert-warning" role="alert" invisible="state != 'draft'">
                                     <i class="fa fa-info-circle"/> Please activate the contract first before adding performance guaranties.
                                 </div>
