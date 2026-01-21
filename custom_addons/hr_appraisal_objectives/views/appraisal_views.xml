@@ -379,12 +379,17 @@
 
   <!-- Override the main appraisal action with role-based context and fiscal year filtering -->
   <record model="ir.actions.act_window" id="hr_appraisal.open_view_hr_appraisal_tree">
-    <field name="name">Appraisals</field>
+    <field name="name">Evaluation</field>
     <field name="res_model">hr.appraisal</field>
     <field name="view_mode">kanban,list,form</field>
     <field name="context">{
         'search_default_filter_current_fy': 1,
     }</field>
+  </record>
+
+  <!-- Rename top-level Appraisals menu to Evaluation -->
+  <record id="hr_appraisal.menu_hr_appraisal_root" model="ir.ui.menu">
+    <field name="name">Performance</field>
   </record>
 
   <!-- Removed server action; we will call the model method directly from the kanban/list views -->
@@ -574,7 +579,9 @@ action
 
   <!-- Wire the Appraisals menu (list entry) to the entry-point (keeps single menu) -->
   <record id="hr_appraisal.menu_open_view_hr_appraisal_tree" model="ir.ui.menu">
+    <field name="name">Evaluation</field>
     <field name="action" ref="action_open_appraisals_entrypoint"/>
+    <field name="sequence">2</field>
   </record>
 +
   <menuitem id="menu_hr_appraisal_config"

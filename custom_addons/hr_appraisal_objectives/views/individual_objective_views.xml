@@ -701,7 +701,7 @@ action = {
     'name': 'My Individual Objectives',
     'type': 'ir.actions.act_window',
     'res_model': 'hr.appraisal.goal',
-    'view_mode': 'kanban,list,form,graph',
+    'view_mode': 'list,kanban,form,graph',
     'domain': [('employee_id.user_id', '=', env.uid)],
     'context': {
         'search_default_filter_current_fy': 1,
@@ -894,5 +894,6 @@ action
   <record id="hr_appraisal.menu_hr_appraisal_goal" model="ir.ui.menu">
     <field name="name">My Objectives</field>
     <field name="action" ref="hr_appraisal_objectives.action_my_individual_objectives"/>
+    <field name="sequence">1</field>
   </record>
 </odoo>
