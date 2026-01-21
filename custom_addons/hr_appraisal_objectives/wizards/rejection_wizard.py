@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields
+from odoo.exceptions import UserError
 
 
 class HrAppraisalGoalRejectionWizard(models.TransientModel):
@@ -17,6 +18,10 @@ class HrAppraisalGoalRejectionWizard(models.TransientModel):
     def action_reject(self):
         self.ensure_one()
         goal = self.goal_id
+        
+        # Prevent self-rejection: the employee cannot reject their own objective
+        if goal.employee_id and goal.employee_id.user_id and goal.employee_id.user_id.id == self.env.uid:
+            raise UserError("You cannot reject your own objective. It must be reviewed by your line manager or HR.")
         
         # Mark current user's activities as done (use res_model string to avoid ir.model access)
         goal.activity_ids.filtered(

@@ -98,14 +98,19 @@ action
     <field name="code"><![CDATA[
 records = env['hr.appraisal.goal'].browse(env.context.get('active_ids', []))
 current_uid = env.uid
-submitted = records.filtered(lambda r: r.state == 'submitted' or r.state == 'draft')
+
+# Only approve objectives that are submitted and not owned by the current user
+submitted = records.filtered(
+    lambda r: r.state == 'submitted'
+    and not (r.employee_id and r.employee_id.user_id and r.employee_id.user_id.id == current_uid)
+)
 for rec in submitted:
     rec.action_first_approve()
 approved_count = len(submitted)
 skipped = len(records) - approved_count
 message = (f"Submitted {approved_count} for HR approval" if approved_count else "Nothing to submit")
 if skipped:
-    message += f", skipped {skipped} not in Submitted state"
+    message += f", skipped {skipped} not in Submitted state or belonging to you"
 action = {
     'type': 'ir.actions.client',
     'tag': 'display_notification',
@@ -129,14 +134,20 @@ action = {
     <field name="state">code</field>
     <field name="code"><![CDATA[
 records = env['hr.appraisal.goal'].browse(env.context.get('active_ids', []))
-to_approve = records.filtered(lambda r: r.state == 'first_approved' or r.state == 'draft' or r.state == 'submitted')
+current_uid = env.uid
+
+# Only approve objectives that are first_approved and not owned by the current user
+to_approve = records.filtered(
+    lambda r: r.state == 'first_approved'
+    and not (r.employee_id and r.employee_id.user_id and r.employee_id.user_id.id == current_uid)
+)
 for rec in to_approve:
     rec.action_second_approve()
 approved_count = len(to_approve)
 skipped = len(records) - approved_count
 message = (f"Approved {approved_count}" if approved_count else "Nothing to approve")
 if skipped:
-    message += f", skipped {skipped} not in First Approved state"
+    message += f", skipped {skipped} not in First Approved state or belonging to you"
 action = {
     'type': 'ir.actions.client',
     'tag': 'display_notification',
@@ -157,6 +168,7 @@ action = {
     <field name="arch" type="xml">
       <xpath expr="//button[@name='action_confirm']" position="replace">
         <field name="state" widget="statusbar" statusbar_visible="draft,submitted,first_approved,progress,progress_done"/>
+        <field name="approval_indicator" readonly="1" nolabel="1" class="ms-2"/>
         <field name="create_uid" invisible="1"/>
         <field name="employee_user_id_int" invisible="1"/>
         <field name="current_uid_int" invisible="1"/>
@@ -168,22 +180,22 @@ action = {
                 icon="fa-paper-plane"/>
         <button name="action_first_approve" type="object" string="Approve"
                 class="oe_stat_button btn-success"
-                  invisible="state != 'submitted'"
+                  invisible="state != 'submitted' or employee_user_id_int == current_uid_int"
                   groups="hr_appraisal_objectives.group_appraisal_line_manager"
                   icon="fa-check"/>
         <button name="action_first_reject_open" type="object" string="Reject"
                 class="oe_stat_button btn-danger"
-                invisible="state != 'submitted'"
+                invisible="state != 'submitted' or employee_user_id_int == current_uid_int"
                 groups="hr_appraisal_objectives.group_appraisal_line_manager"
                 icon="fa-times"/>
         <button name="action_second_approve" type="object" string="Approve"
                 class="oe_stat_button btn-success"
-                invisible="state != 'first_approved'"
+                invisible="state != 'first_approved' or employee_user_id_int == current_uid_int"
                 groups="hr_appraisal_objectives.group_hr_appraisal"
                 icon="fa-check"/>
         <button name="action_second_reject_open" type="object" string="Reject"
                 class="oe_stat_button btn-danger"
-                invisible="state != 'first_approved'"
+                invisible="state != 'first_approved' or employee_user_id_int == current_uid_int"
                 groups="hr_appraisal_objectives.group_hr_appraisal"
                 icon="fa-times"/>
         <button name="action_end_progress" type="object" string="Mark as Done"
@@ -229,12 +241,12 @@ action = {
             <field name="department_objective_id" widget="many2one_autocomplete"
                   string="Department Objective" options="{'no_create': True}"
                   domain="[('state', '=', 'active'), ('current_user_department_id', '=', 'department_id')]"
-                  placeholder="Select Department Objective" readonly="state != 'draft' or is_common" invisible="is_common" required="1"/>
+                  placeholder="Select Department Objective" readonly="(id and create_uid != current_uid_int and state in ['draft','submitted']) or state in ['first_approved','progress','progress_done','self_scored','scored','final']" invisible="is_common" required="1"/>
             <field name="institutional_objective_id"
                   string="Institutional Objective" widget="many2one_autocomplete"
                   domain="[('state', '=', 'active')]"
                   options="{'no_create': True}"
-                  placeholder="Select Institutional Objective" readonly="state != 'draft'" required="1" invisible="is_common"/>
+                  placeholder="Select Institutional Objective" readonly="(id and create_uid != current_uid_int and state in ['draft','submitted']) or state in ['first_approved','progress','progress_done','self_scored','scored','final']" required="1" invisible="is_common"/>
         </group>
         <group string="Timeline">
           <field name="start_date" readonly="id and (current_uid_int != create_uid or state != 'draft')" invisible="1"/>

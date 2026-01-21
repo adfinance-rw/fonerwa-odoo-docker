@@ -14,9 +14,9 @@
                     </div>
                     <group string="KPI Details">
                         <group>
-                            <field name='target' 
+                            <field name='target' placeholder="e.g. 90% of customers are satisfied"
                                 readonly="appraisal_goal_id.state in ['first_approved', 'progress', 'self_scored', 'scored', 'final']" required="1"/>
-                            <field name='measurement_method' 
+                            <field name='measurement_method' placeholder="e.g. Survey Results"
                                 readonly="appraisal_goal_id.state in ['first_approved', 'progress', 'self_scored', 'scored', 'final']" required="1"/>
                         </group>
                         <group>

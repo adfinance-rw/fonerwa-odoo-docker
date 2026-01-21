@@ -93,6 +93,25 @@ class HrAppraisalGoal(models.Model):
         "Review Summary", compute="_compute_review_summary", store=True
     )
 
+    # Track who actually approved at each level
+    lm_approver_id = fields.Many2one(
+        "res.users",
+        string="Line Manager Approver",
+        readonly=True,
+    )
+    hr_approver_id = fields.Many2one(
+        "res.users",
+        string="HR Approver",
+        readonly=True,
+    )
+
+    # Visual indicator of who needs to approve (LM / HR) for the header
+    approval_indicator = fields.Html(
+        string="Approval Status",
+        compute="_compute_approval_indicator",
+        store=False,
+    )
+
     # Debug/Display helper: surface the parent appraisal's state on the goal
     appraisal_state = fields.Selection(
         related="appraisal_id.state",
@@ -414,6 +433,60 @@ class HrAppraisalGoal(models.Model):
             else:
                 record.review_summary = ""
 
+    def _compute_approval_indicator(self):
+        """Compute compact LM/HR chips for the header, similar to small validate icons."""
+        for record in self:
+            state = record.state or "draft"
+
+            # Line Manager considered "done" once state reaches first_approved or beyond
+            lm_done_states = {"first_approved", "progress", "progress_done", "self_scored", "scored", "final"}
+            lm_done = state in lm_done_states
+
+            # HR considered "done" once state reaches progress (after second approval) or beyond
+            hr_done_states = {"progress", "progress_done", "self_scored", "scored", "final"}
+            hr_done = state in hr_done_states
+
+            # Tooltip names - after approval, show the actual approver's name
+            lm_name = ""
+            if lm_done and record.lm_approver_id:
+                # After approval, show the actual user who approved at LM level
+                lm_name = record.lm_approver_id.name or ""
+            elif record.manager_id and record.manager_id.user_id and record.manager_id.user_id.partner_id:
+                # Before approval, show the configured manager on the objective
+                lm_name = record.manager_id.user_id.partner_id.name or record.manager_id.name or ""
+
+            hr_names = ""
+            hr_group = self.env.ref('hr_appraisal_objectives.group_hr_appraisal', raise_if_not_found=False)
+            if hr_done and record.hr_approver_id:
+                # After HR approval, show the actual HR approver
+                hr_names = record.hr_approver_id.name or ""
+            elif hr_group and hr_group.users:
+                # Before HR approval, show all pending HR approvers
+                hr_names = ", ".join(hr_group.users.mapped("name"))
+
+            def _chip(label, done, title):
+                bg = "bg-success" if done else "bg-secondary"
+                icon_class = "fa fa-user-circle"
+                return f"""
+                    <span class="badge rounded-pill {bg} ms-1" title="{title}">
+                        <span class="me-1">{label}</span>
+                        <i class="{icon_class}"></i>
+                    </span>
+                """
+
+            lm_title = f"Line Manager approval ({lm_name})" if lm_name else "Line Manager approval"
+            hr_title = f"HR approval ({hr_names})" if hr_names else "HR approval"
+
+            lm_chip = _chip("LM", lm_done, lm_title)
+            hr_chip = _chip("HR", hr_done, hr_title)
+
+            record.approval_indicator = Markup(f"""
+                <span class="ms-2">
+                    {lm_chip}
+                    {hr_chip}
+                </span>
+            """)
+
     @api.onchange("department_objective_id", "is_common", "common_origin_id", "institutional_objective_id")
     def _onchange_dates_from_sources(self):
         for record in self:
@@ -502,11 +575,16 @@ class HrAppraisalGoal(models.Model):
     def action_first_approve(self):
         """Approve the individual objective"""
         for rec in self:
+            # Prevent self-approval: the employee cannot approve their own objective
+            if rec.employee_id and rec.employee_id.user_id and rec.employee_id.user_id.id == self.env.uid:
+                raise UserError("You cannot approve your own objective. It must be approved by your line manager.")
             # Mark previous activities as done (use sudo to avoid ir.model access issues)
             rec.activity_ids.filtered(
                 lambda a: a.user_id == self.env.user and a.res_model == 'hr.appraisal.goal'
             ).action_feedback(feedback="Approved")
             
+            # Record who approved at LM level
+            rec.lm_approver_id = self.env.user
             rec.write({"state": "first_approved"})
             rec._send_notification("first_approved")
             
@@ -514,6 +592,31 @@ class HrAppraisalGoal(models.Model):
             hr_group = self.env.ref('hr_appraisal_objectives.group_hr_appraisal', raise_if_not_found=False)
             if hr_group:
                 hr_users = hr_group.users
+
+                # CASE 1: Current approver is also HR (but not the employee) -> treat as both LM + HR approval
+                if self.env.user in hr_users and not (rec.employee_id and rec.employee_id.user_id == self.env.user):
+                    # Record HR approver and perform HR approval in one step
+                    rec.hr_approver_id = self.env.user
+                    rec.action_second_approve()
+                    continue
+
+                # CASE 2: Employee is HR and there is no other HR user -> LM approval is final
+                employee_user = rec.employee_id.user_id if rec.employee_id else False
+                if employee_user and employee_user in hr_users and len(hr_users) == 1:
+                    # Simulate HR approval without violating "no self-approval"
+                    rec.hr_approver_id = self.env.user  # line manager effectively acts as HR approver
+                    rec.write({"state": "progress"})
+                    rec._send_notification("progress")
+                    rec._create_approval_activity(
+                        user_id=employee_user.id,
+                        summary=f"Objective Approved: {rec.name}",
+                        note=f"""<p><strong>Status:</strong> Your objective has been approved!</p>
+                              <p><strong>Action Required:</strong> Start working on your objective</p>
+                              <p>Your objective has been approved by your line manager. You can now begin work.</p>"""
+                    )
+                    continue
+
+                # CASE 3: Normal case -> create activities for all HR users
                 for hr_user in hr_users:
                     rec._create_approval_activity(
                         user_id=hr_user.id,
@@ -528,6 +631,12 @@ class HrAppraisalGoal(models.Model):
     def action_second_approve(self):
         """Approve the individual objective and automatically start it"""
         for rec in self:
+            # Prevent self-approval at HR level as well
+            if rec.employee_id and rec.employee_id.user_id and rec.employee_id.user_id.id == self.env.uid:
+                raise UserError("You cannot approve your own objective as HR. It must be approved by another HR user.")
+            # Record who approved at HR level
+            rec.hr_approver_id = self.env.user
+
             # Mark previous activities as done (use sudo to avoid ir.model access issues)
             rec.activity_ids.filtered(
                 lambda a: a.user_id == self.env.user and a.res_model == 'hr.appraisal.goal'
