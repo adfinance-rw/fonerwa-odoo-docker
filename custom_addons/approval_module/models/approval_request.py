@@ -1653,10 +1653,13 @@ class ApprovalRequest(models.Model):
                 added_user_ids -= executive_user_ids
                 
                 # Add executive users at the end in order: CFO, Senior Approver, CEO
+                # Only include executives that were explicitly configured as approvers/reviewers
                 for role_name, exec_user in executive_users:
                     if exec_user and exec_user.id not in added_user_ids:
-                        # Use stored required status, default to True if not found
-                        exec_required = executive_required_status.get(exec_user.id, True)
+                        # If this executive was never referenced in category/reviewer/templates, skip
+                        exec_required = executive_required_status.get(exec_user.id)
+                        if exec_required is None:
+                            continue
                         vals = approver_line(exec_user, seq, required=exec_required, category_id=category_id)
                         if vals and vals.get('user_id'):
                             commands.append(fields.Command.create(vals))
@@ -1723,10 +1726,13 @@ class ApprovalRequest(models.Model):
             added_user_ids -= executive_user_ids
             
             # Add executive users at the end in order: CFO, Senior Approver, CEO
+            # Only include executives that were explicitly configured as approvers/reviewers
             for role_name, exec_user in executive_users:
                 if exec_user and exec_user.id not in added_user_ids:
-                    # Use stored required status, default to True if not found
-                    exec_required = executive_required_status.get(exec_user.id, True)
+                    # If this executive was never referenced in category/reviewer/templates, skip
+                    exec_required = executive_required_status.get(exec_user.id)
+                    if exec_required is None:
+                        continue
                     vals = approver_line(exec_user, seq, required=exec_required, category_id=category_id)
                     if vals and vals.get('user_id'):
                         commands.append(fields.Command.create(vals))
