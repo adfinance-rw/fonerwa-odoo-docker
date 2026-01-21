@@ -1,4 +1,17 @@
 <odoo>
+    <record id="approvals.approval_request_action_to_review" model="ir.actions.act_window">
+        <field name="name">Approvals to Review</field>
+        <field name="res_model">approval.request</field>
+        <field name="view_mode">list,form,kanban</field>
+        <!-- Show requests where the current user still has a pending approver line -->
+        <field name="domain">[('user_has_pending', '=', True)]</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No new approvals to review
+            </p>
+        </field>
+    </record>
+    
     <record id="view_approval_request_view_inherit_form" model="ir.ui.view">
       <field name="name">approval.request.view.inherit.form</field>
       <field name="model">approval.request</field>

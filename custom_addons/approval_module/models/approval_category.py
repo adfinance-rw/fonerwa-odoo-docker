@@ -114,6 +114,14 @@ class ApprovalCategory(models.Model):
             option_ids = rec.available_type_ids.mapped('type_option_id').ids
             rec.available_type_option_ids = [(6, 0, option_ids)]
 
+    def _compute_request_to_validate_count(self):
+        # Count only requests where the current user still has a pending approver line
+        domain = [('user_has_pending', '=', True)]
+        requests_data = self.env['approval.request']._read_group(domain, ['category_id'], ['__count'])
+        requests_mapped_data = {category.id: count for category, count in requests_data}
+        for category in self:
+            category.request_to_validate_count = requests_mapped_data.get(category.id, 0)
+
 
 class ApprovalCategoryAvailableType(models.Model):
     """Defines which specific types are available for a memo category"""

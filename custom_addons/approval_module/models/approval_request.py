@@ -42,6 +42,16 @@ class ApprovalRequest(models.Model):
         help='Users who can approve on behalf of approvers via delegation'
     )
 
+    # Helper: does the current user still have a pending approval on this request?
+    # Used in domains (search) for menus like "Approvals to Review".
+    user_has_pending = fields.Boolean(
+        string='User Has Pending Approval',
+        compute='_compute_user_has_pending',
+        search='_search_user_has_pending',
+        store=False,
+        help='Indicates if the current user has at least one approver line in pending status.'
+    )
+
     @api.depends_context('uid')
     @api.depends('approver_ids.status')
     def _compute_user_status(self):
@@ -80,6 +90,48 @@ class ApprovalRequest(models.Model):
             else:
                 # fallback for any unexpected values
                 approval.user_status = next(iter(statuses))
+
+    @api.depends_context('uid')
+    @api.depends('approver_ids.status', 'approver_ids.user_id')
+    def _compute_user_has_pending(self):
+        """Compute if the current user has at least one pending approver line."""
+        current_user = self.env.user
+        for approval in self:
+            approval.user_has_pending = bool(
+                approval.approver_ids.filtered(
+                    lambda a: a.user_id == current_user and a.status == 'pending'
+                )
+            )
+
+    def _search_user_has_pending(self, operator, value):
+        """
+        Custom search for user_has_pending so it can be used in domains.
+
+        We resolve to request IDs via the approval.approver model to ensure
+        we match on the same approver line (user + status) instead of
+        independent EXISTS clauses on approver_ids.
+        """
+        current_user = self.env.user
+
+        # Base domain: lines for the current user that are pending
+        approver_domain = [
+            ('user_id', '=', current_user.id),
+            ('status', '=', 'pending'),
+            ('request_id.request_status', '=', 'pending'),
+        ]
+
+        approver_recs = self.env['approval.approver'].search(approver_domain)
+        request_ids = approver_recs.mapped('request_id.id')
+
+        base_domain = [('id', 'in', request_ids or [0])]
+
+        # Handle basic boolean operators
+        if (operator == '=' and bool(value)) or (operator == '!=' and not value):
+            return base_domain
+        elif (operator == '=' and not value) or (operator == '!=' and bool(value)):
+            return ['!', *base_domain]
+        # Fallback: no results for unsupported operators
+        return [('id', '=', 0)]
     
     # Computed & stored field to identify category type based on category name
     category_type = fields.Selection(
@@ -1066,11 +1118,11 @@ class ApprovalRequest(models.Model):
         for request in self:
             request._activate_waiting_batch_approvers()
         
-        # Notify requester about the approval
-        for request in self:
-            if approver and approver.status == 'approved':
-                request._notify_requester_of_approval(approver)
-        
+        # # Notify requester about the approval
+        # for request in self:
+        #     if approver and approver.status == 'approved':
+        #         request._notify_requester_of_approval(approver)
+
         # Check if request is now fully approved
         for request in self:
             # First, verify that all required approvers have approved
@@ -1117,7 +1169,7 @@ class ApprovalRequest(models.Model):
         # Post message in chatter (plain text; avoid raw HTML tags).
         # This single notification email (generated from the chatter message)
         # is the only email that should go to the requester at each approval step.
-        message_body = _('%s has approved your request "%s".') % (approver_name, self.name)
+        message_body = _('%s has approved the request "%s".') % (approver_name, self.name)
 
         # Add pending approvers info if any (use newlines instead of <br/>)
         pending_approvers = self.approver_ids.filtered(lambda a: a.status in ['pending', 'waiting'])
@@ -1125,12 +1177,12 @@ class ApprovalRequest(models.Model):
             pending_names = ', '.join(pending_approvers.mapped('user_id.name'))
             message_body += '\n\n' + _('Pending approvers: %s') % pending_names
         
+        # Post only to followers; we no longer force-send to the requester here
         self.message_post(
             body=message_body,
             subject=_('Approval Update: %s') % approver_role,
             message_type='notification',
             subtype_xmlid='mail.mt_comment',
-            partner_ids=[requester.partner_id.id] if requester.partner_id else []
         )
     
     def _activate_waiting_batch_approvers(self):
@@ -1350,71 +1402,40 @@ class ApprovalRequest(models.Model):
             return
             
         notification_users = self.category_id.notification_user_ids
+
+        # Email request owner once when fully approved
+        requester = self.request_owner_id or self.create_uid
+        if requester and requester.partner_id and requester.partner_id.email:
+            try:
+                owner_email_body = _(
+                    '<p>Dear %s,</p>'
+                    '<p>Your approval request <strong>"%s"</strong> has been fully approved.</p>'
+                    '<p><strong>Category:</strong> %s<br/>'
+                    '<strong>Amount:</strong> %s</p>'
+                    '<p>Best regards,<br/>Approval System</p>'
+                ) % (
+                    requester.name,
+                    self.name,
+                    self.category_id.name,
+                    self.amount or 0,
+                )
+                owner_mail_values = {
+                    'subject': _('Your approval request has been approved: %s') % self.name,
+                    'body_html': owner_email_body,
+                    'email_to': requester.partner_id.email,
+                    'email_from': self.env.company.email or self.env.user.email,
+                    'auto_delete': True,
+                }
+                self.env['mail.mail'].sudo().create(owner_mail_values).send()
+            except Exception:
+                # Don't block workflow if owner email fails
+                pass
+
         if not notification_users:
             return
-        
-        # Get partner IDs, filtering out those without email if email is required
-        partner_ids = notification_users.mapped('partner_id').filtered(lambda p: p.email).ids
-        if not partner_ids:
-            # If no partners have email, just post a message instead
-            # Plain-text body for chatter; avoid HTML tags
-            self.message_post(
-                body=_(
-                    'The approval request "%(name)s" has been fully approved.\n'
-                    'Category: %(category)s\n'
-                    'Requester: %(requester)s\n'
-                    'Amount: %(amount)s'
-                ) % {
-                    'name': self.name,
-                    'category': self.category_id.name,
-                    'requester': self.request_owner_id.name or self.create_uid.name,
-                    'amount': self.amount or 0,
-                },
-                subject=_('Approval Request Approved: %s') % self.name,
-            )
-            return
-        
-        # Try to send notification email with HTML body, fallback to message_post
-        email_body = _(
-            '<p>The approval request <strong>"%s"</strong> has been fully approved.</p>'
-            '<p><strong>Category:</strong> %s<br/>'
-            '<strong>Requester:</strong> %s<br/>'
-            '<strong>Amount:</strong> %s</p>'
-        ) % (
-            self.name,
-            self.category_id.name,
-            self.request_owner_id.name or self.create_uid.name,
-            self.amount or 0
-        )
-        try:
-            mail_values = {
-                'subject': _('Approval Request Approved: %s') % self.name,
-                'body_html': email_body,
-                'recipient_ids': [(6, 0, partner_ids)],
-                'email_from': self.env.company.email or self.env.user.email,
-                'auto_delete': True,
-            }
-            mail = self.env['mail.mail'].sudo().create(mail_values)
-            mail.send()
-        except Exception:
-            # Fallback to a plain-text message in chatter if email sending fails
-            fallback_body = _(
-                'The approval request "%(name)s" has been fully approved.\n'
-                'Category: %(category)s\n'
-                'Requester: %(requester)s\n'
-                'Amount: %(amount)s'
-            ) % {
-                'name': self.name,
-                'category': self.category_id.name,
-                'requester': self.request_owner_id.name or self.create_uid.name,
-                'amount': self.amount or 0,
-            }
-            self.message_post(
-                body=fallback_body,
-                subject=_('Approval Request Approved: %s') % self.name,
-            )
-        
-        # Create activities for notification users so they can act on the approved request
+
+        # Only create activities for notification users; the activity email is the
+        # single notification they should receive.
         self._schedule_notification_user_activities(notification_users)
 
     def _schedule_notification_user_activities(self, notification_users):
