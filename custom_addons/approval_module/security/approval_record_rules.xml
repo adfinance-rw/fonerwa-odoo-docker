@@ -88,8 +88,20 @@
             <field name="groups" eval="[(4, ref('base.group_user'))]"/>
             <field name="perm_read" eval="True"/>
             <field name="perm_write" eval="True"/>
-            <field name="perm_create" eval="True"/>
+            <field name="perm_create" eval="False"/>
             <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <!-- Allow creating approval.request activities for any assigned user -->
+        <record id="approval_mail_activity_rule_create_approval_request" model="ir.rule">
+            <field name="name">Mail Activity: create for approval.request</field>
+            <field name="model_id" ref="mail.model_mail_activity"/>
+            <field name="domain_force">[('res_model', '=', 'approval.request')]</field>
+            <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+            <field name="perm_read" eval="False"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
         </record>
 
         <!-- Rule 4: Override base.group_user to include optional approvers -->
