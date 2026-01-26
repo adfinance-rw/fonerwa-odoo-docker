@@ -79,6 +79,30 @@
             <field name="perm_unlink" eval="False"/>
         </record>
 
+        <!-- Approval Category visibility by department -->
+        <record id="approval_category_rule_department" model="ir.rule">
+            <field name="name">Approval Category: Department visibility</field>
+            <field name="model_id" ref="approvals.model_approval_category"/>
+            <field name="domain_force">['|', ('department_ids', '=', False), ('department_ids', 'in', user.employee_id.department_id.id)]</field>
+            <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <!-- Managers can see all categories -->
+        <record id="approval_category_rule_manager_all" model="ir.rule">
+            <field name="name">Approval Category: Manager access all</field>
+            <field name="model_id" ref="approvals.model_approval_category"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('approvals.group_approval_manager')), (4, ref('base.group_system'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
         <!-- Rule: Only the assigned user can mark approval.request activities as done -->
         <!-- Keep access for other models unchanged -->
         <record id="approval_mail_activity_rule_assigned_only" model="ir.rule">
@@ -94,9 +118,9 @@
 
         <!-- Allow creating approval.request activities for any assigned user -->
         <record id="approval_mail_activity_rule_create_approval_request" model="ir.rule">
-            <field name="name">Mail Activity: create for approval.request</field>
+            <field name="name">Mail Activity: allow create</field>
             <field name="model_id" ref="mail.model_mail_activity"/>
-            <field name="domain_force">[('res_model', '=', 'approval.request')]</field>
+            <field name="domain_force">[(1, '=', 1)]</field>
             <field name="groups" eval="[(4, ref('base.group_user'))]"/>
             <field name="perm_read" eval="False"/>
             <field name="perm_write" eval="False"/>

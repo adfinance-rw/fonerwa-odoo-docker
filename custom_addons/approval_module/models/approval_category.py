@@ -31,6 +31,16 @@ class ApprovalCategory(models.Model):
         help='If checked, approvers must approve in sequence. Previous approvers must approve before later ones can approve.'
     )
 
+    # Department restriction (optional)
+    department_ids = fields.Many2many(
+        'hr.department',
+        'approval_category_department_rel',
+        'category_id',
+        'department_id',
+        string='Departments',
+        help='If set, only users in these departments can see this approval category.'
+    )
+
     # Templates configured on the category
     checklist_template_ids = fields.One2many(
         comodel_name='approval.category.checklist',

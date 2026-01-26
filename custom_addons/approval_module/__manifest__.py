@@ -3,7 +3,7 @@
     "name": "Approval Module",
     "version": "1.1.1",
     "summary": "Manage approval process",
-    "depends": ["base", "approvals", "sign", "web", "contract_management"],
+    "depends": ["base", "approvals", "sign", "web", "contract_management", "hr"],
     "data": [
         "security/approval_security_groups.xml",
         "security/ir.model.access.csv",

@@ -28,6 +28,10 @@
                             <field name="approver_sequence" 
                                     string="Require Sequential Approval"
                                     help="If checked, approvers must approve in sequence. Previous approvers must approve before later ones can approve."/>
+                            <field name="department_ids"
+                                    widget="many2many_tags"
+                                    string="Departments"
+                                    help="If set, only users in these departments can see this approval category."/>
                             <field name="notification_user_ids" 
                                     widget="many2many_tags" 
                                     string="Notify on Approval"
