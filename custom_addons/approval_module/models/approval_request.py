@@ -638,12 +638,10 @@ class ApprovalRequest(models.Model):
     @api.onchange('amount')
     def _onchange_amount(self):
         """Trigger approver population and checklist when amount changes"""
-        if self.category_type == 'invoice_payment':
-            self._recompute_approvers()
-        if self.category_type == 'purchase_order':
-            # Amount change affects po_exceeds_10m/20m which affects approvers and checklist
-            self._recompute_approvers()
-            self._onchange_payment_type_populate_checklist()
+        # Amount-based approver templates should re-evaluate for all categories
+        self._recompute_approvers()
+        # Checklist templates may also depend on amount thresholds
+        self._onchange_payment_type_populate_checklist()
 
     @api.onchange('optional_approver_ids')
     def _onchange_optional_approvers(self):
@@ -870,9 +868,38 @@ class ApprovalRequest(models.Model):
             for approver_line in getattr(request, 'approver_ids', self.env['approval.approver']):
                 sync_user_signature(getattr(approver_line, 'user_id', False))
 
-        # Call super().action_confirm() - wrap in try/except to handle email configuration errors and access errors
+        # Determine if we should skip the manager-required check
+        skip_manager_check = False
+        if self.category_id and self.category_id.manager_approval == 'required':
+            # Identify reviewer (line manager or department manager)
+            requester = getattr(self, 'request_owner_id', False) or self.create_uid
+            reviewer_user = False
+            try:
+                emp = requester.employee_id if hasattr(requester, 'employee_id') else False
+                # Department manager
+                dept = emp.department_id if emp and hasattr(emp, 'department_id') else False
+                manager = dept.manager_id if dept and hasattr(dept, 'manager_id') else False
+                dept_manager_user = manager.user_id if manager and hasattr(manager, 'user_id') else False
+            except Exception:
+                dept_manager_user = False
+            parent_manager_user = False
+            try:
+                parent = emp and hasattr(emp, 'parent_id') and emp.parent_id or False
+                parent_manager_user = parent and hasattr(parent, 'user_id') and parent.user_id or False
+            except Exception:
+                parent_manager_user = False
+            reviewer_user = parent_manager_user or dept_manager_user
+
+            # If reviewer is one of the executives, skip manager-required check
+            cfo = self.company_id.cfo_id if hasattr(self.company_id, 'cfo_id') else False
+            senior_approver = self.company_id.senior_approver_id if hasattr(self.company_id, 'senior_approver_id') else False
+            ceo = self.company_id.ceo_id if hasattr(self.company_id, 'ceo_id') else False
+            if reviewer_user and reviewer_user in [cfo, senior_approver, ceo]:
+                skip_manager_check = True
+
+        # Call confirmation logic (customized to optionally skip manager check)
         try:
-            result = super().action_confirm()
+            result = self._action_confirm_core(skip_manager_check=skip_manager_check)
         except ValidationError as e:
             # Re-raise validation errors immediately (these are business logic errors)
             raise
@@ -927,6 +954,42 @@ class ApprovalRequest(models.Model):
         
         return result
 
+    def _action_confirm_core(self, skip_manager_check=False):
+        """Confirm request while optionally skipping manager-required validation."""
+        self.ensure_one()
+
+        # Base manager-required validation (optional)
+        if self.category_id and self.category_id.manager_approval == 'required' and not skip_manager_check:
+            employee = self.env['hr.employee'].search([
+                ('user_id', '=', self.request_owner_id.id),
+                ('company_id', '=', self.company_id.id)
+            ], limit=1)
+            if not employee.parent_id:
+                raise UserError(_('This request needs to be approved by your manager. There is no manager linked to your employee profile.'))
+            if not employee.parent_id.user_id:
+                raise UserError(_('This request needs to be approved by your manager. There is no user linked to your manager.'))
+            if not self.approver_ids.filtered(lambda a: a.user_id.id == employee.parent_id.user_id.id):
+                raise UserError(_('This request needs to be approved by your manager. Your manager is not in the approvers list.'))
+
+        # Base approval minimum + document requirement checks
+        if len(self.approver_ids) < self.approval_minimum:
+            raise UserError(_("You have to add at least %s approvers to confirm your request.", self.approval_minimum))
+        if self.requirer_document == 'required' and not self.attachment_number:
+            raise UserError(_("You have to attach at least one document."))
+
+        approvers = self.approver_ids
+        if self.approver_sequence:
+            approvers = approvers.filtered(lambda a: a.status in ['new', 'pending', 'waiting'])
+            approvers[1:].sudo().write({'status': 'waiting'})
+            approvers = approvers[0] if approvers and approvers[0].status != 'pending' else self.env['approval.approver']
+        else:
+            approvers = approvers.filtered(lambda a: a.status == 'new')
+
+        approvers._create_activity()
+        approvers.sudo().write({'status': 'pending'})
+        self.sudo().write({'date_confirmed': fields.Datetime.now()})
+        return True
+
     @api.depends('approver_ids.status')
     def action_cancel(self):
         """Override to prevent cancel after at least one approval if configured"""
@@ -942,6 +1005,8 @@ class ApprovalRequest(models.Model):
             if status_lst.count('approved') >= 1:
                 raise UserError(_("This request cannot be canceled as it has been approved. "
                                 "Please contact your administrator if you need to cancel this request."))
+            else:
+                return super().action_cancel()
         
 
     def action_withdraw(self, approver=None):
@@ -1575,7 +1640,7 @@ class ApprovalRequest(models.Model):
                     reviewer_users.append((reviewer, manager_required))
                 for user_rec_opt, is_required in reviewer_users:
                     if user_rec_opt and user_rec_opt.id not in added_user_ids:
-                        # Skip executive users here - they'll be added at the end
+                        # If line manager is an executive, skip as reviewer
                         if user_rec_opt.id in executive_user_ids:
                             continue
                         vals_r = approver_line(user_rec_opt, seq, required=is_required, category_id=category_id)
@@ -1691,7 +1756,8 @@ class ApprovalRequest(models.Model):
                 
                 if commands:
                     return [fields.Command.clear()] + commands
-                return []
+                # Ensure we clear existing approvers if none match after recompute
+                return [fields.Command.clear()]
 
             # Step 1: Add Reviewers group (optional approvers first, then manager)
             reviewer_users = []
@@ -1710,7 +1776,7 @@ class ApprovalRequest(models.Model):
             for user_rec, is_required in reviewer_users:
                 if not user_rec or user_rec.id in added_user_ids:
                     continue
-                # Skip executive users here - they'll be added at the end
+                # If line manager is an executive, skip as reviewer
                 if user_rec.id in executive_user_ids:
                     continue
                 lm_vals = approver_line(user_rec, seq, required=is_required, category_id=category_id)
@@ -1764,7 +1830,8 @@ class ApprovalRequest(models.Model):
 
             if commands:
                 return [fields.Command.clear()] + commands
-            return []
+            # Ensure we clear existing approvers if none match after recompute
+            return [fields.Command.clear()]
 
     def _initialize_default_approvers(self):
         """Set default approvers only when empty (used on create/default_get)."""
