@@ -27,7 +27,7 @@
     'assets': {
         # Dark mode variable overrides (loaded first in compilation chain)
         'web.dark_mode_variables': [
-            'rgf_branding/static/src/scss/dark_mode_variables.scss',
+            ('before', 'web_enterprise/static/src/scss/primary_variables.dark.scss', 'rgf_branding/static/src/scss/dark_mode_variables.scss'),
         ],
         # Light mode variable overrides (loaded early in compilation chain)
         'web._assets_primary_variables': [

@@ -8,3 +8,7 @@ $o-brand-odoo: #013f41;
 $o-enterprise-color: #013f41;
 $o-brand-primary: #013f41;
 
+// Dark mode accents use $o-action (from $o-enterprise-action-color) by default.
+// Keep it aligned with the brand so links/highlights are consistent.
+$o-enterprise-action-color: #013f41;
+$o-action: #013f41;
