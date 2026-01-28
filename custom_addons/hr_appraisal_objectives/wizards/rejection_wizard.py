@@ -28,12 +28,12 @@ class HrAppraisalGoalRejectionWizard(models.TransientModel):
             lambda a: a.user_id == self.env.user and a.res_model == 'hr.appraisal.goal'
         ).action_feedback(feedback=f"Rejected: {self.reason or 'No reason provided'}")
         
-        # Write rejection reason (may be empty) and send back to draft
+        # Write rejection reason and set state to "refused"
         goal.write({
             "rejection_reason": self.reason or False,
             "rejected": True,
             "rejection_stage": self.rejection_level,
-            "state": "draft",  # Return to draft instead of rejected state
+            "state": "refused",  # Set to "refused" state instead of "draft"
         })
         goal._send_notification("rejected")
         

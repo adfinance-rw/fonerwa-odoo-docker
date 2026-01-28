@@ -62,16 +62,19 @@ class NotificationManager(models.Model):
     def _send_deadline_notification(self, record, obj_type):
         """Send deadline notification"""
         try:
-            # Determine recipients: employee and/or department manager when available
+            # Determine recipients: employee and/or line manager when available
             partner_ids = []
             user_ids = []
 
-            # For individual goal
+            # For individual goal: notify employee and their parent (line manager)
             if hasattr(record, 'employee_id') and record.employee_id and record.employee_id.user_id:
                 user_ids.append(record.employee_id.user_id.id)
                 partner_ids.append(record.employee_id.user_id.partner_id.id)
+                if record.employee_id.parent_id and record.employee_id.parent_id.user_id and record.employee_id.parent_id.user_id.partner_id:
+                    user_ids.append(record.employee_id.parent_id.user_id.id)
+                    partner_ids.append(record.employee_id.parent_id.user_id.partner_id.id)
 
-            # For department/inst objectives
+            # For department/inst objectives: keep department manager behaviour
             if hasattr(record, 'department_id') and record.department_id and record.department_id.manager_id and record.department_id.manager_id.user_id:
                 user_ids.append(record.department_id.manager_id.user_id.id)
                 partner_ids.append(record.department_id.manager_id.user_id.partner_id.id)
@@ -130,17 +133,15 @@ class NotificationManager(models.Model):
         try:
             if not goal:
                 return
-            # Recipients: employee and manager if available
+            # Recipients: employee and line manager if available
             partner_ids = []
             user_ids = []
             if goal.employee_id and goal.employee_id.user_id:
                 user_ids.append(goal.employee_id.user_id.id)
                 partner_ids.append(goal.employee_id.user_id.partner_id.id)
-            if goal.department_objective_id and goal.department_objective_id.department_id \
-               and goal.department_objective_id.department_id.manager_id \
-               and goal.department_objective_id.department_id.manager_id.user_id:
-                user_ids.append(goal.department_objective_id.department_id.manager_id.user_id.id)
-                partner_ids.append(goal.department_objective_id.department_id.manager_id.user_id.partner_id.id)
+            if goal.employee_id and goal.employee_id.parent_id and goal.employee_id.parent_id.user_id:
+                user_ids.append(goal.employee_id.parent_id.user_id.id)
+                partner_ids.append(goal.employee_id.parent_id.user_id.partner_id.id)
 
             title = 'Performance Alert'
             message = (
@@ -267,19 +268,17 @@ class NotificationManager(models.Model):
                             <p>Thank you for your work on this objective.</p>"""
                         )
 
-                    # Notify manager if exists
-                    if goal.department_objective_id and goal.department_objective_id.department_id:
-                        dept = goal.department_objective_id.department_id
-                        if dept.manager_id and dept.manager_id.user_id and dept.manager_id.user_id.partner_id:
-                            self._send_email_notification(
-                                [dept.manager_id.user_id.partner_id.id],
-                                f"Team Objective Completed: {goal.name}",
-                                f"""<p>Dear Manager,</p>
-                                <p>The objective <strong>"{goal.name}"</strong> for {goal.employee_id.name} has been automatically completed.</p>
-                                <p>End Date: {goal.end_date}</p>
-                                <p>Final Score: {goal.final_score:.1f}%</p>
-                                <p>Please review the completion status.</p>"""
-                            )
+                    # Notify line manager if exists
+                    if goal.employee_id and goal.employee_id.parent_id and goal.employee_id.parent_id.user_id and goal.employee_id.parent_id.user_id.partner_id:
+                        self._send_email_notification(
+                            [goal.employee_id.parent_id.user_id.partner_id.id],
+                            f"Team Objective Completed: {goal.name}",
+                            f"""<p>Dear Manager,</p>
+                            <p>The objective <strong>"{goal.name}"</strong> for {goal.employee_id.name} has been automatically completed.</p>
+                            <p>End Date: {goal.end_date}</p>
+                            <p>Final Score: {goal.final_score:.1f}%</p>
+                            <p>Please review the completion status.</p>"""
+                        )
 
             except Exception as e:
                 _logger.error(f"Failed to complete individual goal {goal.id}: {e}")

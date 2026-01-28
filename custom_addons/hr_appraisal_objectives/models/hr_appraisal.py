@@ -1,5 +1,6 @@
 from odoo import models, fields, api
 from odoo.exceptions import ValidationError
+from markupsafe import Markup
 import logging
 
 _logger = logging.getLogger(__name__)
@@ -197,6 +198,25 @@ class HrAppraisal(models.Model):
             
             rec.state = 'self_scored'
             
+            # Get line manager (parent) - prioritize direct manager over department manager
+            line_manager = rec.employee_id.parent_id if rec.employee_id else False
+            if not line_manager and rec.manager_ids:
+                line_manager = rec.manager_ids[0]  # Fallback to first manager in manager_ids
+            
+            # Send email/chatter notification to line manager
+            if line_manager and line_manager.user_id and line_manager.user_id.partner_id:
+                rec.sudo().message_post(
+                    body=Markup(
+                        f"<p><strong>Employee Feedback Submitted: {rec.employee_id.name if rec.employee_id else 'N/A'}</strong></p>"
+                        f"<p>The employee has submitted their self-assessment and feedback.</p>"
+                        f"<p><strong>Action Required:</strong> Please review and complete your Manager Assessment.</p>"
+                        f"<p><strong>Fiscal Year:</strong> {rec.fiscal_year_id.name if rec.fiscal_year_id else 'N/A'}</p>"
+                    ),
+                    partner_ids=[line_manager.user_id.partner_id.id],
+                    message_type="notification",
+                    subtype_xmlid="mail.mt_comment",
+                )
+            
             # Create activity for line manager(s) to review
             for manager in rec.manager_ids:
                 if manager.user_id:
@@ -253,7 +273,22 @@ class HrAppraisal(models.Model):
             hr_not_scored_goals = rec.employee_goal_ids.filtered(lambda g: g.supervisor_score == 0)
             if hr_not_scored_goals:
                 raise ValidationError("Please score the individual objectives before completing the appraisal.")
-            rec.state = 'done'
+            # Use mail_notrack context to prevent automatic notifications when state changes to 'done'
+            rec.with_context(mail_notrack=True).write({'state': 'done'})
+            
+            # Send email notification to the owner (employee) only
+            if rec.employee_id and rec.employee_id.user_id and rec.employee_id.user_id.partner_id:
+                rec.sudo().message_post(
+                    body=Markup(
+                        f"<p><strong>Appraisal Completed: {rec.employee_id.name if rec.employee_id else 'N/A'}</strong></p>"
+                        f"<p>Your appraisal has been completed.</p>"
+                        f"<p><strong>Fiscal Year:</strong> {rec.fiscal_year_id.name if rec.fiscal_year_id else 'N/A'}</p>"
+                        f"<p>All assessments have been completed and the final scores are now available.</p>"
+                    ),
+                    partner_ids=[rec.employee_id.user_id.partner_id.id],
+                    message_type="notification",
+                    subtype_xmlid="mail.mt_comment",
+                )
         return True
     
     def action_cancel_appraisal(self):

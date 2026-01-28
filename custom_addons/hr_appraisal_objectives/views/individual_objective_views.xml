@@ -13,8 +13,27 @@ current_uid = env.uid
 drafts = records.filtered(lambda r: r.state == 'draft' and r.create_uid.id == current_uid)
 missing_kpi = drafts.filtered(lambda r: not r.kpi_line_ids)
 to_submit = drafts - missing_kpi
+
+# Submit all objectives with skip_notifications=True
+submitted_records = env['hr.appraisal.goal']
 for rec in to_submit:
-    rec.action_submit()
+    rec.with_context(skip_notifications=True).action_submit()
+    submitted_records |= rec
+
+# Group submitted objectives by line manager (recipient)
+objectives_by_manager = {}
+for rec in submitted_records:
+    line_manager = rec.manager_id or (rec.employee_id.parent_id if rec.employee_id else False)
+    if line_manager and line_manager.user_id and line_manager.user_id.partner_id:
+        manager_user_id = line_manager.user_id.id
+        if manager_user_id not in objectives_by_manager:
+            objectives_by_manager[manager_user_id] = []
+        objectives_by_manager[manager_user_id].append(rec)
+
+# Send consolidated notifications grouped by line manager
+if objectives_by_manager and submitted_records:
+    submitted_records[0]._send_consolidated_notifications("submitted", objectives_by_manager)
+
 submitted_count = len(to_submit)
 skipped_nondraft_or_not_mine = len(records) - len(drafts)
 skipped_no_kpi = len(missing_kpi)
@@ -104,11 +123,42 @@ submitted = records.filtered(
     lambda r: r.state == 'submitted'
     and not (r.employee_id and r.employee_id.user_id and r.employee_id.user_id.id == current_uid)
 )
+
+# Approve all objectives with skip_notifications=True
 for rec in submitted:
-    rec.action_first_approve()
+    rec.with_context(skip_notifications=True).action_first_approve()
+
+# After approval, some objectives may be in "first_approved" (need HR approval)
+# while others may be in "progress" (auto-approved, need to notify employees)
+first_approved = submitted.filtered(lambda r: r.state == 'first_approved')
+progress_approved = submitted.filtered(lambda r: r.state == 'progress')
+
+# Group first_approved objectives for HR notification
+objectives_by_hr = {}
+hr_group = env.ref('hr_appraisal_objectives.group_hr_appraisal', raise_if_not_found=False)
+if first_approved and hr_group and hr_group.users:
+    # Use first HR user ID as key (method will notify all HR users anyway)
+    hr_user_id = hr_group.users[0].id
+    objectives_by_hr[hr_user_id] = first_approved
+
+# Group progress objectives by employee for employee notification
+objectives_by_employee = {}
+for rec in progress_approved:
+    if rec.employee_id and rec.employee_id.user_id:
+        employee_user_id = rec.employee_id.user_id.id
+        if employee_user_id not in objectives_by_employee:
+            objectives_by_employee[employee_user_id] = []
+        objectives_by_employee[employee_user_id].append(rec)
+
+# Send consolidated notifications
+if objectives_by_hr:
+    env['hr.appraisal.goal']._send_consolidated_notifications("first_approved", objectives_by_hr)
+if objectives_by_employee:
+    env['hr.appraisal.goal']._send_consolidated_notifications("progress", objectives_by_employee)
+
 approved_count = len(submitted)
 skipped = len(records) - approved_count
-message = (f"Submitted {approved_count} for HR approval" if approved_count else "Nothing to submit")
+message = (f"Approved {approved_count} for HR review" if approved_count else "Nothing to approve")
 if skipped:
     message += f", skipped {skipped} not in Submitted state or belonging to you"
 action = {
@@ -141,8 +191,24 @@ to_approve = records.filtered(
     lambda r: r.state == 'first_approved'
     and not (r.employee_id and r.employee_id.user_id and r.employee_id.user_id.id == current_uid)
 )
+
+# Approve all objectives with skip_notifications=True
 for rec in to_approve:
-    rec.action_second_approve()
+    rec.with_context(skip_notifications=True).action_second_approve()
+
+# Group approved objectives by employee (recipient)
+objectives_by_employee = {}
+for rec in to_approve:
+    if rec.employee_id and rec.employee_id.user_id:
+        employee_user_id = rec.employee_id.user_id.id
+        if employee_user_id not in objectives_by_employee:
+            objectives_by_employee[employee_user_id] = []
+        objectives_by_employee[employee_user_id].append(rec)
+
+# Send consolidated notifications grouped by employee
+if objectives_by_employee:
+    env['hr.appraisal.goal']._send_consolidated_notifications("progress", objectives_by_employee)
+
 approved_count = len(to_approve)
 skipped = len(records) - approved_count
 message = (f"Approved {approved_count}" if approved_count else "Nothing to approve")
@@ -178,6 +244,11 @@ action = {
                 invisible="state != 'draft' or create_uid != current_uid_int"
                 groups="base.group_user"
                 icon="fa-paper-plane"/>
+        <button name="action_resubmit" type="object" string="Resubmit"
+                class="oe_stat_button btn-primary"
+                invisible="state != 'refused' or employee_user_id_int != current_uid_int"
+                groups="base.group_user"
+                icon="fa-redo"/>
         <button name="action_first_approve" type="object" string="Approve"
                 class="oe_stat_button btn-success"
                   invisible="state != 'submitted' or employee_user_id_int == current_uid_int"
@@ -224,7 +295,7 @@ action = {
           <field name="reference" invisible="1"/>
           <label for="name" string="Individual Objective"/>
           <h1>
-            <field name="name" placeholder="e.g. Present yourself to your new team" readonly="(id and create_uid != current_uid_int and state in ['draft','submitted']) or state in ['first_approved','progress','progress_done','self_scored','scored','final']"/>
+            <field name="name" placeholder="e.g. Present yourself to your new team" readonly="(id and create_uid != current_uid_int and state in ['draft','submitted']) or state in ['first_approved','progress','progress_done','self_scored','scored','final', 'refused']"/>
           </h1>
         </div>
       </xpath>
@@ -241,12 +312,12 @@ action = {
             <field name="department_objective_id" widget="many2one_autocomplete"
                   string="Department Objective" options="{'no_create': True}"
                   domain="[('state', '=', 'active'), ('current_user_department_id', '=', 'department_id')]"
-                  placeholder="Select Department Objective" readonly="(id and create_uid != current_uid_int and state in ['draft','submitted']) or state in ['first_approved','progress','progress_done','self_scored','scored','final']" invisible="is_common" required="1"/>
+                  placeholder="Select Department Objective" readonly="(id and create_uid != current_uid_int and state in ['draft','submitted']) or state in ['first_approved','progress','progress_done','self_scored','scored','final', 'refused']" invisible="is_common" required="1"/>
             <field name="institutional_objective_id"
                   string="Institutional Objective" widget="many2one_autocomplete"
                   domain="[('state', '=', 'active')]"
                   options="{'no_create': True}"
-                  placeholder="Select Institutional Objective" readonly="(id and create_uid != current_uid_int and state in ['draft','submitted']) or state in ['first_approved','progress','progress_done','self_scored','scored','final']" required="1" invisible="is_common"/>
+                  placeholder="Select Institutional Objective" readonly="(id and create_uid != current_uid_int and state in ['draft','submitted']) or state in ['first_approved','progress','progress_done','self_scored','scored','final', 'refused']" required="1" invisible="is_common"/>
         </group>
         <group string="Timeline">
           <field name="start_date" readonly="id and (current_uid_int != create_uid or state != 'draft')" invisible="1"/>
@@ -261,23 +332,32 @@ action = {
         <!-- Employee Scoring -->
          <group string="Employee Self-Assessment" invisible="employee_user_id_int != current_uid_int or state not in ['progress', 'progress_done'] or appraisal_state == 'done'">
           <field name="self_score" string="Score (0-100)" 
-                  placeholder="Rate your performance on this objective (0-100)"/>
-          <field name="self_attachment_ids" string="Supporting Documents" widget="many2many_binary"/>
+                  placeholder="Rate your performance on this objective (0-100)"
+                  widget="float" options="{'min': 0, 'max': 100}"
+                  readonly="appraisal_state in ['self_scored', 'manager_scored', 'hr_scored', 'done', 'cancel']"/>
+          <field name="self_attachment_ids" string="Supporting Documents" widget="many2many_binary"
+                readonly="appraisal_state in ['self_scored', 'manager_scored', 'hr_scored', 'done', 'cancel']"/>
         </group>
 
         <!-- Manager Scoring -->
          <group string="Manager Assessment" invisible="state not in ['progress_done'] or appraisal_state == 'done'"
                 groups="hr_appraisal_objectives.group_appraisal_line_manager,hr_appraisal_objectives.group_hr_appraisal">
           <field name="manager_score" string="Manager Score (0-100)" 
-                  placeholder="Rate employee performance on this objective (0-100)"/>
-          <field name="manager_attachment_ids" string="Supporting Documents" widget="many2many_binary"/>
+                placeholder="Rate employee performance on this objective (0-100)"
+                widget="float" options="{'min': 0, 'max': 100}"
+                readonly="appraisal_state in ['manager_scored', 'hr_scored', 'done', 'cancel']"/>
+          <field name="manager_attachment_ids" string="Supporting Documents" widget="many2many_binary"
+                readonly="appraisal_state in ['manager_scored', 'hr_scored', 'done', 'cancel']"/>
         </group>
         
         <!-- HR Scoring -->
          <group string="HR Assessment" groups="hr_appraisal_objectives.group_hr_appraisal" invisible="state not in ['progress_done'] or appraisal_state == 'done'">
           <field name="supervisor_score" string="HR Score (0-100)" 
-                  placeholder="Rate employee performance on this objective (0-100)"/>
-          <field name="hr_attachment_ids" string="Supporting Documents" widget="many2many_binary"/>
+                  placeholder="Rate employee performance on this objective (0-100)"
+                  widget="float" options="{'min': 0, 'max': 100}"
+                  readonly="appraisal_state in ['hr_scored', 'done', 'cancel']"/>
+          <field name="hr_attachment_ids" string="Supporting Documents" widget="many2many_binary"
+                readonly="appraisal_state in ['hr_scored', 'done', 'cancel']"/>
         </group>
 
       </xpath>
@@ -286,7 +366,7 @@ action = {
           <!-- KPI Management Page (shown in draft for detailed editing) -->
           <page string="Key Performance Indicators" name="kpi_management" invisible="state != 'draft'">
             <field name="kpi_line_ids" 
-                   readonly="id and (create_uid != current_uid_int or state in ['first_approved', 'progress', 'progress_done', 'self_scored', 'scored', 'final'])">
+                   readonly="id and (create_uid != current_uid_int or state in ['first_approved', 'progress', 'progress_done', 'self_scored', 'scored', 'final', 'refused'])">
               <list>
                 <field name="kpi" string="KPI Name" required="1"/>
                 <field name="description" string="Description"/>
@@ -298,7 +378,7 @@ action = {
           </page>
           
           <!-- Assessment Status Page -->
-          <page string="Assessment Status" name="assessment_status" invisible="state in ['draft','submitted','first_approved']">
+          <page string="Assessment Status" name="assessment_status" invisible="state in ['draft','submitted','first_approved', 'refused']">
             <div class="alert alert-info" role="alert">
               <strong>Assessment Progress:</strong> This page shows the completion status for each step.
             </div>
@@ -379,7 +459,7 @@ action = {
               <h5 class="mb-0">Key Performance Indicators</h5>
             </div>
             <div class="card-body p-0">
-              <field name="kpi_line_ids" readonly="id and (create_uid != current_uid_int or state in ['first_approved', 'progress', 'self_scored', 'scored', 'final'])">
+              <field name="kpi_line_ids" readonly="id and (create_uid != current_uid_int or state in ['first_approved', 'progress', 'progress_done', 'self_scored', 'scored', 'final', 'refused'])">
                 <list>
                   <field name="kpi" string="KPI" class="font-weight-medium"/>
                   <!-- <field name="task_ids" string="Tasks" widget="many2many_tags"/> -->

@@ -27,13 +27,19 @@
           
           <!-- Add institutional objective field after department -->
           <xpath expr="//field[@name='department_id']" position="after">
-              <field name="fiscal_year_id" required="1" placeholder="Select Fiscal Year"/>
+              <field name="fiscal_year_id" required="1" placeholder="Select Fiscal Year" readonly="state in ['self_scored', 'manager_scored', 'hr_scored', 'done', 'cancel']"/>
               <!-- <field name="institutional_objective_id" placeholder="Institutional Objective (Optional)"/> -->
               <!-- Hidden helper fields for access control -->
               <field name="employee_user_id" invisible="1"/>
               <field name="is_manager" invisible="1"/>
               <field name="is_hr_user" invisible="1"/>
               <field name="current_uid_int" invisible="1"/>
+          </xpath>
+          <xpath expr="//field[@name='manager_ids']" position="attributes">
+            <attribute name="readonly">state in ['self_scored', 'manager_scored', 'hr_scored', 'done', 'cancel']</attribute>
+          </xpath>
+          <xpath expr="//field[@name='date_close']" position="attributes">
+            <attribute name="readonly">state in ['self_scored', 'manager_scored', 'hr_scored', 'done', 'cancel']</attribute>
           </xpath>
           <!-- Remove duplicate appraisal alert - handled by model constraint -->
           <xpath expr="//sheet/div[@class='alert alert-warning p-2']" position="replace">
@@ -58,7 +64,7 @@
                 </div>
                 <div class="card-body p-0">
                   <field name="employee_goal_ids" invisible="state == 'done'" readonly="state in ['done', 'cancel'] or (state in ['hr_scored'] and employee_user_id != current_uid_int)">
-                    <list>
+                    <list create="0" edit="1" delete="0">
                       <field name="name" string="Objective" class="font-weight-medium"/>
                       <field name="kpi_total_weight" string="Weight" class="text-end badge badge-pill badge-info"/>
                       <!-- <field name="state" widget="badge"/> -->

@@ -61,10 +61,10 @@ class HrAppraisalGoal(models.Model):
     target = fields.Char()
     measurement_method = fields.Char()
     weight = fields.Integer(default=1)
-    self_score = fields.Float("Score", help="Score (0-100)")
-    manager_score = fields.Float("Manager Score", help="Line manager's score (0-100)")
+    self_score = fields.Float("Score", help="Score (0-100)", digits=(16, 2))
+    manager_score = fields.Float("Manager Score", help="Line manager's score (0-100)", digits=(16, 2))
     supervisor_score = fields.Float(
-        "HR Score", help="HR's score (0-100)"
+        "HR Score", help="HR's score (0-100)", digits=(16, 2)
     )
     final_score = fields.Float(
         "Final Score", compute="_compute_final_score", store=True
@@ -127,6 +127,7 @@ class HrAppraisalGoal(models.Model):
             ("first_approved", "To Approve"),
             ("progress", "Active"),
             ("progress_done", "Done"),
+            ("refused", "Refused"),
         ],
         default="draft",
         string="Status",
@@ -255,6 +256,63 @@ class HrAppraisalGoal(models.Model):
                 record.supervisor_score < 0 or record.supervisor_score > 100
             ):
                 raise ValidationError("HR's score must be between 0 and 100.")
+    
+    @api.onchange("self_score")
+    def _onchange_self_score(self):
+        """Validate self_score immediately when changed"""
+        if self.self_score is not None:
+            if self.self_score < 0:
+                return {
+                    'warning': {
+                        'title': 'Invalid Score',
+                        'message': 'Score cannot be less than 0. Please enter a value between 0 and 100.'
+                    }
+                }
+            elif self.self_score > 100:
+                return {
+                    'warning': {
+                        'title': 'Invalid Score',
+                        'message': 'Score cannot be greater than 100. Please enter a value between 0 and 100.'
+                    }
+                }
+    
+    @api.onchange("manager_score")
+    def _onchange_manager_score(self):
+        """Validate manager_score immediately when changed"""
+        if self.manager_score is not None:
+            if self.manager_score < 0:
+                return {
+                    'warning': {
+                        'title': 'Invalid Score',
+                        'message': 'Manager score cannot be less than 0. Please enter a value between 0 and 100.'
+                    }
+                }
+            elif self.manager_score > 100:
+                return {
+                    'warning': {
+                        'title': 'Invalid Score',
+                        'message': 'Manager score cannot be greater than 100. Please enter a value between 0 and 100.'
+                    }
+                }
+    
+    @api.onchange("supervisor_score")
+    def _onchange_supervisor_score(self):
+        """Validate supervisor_score immediately when changed"""
+        if self.supervisor_score is not None:
+            if self.supervisor_score < 0:
+                return {
+                    'warning': {
+                        'title': 'Invalid Score',
+                        'message': 'HR score cannot be less than 0. Please enter a value between 0 and 100.'
+                    }
+                }
+            elif self.supervisor_score > 100:
+                return {
+                    'warning': {
+                        'title': 'Invalid Score',
+                        'message': 'HR score cannot be greater than 100. Please enter a value between 0 and 100.'
+                    }
+                }
 
     @api.depends("kpi_line_ids")
     def _compute_kpi_count(self):
@@ -550,6 +608,7 @@ class HrAppraisalGoal(models.Model):
 
     def action_submit(self):
         """Submit the individual objective for approval"""
+        skip_notifications = self.env.context.get('skip_notifications', False)
         for rec in self:
             if not rec.kpi_line_ids:
                 raise UserError("Please add at least one KPI before submitting.")
@@ -557,23 +616,25 @@ class HrAppraisalGoal(models.Model):
             rec.rejection_reason = False
             rec.rejection_stage = False
             rec.write({"state": "submitted"})
-            rec._send_notification("submitted")
             
-            # Create activity for line manager to review
-            if rec.department_objective_id and rec.department_objective_id.department_id:
-                dept = rec.department_objective_id.department_id
-                if dept.manager_id and dept.manager_id.user_id:
+            if not skip_notifications:
+                rec._send_notification("submitted")
+                
+                # Create activity for line manager (parent) to review
+                line_manager = rec.manager_id or rec.employee_id.parent_id
+                if line_manager and line_manager.user_id:
                     rec._create_approval_activity(
-                        user_id=dept.manager_id.user_id.id,
+                        user_id=line_manager.user_id.id,
                         summary=f"Review Objective: {rec.name}",
                         note=f"""<p><strong>Employee:</strong> {rec.employee_id.name}</p>
-                              <p><strong>Department:</strong> {dept.name}</p>
+                              <p><strong>Manager:</strong> {line_manager.name}</p>
                               <p><strong>Action Required:</strong> First Approval</p>
                               <p>Please review and approve or reject this objective.</p>"""
                     )
 
     def action_first_approve(self):
         """Approve the individual objective"""
+        skip_notifications = self.env.context.get('skip_notifications', False)
         for rec in self:
             # Prevent self-approval: the employee cannot approve their own objective
             if rec.employee_id and rec.employee_id.user_id and rec.employee_id.user_id.id == self.env.uid:
@@ -586,7 +647,9 @@ class HrAppraisalGoal(models.Model):
             # Record who approved at LM level
             rec.lm_approver_id = self.env.user
             rec.write({"state": "first_approved"})
-            rec._send_notification("first_approved")
+            
+            if not skip_notifications:
+                rec._send_notification("first_approved")
             
             # Create activity for HR managers to review
             hr_group = self.env.ref('hr_appraisal_objectives.group_hr_appraisal', raise_if_not_found=False)
@@ -597,7 +660,7 @@ class HrAppraisalGoal(models.Model):
                 if self.env.user in hr_users and not (rec.employee_id and rec.employee_id.user_id == self.env.user):
                     # Record HR approver and perform HR approval in one step
                     rec.hr_approver_id = self.env.user
-                    rec.action_second_approve()
+                    rec.with_context(skip_notifications=skip_notifications).action_second_approve()
                     continue
 
                 # CASE 2: Employee is HR and there is no other HR user -> LM approval is final
@@ -606,30 +669,33 @@ class HrAppraisalGoal(models.Model):
                     # Simulate HR approval without violating "no self-approval"
                     rec.hr_approver_id = self.env.user  # line manager effectively acts as HR approver
                     rec.write({"state": "progress"})
-                    rec._send_notification("progress")
-                    rec._create_approval_activity(
-                        user_id=employee_user.id,
-                        summary=f"Objective Approved: {rec.name}",
-                        note=f"""<p><strong>Status:</strong> Your objective has been approved!</p>
-                              <p><strong>Action Required:</strong> Start working on your objective</p>
-                              <p>Your objective has been approved by your line manager. You can now begin work.</p>"""
-                    )
+                    if not skip_notifications:
+                        rec._send_notification("progress")
+                        rec._create_approval_activity(
+                            user_id=employee_user.id,
+                            summary=f"Objective Approved: {rec.name}",
+                            note=f"""<p><strong>Status:</strong> Your objective has been approved!</p>
+                                  <p><strong>Action Required:</strong> Start working on your objective</p>
+                                  <p>Your objective has been approved by your line manager. You can now begin work.</p>"""
+                        )
                     continue
 
                 # CASE 3: Normal case -> create activities for all HR users
-                for hr_user in hr_users:
-                    rec._create_approval_activity(
-                        user_id=hr_user.id,
-                        summary=f"HR Review Objective: {rec.name}",
-                        note=f"""<p><strong>Employee:</strong> {rec.employee_id.name}</p>
-                              <p><strong>Department:</strong> {rec.department_objective_id.department_id.name if rec.department_objective_id else 'N/A'}</p>
-                              <p><strong>Action Required:</strong> Final HR Approval</p>
-                              <p><strong>Line Manager:</strong> Approved by {self.env.user.name}</p>
-                              <p>Please review and give final approval to start this objective.</p>"""
-                    )
+                if not skip_notifications:
+                    for hr_user in hr_users:
+                        rec._create_approval_activity(
+                            user_id=hr_user.id,
+                            summary=f"HR Review Objective: {rec.name}",
+                            note=f"""<p><strong>Employee:</strong> {rec.employee_id.name}</p>
+                                  <p><strong>Department:</strong> {rec.department_objective_id.department_id.name if rec.department_objective_id else 'N/A'}</p>
+                                  <p><strong>Action Required:</strong> Final HR Approval</p>
+                                  <p><strong>Line Manager:</strong> Approved by {self.env.user.name}</p>
+                                  <p>Please review and give final approval to start this objective.</p>"""
+                        )
 
     def action_second_approve(self):
         """Approve the individual objective and automatically start it"""
+        skip_notifications = self.env.context.get('skip_notifications', False)
         for rec in self:
             # Prevent self-approval at HR level as well
             if rec.employee_id and rec.employee_id.user_id and rec.employee_id.user_id.id == self.env.uid:
@@ -643,17 +709,19 @@ class HrAppraisalGoal(models.Model):
             ).action_feedback(feedback="Approved by HR")
             
             rec.write({"state": "progress"})  # Automatically transition to progress (ongoing)
-            rec._send_notification("progress")
             
-            # Notify employee that objective is approved and active
-            if rec.employee_id and rec.employee_id.user_id:
-                rec._create_approval_activity(
-                    user_id=rec.employee_id.user_id.id,
-                    summary=f"Objective Approved: {rec.name}",
-                    note=f"""<p><strong>Status:</strong> Your objective has been approved!</p>
-                          <p><strong>Action Required:</strong> Start working on your objective</p>
-                          <p>Your objective has been approved by management and HR. You can now begin work.</p>"""
-                )
+            if not skip_notifications:
+                rec._send_notification("progress")
+                
+                # Notify employee that objective is approved and active
+                if rec.employee_id and rec.employee_id.user_id:
+                    rec._create_approval_activity(
+                        user_id=rec.employee_id.user_id.id,
+                        summary=f"Objective Approved: {rec.name}",
+                        note=f"""<p><strong>Status:</strong> Your objective has been approved!</p>
+                              <p><strong>Action Required:</strong> Start working on your objective</p>
+                              <p>Your objective has been approved by management and HR. You can now begin work.</p>"""
+                    )
             # Auto-create tasks for each KPI if not already linked
             # for kpi in rec.kpi_line_ids:
             #     if not kpi.task_ids:
@@ -709,6 +777,23 @@ class HrAppraisalGoal(models.Model):
             },
         }
 
+
+    def action_resubmit(self):
+        """Resubmit a refused objective - changes state from refused to draft"""
+        for rec in self:
+            if rec.state != 'refused':
+                raise UserError("Only refused objectives can be resubmitted.")
+            # Only the owner (employee) can resubmit
+            if rec.employee_id and rec.employee_id.user_id and rec.employee_id.user_id.id != self.env.uid:
+                raise UserError("Only the objective owner can resubmit a refused objective.")
+            # Clear rejection flags and reset to draft
+            rec.write({
+                'state': 'draft',
+                'rejected': False,
+                'rejection_reason': False,
+                'rejection_stage': False,
+            })
+        return True
 
     def action_end_progress(self):
         for rec in self:
@@ -770,6 +855,150 @@ class HrAppraisalGoal(models.Model):
             # Never block workflow on activity creation failure
             pass
     
+    def _send_consolidated_notifications(self, action, objectives_by_recipient):
+        """Send consolidated notifications grouped by recipient
+        
+        Args:
+            action: The action type ('submitted', 'first_approved', etc.)
+            objectives_by_recipient: Dict mapping recipient user_id to list of objective records
+        """
+        action_labels = {
+            "submitted": "submitted, waiting for your first approval",
+            "first_approved": "first approved, waiting for HR approval",
+            "progress": "approved and active",
+            "self_scored": "scored, waiting for manager review",
+            "scored": "scored by manager, waiting for supervisor review",
+            "final": "finalized with supervisor score",
+            "rejected": "refused",
+        }
+        
+        for recipient_user_id, objectives in objectives_by_recipient.items():
+            if not objectives:
+                continue
+                
+            recipient_user = self.env['res.users'].browse(recipient_user_id)
+            if not recipient_user.exists() or not recipient_user.partner_id:
+                continue
+            
+            # Build consolidated message body
+            objective_list = []
+            employee_names = set()
+            for obj in objectives:
+                objective_list.append(f"<li><strong>{obj.name}</strong> - {obj.employee_id.name if obj.employee_id else 'N/A'}</li>")
+                if obj.employee_id:
+                    employee_names.add(obj.employee_id.name)
+            
+            employee_list = ", ".join(sorted(employee_names))
+            objective_count = len(objectives)
+            
+            if action == "submitted":
+                # Consolidated chatter message for line manager
+                body = Markup(
+                    f"<p><strong>{objective_count} Objective(s) {action_labels[action].capitalize()}</strong></p>"
+                    f"<p>Objective(s) for {employee_list} {'have' if objective_count > 1 else 'has'} been {action_labels[action]}.</p>"
+                    f"<p><strong>Objective(s):</strong></p><ul>{''.join(objective_list)}</ul>"
+                )
+                
+                # Post to the first objective's record to send email to line manager
+                if objectives and recipient_user.partner_id:
+                    # Use the same approach as individual notifications to ensure email is sent
+                    objectives[0].sudo().message_post(
+                        body=body,
+                        partner_ids=[recipient_user.partner_id.id],
+                        message_type="notification",
+                        # Use mt_note to ensure email is sent in bulk submit
+                        subtype_xmlid="mail.mt_note",
+                        email_layout_xmlid="mail.mail_notification_layout_with_responsible_signature",
+                    )
+                
+                # Create consolidated activity
+                summary = f"Review {objective_count} Objective(s)" if objective_count > 1 else f"Review Objective: {objectives[0].name}"
+                note = Markup(
+                    f"<p><strong>Employee(s):</strong> {employee_list}</p>"
+                    f"<p><strong>Action Required:</strong> First Approval</p>"
+                    f"<p><strong>Objective(s):</strong></p><ul>{''.join(objective_list)}</ul>"
+                    f"<p>Please review and approve or reject {'these objectives' if objective_count > 1 else 'this objective'}.</p>"
+                )
+                
+                objectives[0].activity_schedule(
+                    'mail.mail_activity_data_todo',
+                    date_deadline=fields.Date.today(),
+                    user_id=recipient_user_id,
+                    summary=summary,
+                    note=note,
+                )
+            
+            elif action == "first_approved":
+                # For HR approval, notify all HR users (consolidated)
+                hr_group = self.env.ref('hr_appraisal_objectives.group_hr_appraisal', raise_if_not_found=False)
+                if hr_group and hr_group.users:
+                    body = Markup(
+                        f"<p><strong>{objective_count} Objective(s) {action_labels[action].capitalize()}</strong></p>"
+                        f"<p>Objective(s) for {employee_list} {'have' if objective_count > 1 else 'has'} been {action_labels[action]}.</p>"
+                        f"<p><strong>Objective(s):</strong></p><ul>{''.join(objective_list)}</ul>"
+                    )
+                    
+                    # Send to all HR users
+                    hr_partner_ids = hr_group.users.mapped('partner_id').ids
+                    if objectives and hr_partner_ids:
+                        objectives[0].sudo().message_post(
+                            body=body,
+                            partner_ids=hr_partner_ids,
+                            message_type="notification",
+                            subtype_xmlid="mail.mt_comment",
+                        )
+                    
+                    # Create consolidated activity for each HR user
+                    summary = f"Approve {objective_count} Objective(s)" if objective_count > 1 else f"Approve Objective: {objectives[0].name}"
+                    note = Markup(
+                        f"<p><strong>Employee(s):</strong> {employee_list}</p>"
+                        f"<p><strong>Action Required:</strong> HR Approval</p>"
+                        f"<p><strong>Objective(s):</strong></p><ul>{''.join(objective_list)}</ul>"
+                        f"<p>Please review and approve {'these objectives' if objective_count > 1 else 'this objective'}.</p>"
+                    )
+                    
+                    for hr_user in hr_group.users:
+                        objectives[0].activity_schedule(
+                            'mail.mail_activity_data_todo',
+                            date_deadline=fields.Date.today(),
+                            user_id=hr_user.id,
+                            summary=summary,
+                            note=note,
+                        )
+            
+            elif action == "progress":
+                # For progress (approved), notify employees (consolidated)
+                body = Markup(
+                    f"<p><strong>{objective_count} Objective(s) {action_labels[action].capitalize()}</strong></p>"
+                    f"<p>Your objective(s) {'have' if objective_count > 1 else 'has'} been approved and {'are' if objective_count > 1 else 'is'} now active.</p>"
+                    f"<p><strong>Objective(s):</strong></p><ul>{''.join(objective_list)}</ul>"
+                )
+                
+                if objectives and recipient_user.partner_id:
+                    objectives[0].sudo().message_post(
+                        body=body,
+                        partner_ids=[recipient_user.partner_id.id],
+                        message_type="notification",
+                        subtype_xmlid="mail.mt_comment",
+                    )
+                
+                # Create consolidated activity for employee
+                summary = f"{objective_count} Objective(s) Approved" if objective_count > 1 else f"Objective Approved: {objectives[0].name}"
+                note = Markup(
+                    f"<p><strong>Status:</strong> Your objective(s) {'have' if objective_count > 1 else 'has'} been approved!</p>"
+                    f"<p><strong>Action Required:</strong> Start working on your objective(s)</p>"
+                    f"<p><strong>Objective(s):</strong></p><ul>{''.join(objective_list)}</ul>"
+                    f"<p>Your objective(s) {'have' if objective_count > 1 else 'has'} been approved by management and HR. You can now begin work.</p>"
+                )
+                
+                objectives[0].activity_schedule(
+                    'mail.mail_activity_data_todo',
+                    date_deadline=fields.Date.today(),
+                    user_id=recipient_user_id,
+                    summary=summary,
+                    note=note,
+                )
+
     def _send_notification(self, action):
         """Send notifications and create activities for the appropriate users"""
         for record in self:
@@ -785,26 +1014,68 @@ class HrAppraisalGoal(models.Model):
                 continue
             
             action_labels = {
-                "submitted": "submitted, waiting for first approval",
+                "submitted": "submitted, waiting for your first approval",
                 "first_approved": "first approved, waiting for HR approval",
                 "progress": "approved and active",
                 "self_scored": "scored, waiting for manager review",
                 "scored": "scored by manager, waiting for supervisor review",
                 "final": "finalized with supervisor score",
-                "rejected": "rejected and returned to draft",
+                "rejected": "refused",
             }
             
-            # Post chatter message
-            if record.department_objective_id and record.department_objective_id.department_id:
-                dept = record.department_objective_id.department_id
-                if dept.manager_id and dept.manager_id.user_id:
+            # Post chatter message/email based on action
+            if action == "submitted":
+                # Notify line manager (parent) when objective is submitted
+                line_manager = record.manager_id or (record.employee_id.parent_id if record.employee_id else False)
+                if line_manager and line_manager.user_id and line_manager.user_id.partner_id:
                     record.sudo().message_post(
                         body=Markup(
                             f"<p><strong>Objective {action_labels[action].capitalize()}: {record.name}</strong></p>"
                             f"<p>Objective for {record.employee_id.name} has been {action_labels[action]}.</p>"
                             + (f"<p><strong>Reason:</strong> {record.rejection_reason}</p>" if record.rejection_reason else "")
                         ),
-                        partner_ids=[dept.manager_id.user_id.partner_id.id],
+                        partner_ids=[line_manager.user_id.partner_id.id],
+                        message_type="notification",
+                        subtype_xmlid="mail.mt_comment",
+                    )
+            elif action == "first_approved":
+                # Notify only the owner (employee) when objective is first approved
+                if record.employee_id and record.employee_id.user_id and record.employee_id.user_id.partner_id:
+                    record.sudo().message_post(
+                        body=Markup(
+                            f"<p><strong>Objective {action_labels[action].capitalize()}: {record.name}</strong></p>"
+                            f"<p>Your objective has been {action_labels[action]}.</p>"
+                        ),
+                        partner_ids=[record.employee_id.user_id.partner_id.id],
+                        message_type="notification",
+                        subtype_xmlid="mail.mt_comment",
+                    )
+            elif action == "progress":
+                # Notify employee when objective is approved and active
+                if record.employee_id and record.employee_id.user_id and record.employee_id.user_id.partner_id:
+                    # Use mail.mt_note to ensure email is sent
+                    record.sudo().message_post(
+                        body=Markup(
+                            f"<p><strong>Objective {action_labels[action].capitalize()}: {record.name}</strong></p>"
+                            f"<p>Your objective has been {action_labels[action]}.</p>"
+                            f"<p>You can now start working on this objective.</p>"
+                        ),
+                        partner_ids=[record.employee_id.user_id.partner_id.id],
+                        message_type="notification",
+                        subtype_xmlid="mail.mt_note",
+                    )
+            elif action == "rejected":
+                # Notify owner (employee) when objective is refused
+                if record.employee_id and record.employee_id.user_id and record.employee_id.user_id.partner_id:
+                    rejection_stage_label = dict(record._fields['rejection_stage'].selection).get(record.rejection_stage, 'Manager') if record.rejection_stage else 'Manager'
+                    record.sudo().message_post(
+                        body=Markup(
+                            f"<p><strong>Objective Refused: {record.name}</strong></p>"
+                            f"<p>Your objective has been {action_labels[action]}.</p>"
+                            + (f"<p><strong>Rejection Reason:</strong> {record.rejection_reason}</p>" if record.rejection_reason else "<p>No specific reason provided.</p>")
+                            + f"<p><strong>Action Required:</strong> Please revise your objective and use the 'Resubmit' button to resubmit it for approval.</p>"
+                        ),
+                        partner_ids=[record.employee_id.user_id.partner_id.id],
                         message_type="notification",
                         subtype_xmlid="mail.mt_comment",
                     )
@@ -823,11 +1094,11 @@ class HrAppraisalGoal(models.Model):
                     
                     # Determine recipient based on action
                     recipient_user = None
-                    if action == "self_scored" and record.department_objective_id:
-                        # Manager needs to review
-                        dept = record.department_objective_id.department_id
-                        if dept and dept.manager_id and dept.manager_id.user_id:
-                            recipient_user = dept.manager_id.user_id
+                    if action == "self_scored":
+                        # Line manager needs to review
+                        line_manager = record.manager_id or (record.employee_id.parent_id if record.employee_id else False)
+                        if line_manager and line_manager.user_id:
+                            recipient_user = line_manager.user_id
                     elif action == "scored":
                         # HR needs to review
                         hr_group = self.env.ref('hr_appraisal_objectives.group_hr_appraisal', raise_if_not_found=False)
