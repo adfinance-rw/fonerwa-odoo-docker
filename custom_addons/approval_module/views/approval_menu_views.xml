@@ -21,5 +21,10 @@
     <record id="approvals.approvals_approval_menu_all" model="ir.ui.menu">
         <field name="groups_id" eval="[(6, 0, [ref('base.group_user')])]"/>
     </record>
+
+    <!-- Hide Manager menu unless user is Officer or Administrator -->
+    <record id="approvals.approvals_menu_manager" model="ir.ui.menu">
+        <field name="groups_id" eval="[(6, 0, [ref('approvals.group_approval_user'), ref('approvals.group_approval_manager')])]"/>
+    </record>
 </odoo>
 

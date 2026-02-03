@@ -45,6 +45,17 @@
         <xpath expr="//header/button[@name='action_refuse']" position="attributes">
             <attribute name="string">Reject</attribute>
         </xpath>
+        <xpath expr="//header/button[@name='action_withdraw']" position="replace">
+          <button name="action_withdraw" string="Withdraw" type="object" invisible="request_status in ['new', 'refused', 'cancel'] or user_status in ['waiting', 'pending', 'cancel'] or not user_status" data-hotkey="y"/>
+        </xpath>
+        <!-- Hide widget button attach document-->
+        <xpath expr="//header/widget[@name='attach_document']" position="attributes">
+            <attribute name="invisible">1</attribute>
+        </xpath>
+        <!-- Hide Documents smart button -->
+        <xpath expr="//button[@name='action_get_attachment_view']" position="attributes">
+            <attribute name="invisible">1</attribute>
+        </xpath>
         <xpath expr="//group[@name='request_main']" position="inside">
             <field name="category_type" invisible="1"/>
             <field name="category_requires_contract" invisible="1"/>

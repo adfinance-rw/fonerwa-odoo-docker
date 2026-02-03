@@ -18,6 +18,9 @@
         <field name="model">approval.category</field>
         <field name="inherit_id" ref="approvals.approval_category_view_form"/>
         <field name="arch" type="xml">
+            <xpath expr="//group[@name='approvers']/field[@name='manager_approval']" position="after">
+                <field name="second_manager_approval"/>
+            </xpath>
             <xpath expr="//notebook" position="inside">
                 <page string="Configuration" name="configuration">
                     <group>

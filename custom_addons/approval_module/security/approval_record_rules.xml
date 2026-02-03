@@ -83,7 +83,13 @@
         <record id="approval_category_rule_department" model="ir.rule">
             <field name="name">Approval Category: Department visibility</field>
             <field name="model_id" ref="approvals.model_approval_category"/>
-            <field name="domain_force">['|', ('department_ids', '=', False), ('department_ids', 'in', user.employee_id.department_id.id)]</field>
+            <field name="domain_force">[
+                '|','|','|',
+                ('department_ids', '=', False),
+                ('department_ids', 'in', user.employee_id.department_id.id),
+                ('request_ids.request_owner_id', '=', user.id),
+                ('request_ids.approver_ids.user_id', '=', user.id)
+            ]</field>
             <field name="groups" eval="[(4, ref('base.group_user'))]"/>
             <field name="perm_read" eval="True"/>
             <field name="perm_write" eval="True"/>
@@ -114,6 +120,18 @@
             <field name="perm_write" eval="True"/>
             <field name="perm_create" eval="False"/>
             <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <!-- Ensure approval.request activities are only readable by the assigned user -->
+        <record id="approval_mail_activity_rule_read_assigned_only" model="ir.rule">
+            <field name="name">Mail Activity: approval.request read assigned only</field>
+            <field name="model_id" ref="mail.model_mail_activity"/>
+            <field name="domain_force">['|', ('res_model', '!=', 'approval.request'), ('user_id', '=', user.id)]</field>
+            <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
         </record>
 
         <!-- Allow creating approval.request activities for any assigned user -->

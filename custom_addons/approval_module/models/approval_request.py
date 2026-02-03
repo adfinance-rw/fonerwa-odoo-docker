@@ -952,6 +952,10 @@ class ApprovalRequest(models.Model):
         for request in self.filtered('category_approver_sequence'):
             request._activate_waiting_batch_approvers()
         
+        # Post next approver info in chatter (no emails / followers)
+        for request in self:
+            request._post_next_approver_message()
+            
         return result
 
     def _action_confirm_core(self, skip_manager_check=False):
@@ -970,6 +974,31 @@ class ApprovalRequest(models.Model):
                 raise UserError(_('This request needs to be approved by your manager. There is no user linked to your manager.'))
             if not self.approver_ids.filtered(lambda a: a.user_id.id == employee.parent_id.user_id.id):
                 raise UserError(_('This request needs to be approved by your manager. Your manager is not in the approvers list.'))
+
+        # Second manager (grandparent) required validation (optional)
+        if self.category_id and self.category_id.second_manager_approval == 'required':
+            employee = self.env['hr.employee'].search([
+                ('user_id', '=', self.request_owner_id.id),
+                ('company_id', '=', self.company_id.id)
+            ], limit=1)
+            parent = employee.parent_id or False
+            grandparent = parent and parent.parent_id or False
+            # Skip second-manager check if parent is executive and no grandparent exists
+            cfo = self.company_id.cfo_id if hasattr(self.company_id, 'cfo_id') else False
+            senior_approver = self.company_id.senior_approver_id if hasattr(self.company_id, 'senior_approver_id') else False
+            ceo = self.company_id.ceo_id if hasattr(self.company_id, 'ceo_id') else False
+            executives = [cfo, senior_approver, ceo]
+            if not grandparent:
+                if parent and parent.user_id in executives:
+                    grandparent = False
+                else:
+                    raise UserError(_('This request needs to be approved by your second manager. There is no second manager linked to your employee profile.'))
+            if grandparent and not grandparent.user_id:
+                raise UserError(_('This request needs to be approved by your second manager. There is no user linked to your second manager.'))
+            # Skip check if second manager is executive
+            if grandparent and grandparent.user_id not in executives:
+                if not self.approver_ids.filtered(lambda a: a.user_id.id == grandparent.user_id.id):
+                    raise UserError(_('This request needs to be approved by your second manager. Your second manager is not in the approvers list.'))
 
         # Base approval minimum + document requirement checks
         if len(self.approver_ids) < self.approval_minimum:
@@ -1183,6 +1212,10 @@ class ApprovalRequest(models.Model):
         for request in self:
             request._activate_waiting_batch_approvers()
         
+        # Post next approver info in chatter (no emails / followers)
+        for request in self:
+            request._post_next_approver_message()
+
         # # Notify requester about the approval
         # for request in self:
         #     if approver and approver.status == 'approved':
@@ -1218,6 +1251,17 @@ class ApprovalRequest(models.Model):
                 request._send_approval_notifications()
         
         return result
+
+    def _post_next_approver_message(self):
+        """Post next approver in chatter without emailing/following."""
+        self.ensure_one()
+        next_approver = self.approver_ids.filtered(lambda a: a.status == 'pending')[:1]
+        if next_approver and next_approver.user_id:
+            self.with_context(mail_post_autofollow=False).message_post(
+                body=_('Next approver: %s') % next_approver.user_id.name,
+                message_type='comment',
+                subtype_xmlid='mail.mt_note',
+            )
     
     def _notify_requester_of_approval(self, approver):
         """Notify the requester when an approver approves their request"""
@@ -1621,6 +1665,13 @@ class ApprovalRequest(models.Model):
             except Exception:
                 parent_manager_user = False
             reviewer = parent_manager_user or dept_manager_user
+            # Second manager (grandparent) if configured
+            second_manager_user = False
+            try:
+                grandparent = emp and hasattr(emp, 'parent_id') and emp.parent_id and hasattr(emp.parent_id, 'parent_id') and emp.parent_id.parent_id or False
+                second_manager_user = grandparent and hasattr(grandparent, 'user_id') and grandparent.user_id or False
+            except Exception:
+                second_manager_user = False
             is_specialist = not reviewer  # Specialist = no reviewer
 
             # If category has configured approver templates, use them
@@ -1638,6 +1689,11 @@ class ApprovalRequest(models.Model):
                 if not is_specialist and reviewer and request.category_id.manager_approval:
                     manager_required = request.category_id.manager_approval == 'required'
                     reviewer_users.append((reviewer, manager_required))
+                # Add second manager (grandparent) if configured and not executive
+                if second_manager_user and request.category_id.second_manager_approval:
+                    if second_manager_user.id not in executive_user_ids and second_manager_user != reviewer:
+                        second_required = request.category_id.second_manager_approval == 'required'
+                        reviewer_users.append((second_manager_user, second_required))
                 for user_rec_opt, is_required in reviewer_users:
                     if user_rec_opt and user_rec_opt.id not in added_user_ids:
                         # If line manager is an executive, skip as reviewer
@@ -1772,6 +1828,11 @@ class ApprovalRequest(models.Model):
             if not is_specialist and reviewer and request.category_id.manager_approval:
                 manager_required = request.category_id.manager_approval == 'required'
                 reviewer_users.append((reviewer, manager_required))
+            # Add second manager (grandparent) if configured and not executive
+            if second_manager_user and request.category_id.second_manager_approval:
+                if second_manager_user.id not in executive_user_ids and second_manager_user != reviewer:
+                    second_required = request.category_id.second_manager_approval == 'required'
+                    reviewer_users.append((second_manager_user, second_required))
 
             for user_rec, is_required in reviewer_users:
                 if not user_rec or user_rec.id in added_user_ids:

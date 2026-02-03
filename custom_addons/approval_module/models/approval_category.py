@@ -31,6 +31,13 @@ class ApprovalCategory(models.Model):
         help='If checked, approvers must approve in sequence. Previous approvers must approve before later ones can approve.'
     )
 
+    # Second line manager approval (grandparent)
+    second_manager_approval = fields.Selection(
+        [('approver', 'Is Approver'), ('required', 'Is Required Approver')],
+        string="Second Employee's Manager",
+        help="If set, the employee's manager's manager will be added as an approver."
+    )
+
     # Department restriction (optional)
     department_ids = fields.Many2many(
         'hr.department',
@@ -39,6 +46,12 @@ class ApprovalCategory(models.Model):
         'department_id',
         string='Departments',
         help='If set, only users in these departments can see this approval category.'
+    )
+    # Link back to requests for access rules
+    request_ids = fields.One2many(
+        'approval.request',
+        'category_id',
+        string='Requests'
     )
 
     # Templates configured on the category
@@ -123,6 +136,19 @@ class ApprovalCategory(models.Model):
         for rec in self:
             option_ids = rec.available_type_ids.mapped('type_option_id').ids
             rec.available_type_option_ids = [(6, 0, option_ids)]
+
+    @api.depends_context('lang')
+    @api.depends('approval_minimum', 'approver_ids', 'manager_approval', 'second_manager_approval')
+    def _compute_invalid_minimum(self):
+        for record in self:
+            extra = int(bool(record.manager_approval)) + int(bool(record.second_manager_approval))
+            if record.approval_minimum > len(record.approver_ids) + extra:
+                record.invalid_minimum = True
+            else:
+                record.invalid_minimum = False
+            record.invalid_minimum_warning = record.invalid_minimum and _(
+                'Your minimum approval exceeds the total of default approvers.'
+            )
 
     def _compute_request_to_validate_count(self):
         # Count only requests where the current user still has a pending approver line
