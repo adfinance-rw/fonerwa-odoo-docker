@@ -2139,7 +2139,7 @@ class ApprovalApprover(models.Model):
             elif hasattr(request, 'optional_approver_ids') and request.optional_approver_ids and role_user.id in request.optional_approver_ids.mapped('user_id').ids:
                 role = 'Reviewer (Reviewed by)'
             else:
-                # Check if role_user is reviewer (department manager or employee's parent manager)
+                # Check if role_user is reviewer (department manager, line manager, or second manager)
                 requester = request.request_owner_id or request.create_uid
                 if requester:
                     dept_manager_user = False
@@ -2152,14 +2152,22 @@ class ApprovalApprover(models.Model):
                         dept_manager_user = False
                     
                     parent_manager_user = False
+                    second_manager_user = False
                     try:
                         emp = requester.employee_id if hasattr(requester, 'employee_id') else False
                         parent = emp.parent_id if emp and hasattr(emp, 'parent_id') else False
                         parent_manager_user = parent.user_id if parent and hasattr(parent, 'user_id') else False
+                        # Second manager = employee's parent.parent.user_id (if any)
+                        grandparent = parent.parent_id if parent and hasattr(parent, 'parent_id') else False
+                        second_manager_user = grandparent.user_id if grandparent and hasattr(grandparent, 'user_id') else False
                     except Exception:
                         parent_manager_user = False
+                        second_manager_user = False
                     reviewer = parent_manager_user or dept_manager_user
                     if reviewer and role_user.id == reviewer.id:
+                        role = 'Reviewer (Reviewed by)'
+                    # Second manager (grandparent) is also considered a Reviewer
+                    elif second_manager_user and role_user.id == second_manager_user.id:
                         role = 'Reviewer (Reviewed by)'
             
             # Add "For [Delegator]" suffix if this is a delegation

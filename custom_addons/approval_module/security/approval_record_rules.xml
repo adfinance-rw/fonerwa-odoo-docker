@@ -111,7 +111,7 @@
 
         <!-- Rule: Only the assigned user can mark approval.request activities as done -->
         <!-- Keep access for other models unchanged -->
-        <record id="approval_mail_activity_rule_assigned_only" model="ir.rule">
+        <!-- <record id="approval_mail_activity_rule_assigned_only" model="ir.rule">
             <field name="name">Mail Activity: approval.request assigned user only</field>
             <field name="model_id" ref="mail.model_mail_activity"/>
             <field name="domain_force">['|', ('res_model', '!=', 'approval.request'), ('user_id', '=', user.id)]</field>
@@ -120,10 +120,10 @@
             <field name="perm_write" eval="True"/>
             <field name="perm_create" eval="False"/>
             <field name="perm_unlink" eval="True"/>
-        </record>
+        </record> -->
 
         <!-- Ensure approval.request activities are only readable by the assigned user -->
-        <record id="approval_mail_activity_rule_read_assigned_only" model="ir.rule">
+        <!-- <record id="approval_mail_activity_rule_read_assigned_only" model="ir.rule">
             <field name="name">Mail Activity: approval.request read assigned only</field>
             <field name="model_id" ref="mail.model_mail_activity"/>
             <field name="domain_force">['|', ('res_model', '!=', 'approval.request'), ('user_id', '=', user.id)]</field>
@@ -132,7 +132,7 @@
             <field name="perm_write" eval="False"/>
             <field name="perm_create" eval="False"/>
             <field name="perm_unlink" eval="False"/>
-        </record>
+        </record> -->
 
         <!-- Allow creating approval.request activities for any assigned user -->
         <record id="approval_mail_activity_rule_create_approval_request" model="ir.rule">
