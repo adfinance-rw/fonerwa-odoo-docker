@@ -14,7 +14,11 @@
                 <t t-set="ceo_sign_user" t-value="ceo_line and ceo_line.user_id and ceo_line.user_id.sudo() or False"/>
                 <t t-set="requester" t-value="(o.request_owner_id or o.create_uid).sudo()"/>
                 <t t-set="dept_manager_user" t-value="(requester.employee_id and requester.employee_id.department_id and requester.employee_id.department_id.manager_id and requester.employee_id.department_id.manager_id.user_id) or False"/>
-                <t t-set="reviewer" t-value="(dept_manager_user or requester.line_manager_id) and (dept_manager_user or requester.line_manager_id).sudo()"/>
+                <!-- Raw reviewer from department manager or line manager -->
+                <t t-set="raw_reviewer" t-value="(dept_manager_user or requester.line_manager_id) and (dept_manager_user or requester.line_manager_id).sudo()"/>
+                <!-- Do not treat CFO/CEO as 'Reviewed by' to avoid duplicates -->
+                <t t-set="reviewer_is_executive" t-value="raw_reviewer and ((cfo and raw_reviewer.id == cfo.id) or (ceo and raw_reviewer.id == ceo.id))"/>
+                <t t-set="reviewer" t-value="(not reviewer_is_executive) and raw_reviewer or False"/>
                 <t t-set="reviewer_line" t-value="o.approver_ids.filtered(lambda l: reviewer and l.user_id.id == reviewer.id)[:1]"/>
                 <t t-set="reviewer_lines_all" t-value="o.approver_ids.filtered(lambda l: l.approval_role and 'Reviewer' in l.approval_role)"/>
                 <t t-set="additional_reviewer_lines" t-value="reviewer_lines_all.filtered(lambda l: not reviewer_line or l.id != reviewer_line.id)"/>
