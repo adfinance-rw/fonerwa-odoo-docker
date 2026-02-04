@@ -42,6 +42,19 @@ class ApprovalRequest(models.Model):
         help='Users who can approve on behalf of approvers via delegation'
     )
 
+    approved_count = fields.Integer(
+        string='Approved Count',
+        compute='_compute_approved_count',
+        help='Number of approvals for this request',
+        store=True
+    )
+
+    @api.depends('approver_ids.status')
+    def _compute_approved_count(self):
+        """Compute the number of approvals for this request"""
+        for request in self:
+            request.approved_count = len(request.approver_ids.filtered(lambda a: a.status != 'approved'))
+
     # Helper: does the current user still have a pending approval on this request?
     # Used in domains (search) for menus like "Approvals to Review".
     user_has_pending = fields.Boolean(
@@ -2272,4 +2285,3 @@ class ApprovalContractPriceLine(models.Model):
         for line in self:
             line.total_price_vat_exclusive = line.quantity * (line.unit_price_vat_exclusive or 0.0)
             line.total_price_vat_inclusive = line.quantity * (line.unit_price_vat_inclusive or 0.0)
-
