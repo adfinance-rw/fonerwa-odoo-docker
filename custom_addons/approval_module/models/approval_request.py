@@ -2183,6 +2183,10 @@ class ApprovalApprover(models.Model):
                     elif second_manager_user and role_user.id == second_manager_user.id:
                         role = 'Reviewer (Reviewed by)'
             
+            # Any user added as approver has at least the Reviewer role
+            if not role:
+                role = 'Reviewer (Reviewed by)'
+            
             # Add "For [Delegator]" suffix if this is a delegation
             if approver.delegated_by_id:
                 role = f"{role} - For {approver.delegated_by_id.name}"

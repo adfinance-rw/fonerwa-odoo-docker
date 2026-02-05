@@ -354,7 +354,7 @@
                         <table class="reviewers-table" style="border: none !important; border-top: none !important; border-bottom: none !important;">
                             <thead style="border: none !important;">
                                 <tr style="border: none !important;">
-                                    <th colspan="3" style="border: none !important; border-top: none !important; border-bottom: none !important;">Additional Reviewers</th>
+                                    <th colspan="3" style="border: none !important; border-top: none !important; border-bottom: none !important;">Reviewd By</th>
                                 </tr>
                             </thead>
                             <tbody style="border: none !important;">
