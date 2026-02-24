@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Add document requirement fields to Leave Type form -->
+    <record id="view_hr_leave_type_form_inherit" model="ir.ui.view">
+        <field name="name">hr.leave.type.form.inherit.document</field>
+        <field name="model">hr.leave.type</field>
+        <field name="inherit_id" ref="hr_holidays.edit_holiday_status_form"/>
+        <field name="arch" type="xml">
+            <field name="support_document" position="after">
+                <field name="document_requirement"/>
+                <field name="document_required_days"
+                       invisible="document_requirement != 'conditional'"/>
+            </field>
+        </field>
+    </record>
+</odoo>

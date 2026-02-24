@@ -325,7 +325,7 @@ class Contract(models.Model):
         ('expired', 'Expired'),
         ('terminated', 'Terminated'),
         ('archived', 'Archived')
-    ], string='Status', default='active', tracking=True)
+    ], string='Status', default='draft', tracking=True)
     
     # Version Control (UR-04)
     version = fields.Char(
@@ -753,80 +753,9 @@ class Contract(models.Model):
                 if 'contract_manager_id' not in vals:
                     vals['contract_manager_id'] = self.env.user.id
         
-        # Always assign contract number during creation
+        # Assign contract number based on max existing in database
         if not vals.get('contract_number') or vals.get('contract_number') == _('New'):
-            # Get company_id from vals or current company
-            company_id = vals.get('company_id') or self.env.company.id
-            
-            try:
-                # Use next_by_code which handles sequence lookup, creation, and locking properly
-                # This is the standard Odoo way and prevents race conditions
-                sequence_env = self.env['ir.sequence'].with_company(company_id)
-                contract_number = sequence_env.next_by_code('contract.management')
-                
-                if not contract_number or contract_number == _('New'):
-                    # Sequence might not exist, create it
-                    # Find the maximum existing contract number for this company
-                    existing_contracts = self.search([
-                        ('contract_number', '!=', 'New'), 
-                        ('contract_number', '!=', False),
-                        ('company_id', '=', company_id)
-                    ])
-                    max_number = 0
-                    
-                    for contract in existing_contracts:
-                        if contract.contract_number and contract.contract_number.startswith('CON'):
-                            try:
-                                # Extract number from CON0001 format
-                                number_part = contract.contract_number[3:]  # Remove 'CON' prefix
-                                number = int(number_part)
-                                max_number = max(max_number, number)
-                            except (ValueError, IndexError):
-                                continue
-                    
-                    # Create sequence starting from max_number + 1
-                    sequence_env.create({
-                        'name': 'Contract Management',
-                        'code': 'contract.management',
-                        'prefix': 'CON',
-                        'padding': 4,
-                        'number_next': max_number + 1,
-                        'number_increment': 1,
-                        'company_id': company_id,
-                    })
-                    
-                    # Try again after creating sequence
-                    contract_number = sequence_env.next_by_code('contract.management') or _('New')
-                
-                vals['contract_number'] = contract_number
-                
-            except Exception as e:
-                _logger.error('Error generating contract number: %s', str(e), exc_info=True)
-                # Fallback: generate manually based on max existing number
-                try:
-                    existing_contracts = self.search([
-                        ('contract_number', '!=', 'New'), 
-                        ('contract_number', '!=', False),
-                        ('company_id', '=', company_id)
-                    ])
-                    max_number = 0
-                    
-                    for contract in existing_contracts:
-                        if contract.contract_number and contract.contract_number.startswith('CON'):
-                            try:
-                                number_part = contract.contract_number[3:]
-                                number = int(number_part)
-                                max_number = max(max_number, number)
-                            except (ValueError, IndexError):
-                                continue
-                    
-                    # Generate number manually
-                    next_number = max_number + 1
-                    vals['contract_number'] = f'CON{next_number:04d}'
-                    _logger.warning('Generated contract number manually: %s', vals['contract_number'])
-                except Exception as e2:
-                    _logger.error('Fallback sequence generation also failed: %s', str(e2))
-                    vals['contract_number'] = _('New')
+            vals['contract_number'] = self._get_next_contract_number()
         
         # Validate contract value (amount)
         contract_value = vals.get('contract_value', 0)
@@ -837,10 +766,9 @@ class Contract(models.Model):
         if not vals.get('contract_documents'):
             raise UserError(_('Contract Document is required. Please upload the contract document.'))
         
-        # Set state to 'active' by default if not explicitly set
-        if 'state' not in vals:
-            vals['state'] = 'active'
-        
+        # Set state to active on save
+        vals['state'] = 'active'
+
         # Create the contract
         contract = super(Contract, self).create(vals)
         return contract
@@ -858,38 +786,8 @@ class Contract(models.Model):
         return result
 
     def action_activate(self):
-        # Ensure contract has a proper number before activation
         if self.contract_number == 'New':
-            sequence = self.env['ir.sequence'].search([('code', '=', 'contract.management')])
-            if not sequence:
-                # Find the maximum existing contract number
-                existing_contracts = self.search([('contract_number', '!=', 'New'), ('contract_number', '!=', False)])
-                max_number = 0
-                
-                for contract in existing_contracts:
-                    if contract.contract_number and contract.contract_number.startswith('CON'):
-                        try:
-                            # Extract number from CON0001 format
-                            number_part = contract.contract_number[3:]  # Remove 'CON' prefix
-                            number = int(number_part)
-                            max_number = max(max_number, number)
-                        except (ValueError, IndexError):
-                            continue
-                
-                # Create sequence starting from max_number + 1
-                sequence = self.env['ir.sequence'].create({
-                    'name': 'Contract Management',
-                    'code': 'contract.management',
-                    'prefix': 'CON',
-                    'padding': 4,
-                    'number_next': max_number + 1,
-                    'number_increment': 1,
-                })
-            
-            # Assign contract number
-            new_number = sequence.next_by_code('contract.management')
-            self.write({'contract_number': new_number})
-        
+            self.write({'contract_number': self._get_next_contract_number()})
         self.write({'state': 'active'})
 
     def action_expire(self):
@@ -1089,66 +987,41 @@ class Contract(models.Model):
     def action_fix_contract_numbers(self):
         """Fix contracts that have 'New' as contract number"""
         contracts_with_new = self.search([('contract_number', '=', 'New')])
-        
-        # Get or create sequence
-        sequence = self.env['ir.sequence'].search([('code', '=', 'contract.management')])
-        if not sequence:
-            # Find the maximum existing contract number
-            existing_contracts = self.search([('contract_number', '!=', 'New'), ('contract_number', '!=', False)])
-            max_number = 0
-            
-            for contract in existing_contracts:
-                if contract.contract_number.startswith('CON'):
-                    try:
-                        # Extract number from CON0001 format
-                        number_part = contract.contract_number[3:]  # Remove 'CON' prefix
-                        number = int(number_part)
-                        max_number = max(max_number, number)
-                    except (ValueError, IndexError):
-                        continue
-            
-            # Create sequence starting from max_number + 1
-            sequence = self.env['ir.sequence'].create({
-                'name': 'Contract Management',
-                'code': 'contract.management',
-                'prefix': 'CON',
-                'padding': 4,
-                'number_next': max_number + 1,
-                'number_increment': 1,
-            })
-        else:
-            # Update existing sequence to continue from max existing number
-            existing_contracts = self.search([('contract_number', '!=', 'New'), ('contract_number', '!=', False)])
-            max_number = 0
-            
-            for contract in existing_contracts:
-                if contract.contract_number.startswith('CON'):
-                    try:
-                        # Extract number from CON0001 format
-                        number_part = contract.contract_number[3:]  # Remove 'CON' prefix
-                        number = int(number_part)
-                        max_number = max(max_number, number)
-                    except (ValueError, IndexError):
-                        continue
-            
-            # Update sequence to continue from max existing number
-            sequence.write({'number_next': max_number + 1})
-        
-        # Fix contracts with 'New' numbers
+
         for contract in contracts_with_new:
-            # Assign next sequence number
-            new_number = sequence.next_by_code('contract.management')
-            contract.write({'contract_number': new_number})
-        
+            contract.write({'contract_number': self._get_next_contract_number()})
+
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
-                'title': 'Contract Numbers Fixed',
-                'message': f'Fixed {len(contracts_with_new)} contracts with proper sequence numbers. Sequence now starts from {sequence.number_next}.',
+                'title': _('Contract Numbers Fixed'),
+                'message': _('Fixed %d contracts with proper sequence numbers.') % len(contracts_with_new),
                 'type': 'success',
             }
         }
+
+    @api.model
+    def _get_next_contract_number(self):
+        """Get the next contract number by checking the max existing number in DB"""
+        # Use SQL for a reliable, atomic read of the max contract number
+        self.env.cr.execute("""
+            SELECT contract_number FROM contract_management
+            WHERE contract_number IS NOT NULL
+              AND contract_number != 'New'
+              AND contract_number LIKE 'CON%%'
+            ORDER BY LENGTH(contract_number) DESC, contract_number DESC
+            LIMIT 1
+        """)
+        result = self.env.cr.fetchone()
+        max_number = 0
+        if result and result[0]:
+            try:
+                max_number = int(result[0][3:])  # Remove 'CON' prefix
+            except (ValueError, IndexError):
+                max_number = 0
+        next_number = max_number + 1
+        return 'CON%04d' % next_number
 
 
     def action_download_contract_document(self):

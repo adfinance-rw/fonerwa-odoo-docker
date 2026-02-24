@@ -23,7 +23,7 @@
                            decoration-muted="state == 'archived'"/>
                     <field name="version"/>
                     <field name="create_date" widget="date"/>
-                    <field name="contract_value"/>
+                    <field name="contract_value" widget="float"/>
                 </list>
             </field>
         </record>
@@ -45,12 +45,12 @@
                     <field name="effective_date"/>
                     <field name="expiry_date"/>
                     <field name="days_to_expiry" decoration-danger="days_to_expiry &lt; 0"/>
-                    <field name="state" decoration-success="state == 'active'" 
+                    <field name="state" decoration-success="state == 'active'"
                            decoration-danger="state == 'expired'"
                            decoration-muted="state == 'archived'"/>
                     <field name="version"/>
                     <field name="create_date" widget="date"/>
-                    <field name="contract_value"/>
+                    <field name="contract_value" widget="float"/>
                 </list>
             </field>
         </record>
@@ -63,9 +63,7 @@
             <field name="arch" type="xml">
                 <form string="Contract" create="0">
                     <header>
-                        <button name="action_activate" string="Activate" type="object" 
-                                class="btn-primary" invisible="state != 'draft'"/>
-                        <button name="action_archive" string="Archive" type="object" 
+                        <button name="action_archive" string="Archive" type="object"
                                 class="btn-secondary" invisible="state not in ['expired', 'terminated']"/>
                         <field name="state" widget="statusbar" statusbar_visible="draft,active,expired,terminated,archived"/>
                     </header>
@@ -212,9 +210,7 @@
             <field name="arch" type="xml">
                 <form string="Contract" create="1">
                     <header>
-                        <button name="action_activate" string="Activate" type="object" 
-                                class="btn-primary" invisible="state != 'draft'"/>
-                        <button name="action_archive" string="Archive" type="object" 
+                        <button name="action_archive" string="Archive" type="object"
                                 class="btn-secondary" invisible="state not in ['expired', 'terminated']"/>
                         <field name="state" widget="statusbar" statusbar_visible="draft,active,expired,terminated,archived"/>
                     </header>
