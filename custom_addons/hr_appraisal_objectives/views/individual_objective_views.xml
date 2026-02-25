@@ -106,9 +106,9 @@ action
     ]]></field>
   </record>
 
-  <!-- Line Manager: batch first-approve submitted objectives -->
+  <!-- Line Manager: batch first-approve submitted objectives (used from Actions dropdown) -->
   <record id="action_manager_first_approve_selected" model="ir.actions.server">
-    <field name="name">Approve Objectives</field>
+    <field name="name">Approve Submitted (Line Manager)</field>
     <field name="model_id" ref="hr_appraisal.model_hr_appraisal_goal"/>
     <field name="binding_model_id" ref="hr_appraisal.model_hr_appraisal_goal"/>
     <field name="binding_type">action</field>
@@ -118,30 +118,23 @@ action
 records = env['hr.appraisal.goal'].browse(env.context.get('active_ids', []))
 current_uid = env.uid
 
-# Only approve objectives that are submitted and not owned by the current user
 submitted = records.filtered(
     lambda r: r.state == 'submitted'
     and not (r.employee_id and r.employee_id.user_id and r.employee_id.user_id.id == current_uid)
 )
 
-# Approve all objectives with skip_notifications=True
 for rec in submitted:
     rec.with_context(skip_notifications=True).action_first_approve()
 
-# After approval, some objectives may be in "first_approved" (need HR approval)
-# while others may be in "progress" (auto-approved, need to notify employees)
 first_approved = submitted.filtered(lambda r: r.state == 'first_approved')
 progress_approved = submitted.filtered(lambda r: r.state == 'progress')
 
-# Group first_approved objectives for HR notification
 objectives_by_hr = {}
 hr_group = env.ref('hr_appraisal_objectives.group_hr_appraisal', raise_if_not_found=False)
 if first_approved and hr_group and hr_group.users:
-    # Use first HR user ID as key (method will notify all HR users anyway)
     hr_user_id = hr_group.users[0].id
     objectives_by_hr[hr_user_id] = first_approved
 
-# Group progress objectives by employee for employee notification
 objectives_by_employee = {}
 for rec in progress_approved:
     if rec.employee_id and rec.employee_id.user_id:
@@ -150,7 +143,6 @@ for rec in progress_approved:
             objectives_by_employee[employee_user_id] = []
         objectives_by_employee[employee_user_id].append(rec)
 
-# Send consolidated notifications
 if objectives_by_hr:
     env['hr.appraisal.goal']._send_consolidated_notifications("first_approved", objectives_by_hr)
 if objectives_by_employee:
@@ -174,9 +166,9 @@ action = {
     <field name="groups_id" eval="[(4, ref('hr_appraisal_objectives.group_appraisal_line_manager'))]"/>
   </record>
 
-  <!-- HR: batch second-approve first_approved objectives -->
+  <!-- HR: batch second-approve first_approved objectives (used from Actions dropdown) -->
   <record id="action_hr_second_approve_selected" model="ir.actions.server">
-    <field name="name">Approve Objectives</field>
+    <field name="name">Approve Awaiting HR (HR Manager)</field>
     <field name="model_id" ref="hr_appraisal.model_hr_appraisal_goal"/>
     <field name="binding_model_id" ref="hr_appraisal.model_hr_appraisal_goal"/>
     <field name="binding_type">action</field>
@@ -186,17 +178,14 @@ action = {
 records = env['hr.appraisal.goal'].browse(env.context.get('active_ids', []))
 current_uid = env.uid
 
-# Only approve objectives that are first_approved and not owned by the current user
 to_approve = records.filtered(
     lambda r: r.state == 'first_approved'
     and not (r.employee_id and r.employee_id.user_id and r.employee_id.user_id.id == current_uid)
 )
 
-# Approve all objectives with skip_notifications=True
 for rec in to_approve:
     rec.with_context(skip_notifications=True).action_second_approve()
 
-# Group approved objectives by employee (recipient)
 objectives_by_employee = {}
 for rec in to_approve:
     if rec.employee_id and rec.employee_id.user_id:
@@ -205,7 +194,6 @@ for rec in to_approve:
             objectives_by_employee[employee_user_id] = []
         objectives_by_employee[employee_user_id].append(rec)
 
-# Send consolidated notifications grouped by employee
 if objectives_by_employee:
     env['hr.appraisal.goal']._send_consolidated_notifications("progress", objectives_by_employee)
 
@@ -225,6 +213,92 @@ action = {
 }
     ]]></field>
     <field name="groups_id" eval="[(4, ref('hr_appraisal_objectives.group_hr_appraisal'))]"/>
+  </record>
+
+  <!-- Unified approve action for header button: handles both submitted and first_approved -->
+  <record id="action_unified_approve_selected" model="ir.actions.server">
+    <field name="name">Approve Objectives</field>
+    <field name="model_id" ref="hr_appraisal.model_hr_appraisal_goal"/>
+    <field name="state">code</field>
+    <field name="code"><![CDATA[
+records = env['hr.appraisal.goal'].browse(env.context.get('active_ids', []))
+current_uid = env.uid
+is_lm = env.user.has_group('hr_appraisal_objectives.group_appraisal_line_manager')
+is_hr = env.user.has_group('hr_appraisal_objectives.group_hr_appraisal')
+
+not_own = lambda r: not (r.employee_id and r.employee_id.user_id and r.employee_id.user_id.id == current_uid)
+
+first_approved_count = 0
+second_approved_count = 0
+messages = []
+
+if is_lm:
+    submitted = records.filtered(lambda r: r.state == 'submitted' and not_own(r))
+    for rec in submitted:
+        rec.with_context(skip_notifications=True).action_first_approve()
+
+    went_to_first_approved = submitted.filtered(lambda r: r.state == 'first_approved')
+    went_to_progress = submitted.filtered(lambda r: r.state == 'progress')
+
+    objectives_by_hr = {}
+    hr_group = env.ref('hr_appraisal_objectives.group_hr_appraisal', raise_if_not_found=False)
+    if went_to_first_approved and hr_group and hr_group.users:
+        hr_user_id = hr_group.users[0].id
+        objectives_by_hr[hr_user_id] = went_to_first_approved
+
+    objectives_by_employee = {}
+    for rec in went_to_progress:
+        if rec.employee_id and rec.employee_id.user_id:
+            emp_uid = rec.employee_id.user_id.id
+            objectives_by_employee.setdefault(emp_uid, []).append(rec)
+
+    if objectives_by_hr:
+        env['hr.appraisal.goal']._send_consolidated_notifications("first_approved", objectives_by_hr)
+    if objectives_by_employee:
+        env['hr.appraisal.goal']._send_consolidated_notifications("progress", objectives_by_employee)
+
+    first_approved_count = len(submitted)
+    if first_approved_count:
+        messages.append(f"Manager-approved {first_approved_count}")
+
+if is_hr:
+    to_approve = records.filtered(lambda r: r.state == 'first_approved' and not_own(r))
+    for rec in to_approve:
+        rec.with_context(skip_notifications=True).action_second_approve()
+
+    objectives_by_employee = {}
+    for rec in to_approve:
+        if rec.employee_id and rec.employee_id.user_id:
+            emp_uid = rec.employee_id.user_id.id
+            objectives_by_employee.setdefault(emp_uid, []).append(rec)
+
+    if objectives_by_employee:
+        env['hr.appraisal.goal']._send_consolidated_notifications("progress", objectives_by_employee)
+
+    second_approved_count = len(to_approve)
+    if second_approved_count:
+        messages.append(f"HR-approved {second_approved_count}")
+
+total = first_approved_count + second_approved_count
+skipped = len(records) - total
+if not messages:
+    message = "Nothing to approve"
+else:
+    message = ", ".join(messages)
+if skipped:
+    message += f" ({skipped} skipped — wrong state or own objectives)"
+
+action = {
+    'type': 'ir.actions.client',
+    'tag': 'display_notification',
+    'params': {
+        'message': message,
+        'type': 'success' if total else 'warning',
+        'sticky': False,
+    },
+}
+    ]]></field>
+    <field name="groups_id" eval="[(4, ref('hr_appraisal_objectives.group_appraisal_line_manager')), (4, ref('hr_appraisal_objectives.group_hr_appraisal'))]"/>
   </record>
 
   <record id="view_hr_appraisal_goal_form_inherit" model="ir.ui.view">
@@ -528,13 +602,9 @@ action = {
                   name="%(hr_appraisal_objectives.action_submit_selected_drafts)d"
                   class="btn-primary"/>
           <button string="Approve" type="action"
-                  name="%(hr_appraisal_objectives.action_manager_first_approve_selected)d"
+                  name="%(hr_appraisal_objectives.action_unified_approve_selected)d"
                   class="btn-secondary"
-                  groups="hr_appraisal_objectives.group_appraisal_line_manager"/>
-          <button string="Approve" type="action"
-                  name="%(hr_appraisal_objectives.action_hr_second_approve_selected)d"
-                  class="btn-secondary"
-                  groups="hr_appraisal_objectives.group_hr_appraisal"/>
+                  groups="hr_appraisal_objectives.group_appraisal_line_manager,hr_appraisal_objectives.group_hr_appraisal"/>
         </header>
       </xpath>
       <xpath expr="//field[@name='progression']" position="after">
