@@ -72,9 +72,12 @@ else:
     </record>
     
     <!-- ========================================== -->
-    <!-- BATCH APPROVE: Line Manager approves all submitted -->
+    <!-- BATCH APPROVE: Smart single button - handles both LM and HR approval -->
+    <!-- If user is both LM+HR: submitted objectives go directly to final (active) -->
+    <!-- If user is only LM: submitted → first_approved -->
+    <!-- If user is only HR: first_approved → active -->
     <!-- ========================================== -->
-    
+
     <record id="action_batch_approve_line_manager" model="ir.actions.server">
         <field name="name">Approve All Objectives</field>
         <field name="model_id" ref="hr.model_hr_employee"/>
@@ -89,28 +92,57 @@ if not employee_ids:
     employee_ids = [env.context.get('active_id')]
 
 employees = env['hr.employee'].browse(employee_ids)
+current_uid = env.uid
+is_lm = env.user.has_group('hr_appraisal_objectives.group_appraisal_line_manager')
+is_hr = env.user.has_group('hr_appraisal_objectives.group_hr_appraisal')
+
 approved_count = 0
+skipped_count = 0
+
+current_employee = env['hr.employee'].search([('user_id', '=', current_uid)], limit=1)
 
 for employee in employees:
-    # Get all submitted objectives for this employee
-    submitted_objectives = env['hr.appraisal.goal'].search([
-        ('employee_id', '=', employee.id),
-        ('state', '=', 'submitted')
-    ])
-    
-    # Approve all
-    for objective in submitted_objectives:
-        objective.action_first_approve()
+    objectives = env['hr.appraisal.goal']
+
+    if is_lm:
+        # Only first-approve objectives where current user is actually the line manager
+        submitted = env['hr.appraisal.goal'].search([
+            ('employee_id', '=', employee.id),
+            ('state', '=', 'submitted')
+        ])
+        for obj in submitted:
+            manager = obj.manager_id or obj.employee_id.parent_id
+            if manager and manager.id == current_employee.id:
+                objectives |= obj
+    if is_hr:
+        # HR can final-approve any first_approved objective
+        objectives |= env['hr.appraisal.goal'].search([
+            ('employee_id', '=', employee.id),
+            ('state', '=', 'first_approved')
+        ])
+
+    for objective in objectives:
+        # Skip own objectives (self-approval not allowed)
+        if objective.employee_id and objective.employee_id.user_id and objective.employee_id.user_id.id == current_uid:
+            skipped_count += 1
+            continue
+        if objective.state == 'submitted':
+            objective.action_first_approve()
+        elif objective.state == 'first_approved':
+            objective.action_second_approve()
         approved_count += 1
 
-# Show result
-if approved_count:
+# Build result message
+if approved_count or skipped_count:
+    message = f"✓ Approved {approved_count} objectives for {len(employees)} employee(s)"
+    if skipped_count:
+        message += f"\n⚠ Skipped {skipped_count} of your own objectives (self-approval not allowed)"
     action = {
         'type': 'ir.actions.client',
         'tag': 'display_notification',
         'params': {
-            'message': f"✓ Approved {approved_count} objectives for {len(employees)} employee(s)",
-            'type': 'success',
+            'message': message,
+            'type': 'success' if approved_count else 'warning',
             'sticky': False,
         },
     }
@@ -119,70 +151,22 @@ else:
         'type': 'ir.actions.client',
         'tag': 'display_notification',
         'params': {
-            'message': 'No submitted objectives found to approve',
+            'message': 'No objectives awaiting approval found',
             'type': 'warning',
             'sticky': False,
         },
     }
 ]]></field>
-        <field name="groups_id" eval="[(4, ref('hr_appraisal_objectives.group_appraisal_line_manager'))]"/>
+        <field name="groups_id" eval="[(4, ref('hr_appraisal_objectives.group_appraisal_line_manager')), (4, ref('hr_appraisal_objectives.group_hr_appraisal'))]"/>
     </record>
-    
-    <!-- ========================================== -->
-    <!-- BATCH APPROVE: HR approves all first_approved -->
-    <!-- ========================================== -->
-    
+
+    <!-- Unbind old separate HR action (keep record to avoid XML ID errors on upgrade) -->
     <record id="action_batch_approve_hr" model="ir.actions.server">
-        <field name="name">Final Approve All Objectives</field>
+        <field name="name">Final Approve All Objectives (Deprecated)</field>
         <field name="model_id" ref="hr.model_hr_employee"/>
-        <field name="binding_model_id" ref="hr.model_hr_employee"/>
-        <field name="binding_type">action</field>
-        <field name="binding_view_types">kanban,list,form</field>
+        <field name="binding_model_id" eval="False"/>
         <field name="state">code</field>
-        <field name="code"><![CDATA[
-# Get selected employees
-employee_ids = env.context.get('active_ids', [])
-if not employee_ids:
-    employee_ids = [env.context.get('active_id')]
-
-employees = env['hr.employee'].browse(employee_ids)
-approved_count = 0
-
-for employee in employees:
-    # Get all first_approved objectives for this employee
-    first_approved_objectives = env['hr.appraisal.goal'].search([
-        ('employee_id', '=', employee.id),
-        ('state', '=', 'first_approved')
-    ])
-    
-    # Final approve all
-    for objective in first_approved_objectives:
-        objective.action_second_approve()
-        approved_count += 1
-
-# Show result
-if approved_count:
-    action = {
-        'type': 'ir.actions.client',
-        'tag': 'display_notification',
-        'params': {
-            'message': f"✓ Approved {approved_count} objectives for {len(employees)} employee(s)",
-            'type': 'success',
-            'sticky': False,
-        },
-    }
-else:
-    action = {
-        'type': 'ir.actions.client',
-        'tag': 'display_notification',
-        'params': {
-            'message': 'No objectives awaiting HR approval found',
-            'type': 'warning',
-            'sticky': False,
-        },
-    }
-]]></field>
-        <field name="groups_id" eval="[(4, ref('hr_appraisal_objectives.group_hr_appraisal'))]"/>
+        <field name="code">action = None</field>
     </record>
     
     <!-- ========================================== -->
