@@ -85,6 +85,12 @@
         <field name="model">hr.employee</field>
         <field name="arch" type="xml">
             <list string="Employee Objectives" create="false" edit="false" action="action_view_employee_objectives" type="object" default_order="objective_status asc, name asc">
+                <header>
+                    <button string="Approve" type="action"
+                            name="%(hr_appraisal_objectives.action_batch_approve_line_manager)d"
+                            class="btn-secondary"
+                            groups="hr_appraisal_objectives.group_appraisal_line_manager,hr_appraisal_objectives.group_hr_appraisal"/>
+                </header>
                 <field name="name" string="Employee"/>
                 <field name="department_id"/>
                 <field name="job_id"/>

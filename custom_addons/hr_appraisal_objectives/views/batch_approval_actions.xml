@@ -98,6 +98,7 @@ is_hr = env.user.has_group('hr_appraisal_objectives.group_hr_appraisal')
 
 approved_count = 0
 skipped_count = 0
+approved_employees = set()
 
 current_employee = env['hr.employee'].search([('user_id', '=', current_uid)], limit=1)
 
@@ -131,10 +132,14 @@ for employee in employees:
         elif objective.state == 'first_approved':
             objective.action_second_approve()
         approved_count += 1
+        approved_employees.add(employee.name)
 
 # Build result message
+no_action_employees = [e.name for e in employees if e.name not in approved_employees]
 if approved_count or skipped_count:
-    message = f"✓ Approved {approved_count} objectives for {len(employees)} employee(s)"
+    message = f"✓ Approved {approved_count} objectives for {len(approved_employees)} employee(s)"
+    if no_action_employees:
+        message += f"\n⚠ No approvable objectives found for: {', '.join(no_action_employees)}"
     if skipped_count:
         message += f"\n⚠ Skipped {skipped_count} of your own objectives (self-approval not allowed)"
     action = {
