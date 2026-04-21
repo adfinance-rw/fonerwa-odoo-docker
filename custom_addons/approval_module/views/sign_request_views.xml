@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Add a header button to open the linked approval request -->
+    <record id="sign_request_view_form_inherit_approval" model="ir.ui.view">
+        <field name="name">sign.request.form.inherit.approval</field>
+        <field name="model">sign.request</field>
+        <field name="inherit_id" ref="sign.sign_request_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form/header" position="inside">
+                <button name="action_open_reference_doc"
+                        type="object"
+                        string="Open Linked Document"
+                        class="btn-secondary"
+                        invisible="not reference_doc"
+                        />
+            </xpath>
+            <!-- Make reference_doc field visible in form (optional, for visibility in backend) -->
+            <xpath expr="//sheet/group" position="inside">
+                <field name="reference_doc" readonly="1" invisible="1"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

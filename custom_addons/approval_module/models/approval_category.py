@@ -122,6 +122,18 @@ class ApprovalCategory(models.Model):
         help='Define which specific type options are available for requests in this category'
     )
 
+    # Letter memo & Sign configuration
+    is_letter_memo = fields.Boolean(
+        string='Letter Memo',
+        help='Enable this when the category represents a letter memo that should be signed via the Sign module after full approval.'
+    )
+    notify_owner_after_signing = fields.Boolean(
+        string='Notify Owner After Signing',
+        default=True,
+        help='Send a notification to the request owner when the invited signatory completes signing. '
+             'The signed document will also be attached to the approval request.'
+    )
+
     # Computed field for available type option IDs (used in domains)
     available_type_option_ids = fields.Many2many(
         'approval.type.option',
@@ -271,6 +283,7 @@ class ApprovalCategoryApprover(models.Model):
     role = fields.Selection([
         ('reviewer', 'Reviewer (Line Manager)'),
         ('cfo', 'CFO'),
+        ('cso', 'CSO'),
         ('senior', 'CEO Office (Pre-authorization)'),
         ('ceo', 'CEO'),
     ], required=False, help='Deprecated: Use Users field instead')

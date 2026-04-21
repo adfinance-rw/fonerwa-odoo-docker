@@ -48,9 +48,9 @@
         <xpath expr="//header/button[@name='action_withdraw']" position="replace">
           <button name="action_withdraw" string="Withdraw" type="object" invisible="request_status in ['new', 'refused', 'cancel'] or user_status in ['waiting', 'pending', 'cancel'] or not user_status" data-hotkey="y"/>
         </xpath>
-        <!-- Hide widget button attach document-->
+        <!-- Show widget button attach document-->
         <xpath expr="//header/widget[@name='attach_document']" position="attributes">
-            <attribute name="invisible">1</attribute>
+            <attribute name="invisible">0</attribute>
         </xpath>
         <!-- Hide Documents smart button -->
         <xpath expr="//button[@name='action_get_attachment_view']" position="attributes">
@@ -153,7 +153,10 @@
         </xpath>
         <xpath expr="//notebook" position="inside">
             <page string="Checklist" name="payment_checklist">
-                <field name="checklist_line_ids" nolabel="1" context="{'list_view_ref': 'approval_module.approval_checklist_line_view_list', 'form_view_ref': 'approval_module.approval_checklist_line_view_form'}" options="{'no_create_edit': True, 'no_open': True}" readonly="request_status != 'new'"/>
+                <field name="is_letter_memo_signable" invisible="1"/>
+                <field name="checklist_line_ids" nolabel="1"
+                       context="{'list_view_ref': 'approval_module.approval_checklist_line_view_list', 'form_view_ref': 'approval_module.approval_checklist_line_view_form'}"
+                       options="{'no_create_edit': True, 'no_open': True}"/>
             </page>
             <page string="Reviewers" name="optional_approvers" invisible="request_status != 'new'">
                 <field name="optional_approver_ids" nolabel="1"
@@ -185,9 +188,20 @@
       <field name="model">approval.checklist.line</field>
       <field name="arch" type="xml">
         <list editable="bottom" create="0" delete="0">
+          <field name="request_id" column_invisible="1"/>
+          <field name="is_letter_memo" column_invisible="1"/>
+          <field name="request_status" column_invisible="1"/>
+          <field name="can_open_in_sign" column_invisible="1"/>
           <field name="name" readonly="1" force_save="1"/>
           <field name="is_required" readonly="1" force_save="1"/>
-          <field name="document_ids" widget="many2many_binary"/>
+          <field name="document_ids" widget="many2many_binary"
+                 readonly="request_status != 'new'"/>
+          <button name="action_open_in_sign" string="Open in Sign" type="object"
+                  icon="fa-pencil-square-o"
+                  column_invisible="not parent.is_letter_memo_signable"
+                  invisible="not can_open_in_sign"/>
+          <field name="sign_template_id" optional="hide" readonly="1"/>
+          <field name="sign_request_id" optional="hide" readonly="1"/>
         </list>
       </field>
     </record>
@@ -201,6 +215,7 @@
             <field name="name" readonly="1" force_save="1"/>
             <field name="is_required" readonly="1" force_save="1"/>
             <field name="document_ids" widget="many2many_binary"/>
+            <field name="can_open_in_sign" invisible="1"/>
           </group>
         </form>
       </field>

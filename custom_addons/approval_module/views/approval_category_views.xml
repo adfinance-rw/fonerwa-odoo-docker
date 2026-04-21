@@ -94,6 +94,12 @@
                                    context="{'tree_view_ref': 'approval_module.view_category_approver_tree', 'available_type_option_ids': available_type_option_ids}"/>
                         </group>
                     </group>
+                    <group>
+                        <group string="Letter Memo &amp; Sign">
+                            <field name="is_letter_memo"/>
+                            <field name="notify_owner_after_signing" invisible="not is_letter_memo"/>
+                        </group>
+                    </group>
                 </page>
             </xpath>
         </field>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record model="sign.item.type" id="sign_item_type_letter_sequence">
+        <field name="name">Letter Sequence</field>
+        <field name="item_type">text</field>
+        <field name="tip">fill in</field>
+        <field name="placeholder">Letter No.</field>
+        <field name="icon">fa-hashtag</field>
+    </record>
+
+    <!-- Sequence for unique letter numbers assigned per checklist line -->
+    <record id="seq_letter_number" model="ir.sequence">
+        <field name="name">Letter Number</field>
+        <field name="code">approval.checklist.line.letter</field>
+        <field name="prefix"/>
+        <field name="padding">5</field>
+        <field name="number_increment">1</field>
+        <field name="number_next">1</field>
+    </record>
+</odoo>

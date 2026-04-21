@@ -1,0 +1,14 @@
+<odoo>
+    <!-- Extend the sign document template to embed reference doc info as a hidden element.
+         The JS fetchDocument parses this HTML and reads the data attributes. -->
+    <template id="sign_doc_reference_doc" inherit_id="sign._doc_sign">
+        <xpath expr="//input[@id='o_sign_input_sign_request_id']" position="before">
+            <!-- Always render so we can debug whether the template extension is applied -->
+            <div class="o_sign_reference_doc_data d-none"
+                 t-att-data-model="reference_doc_model"
+                 t-att-data-id="reference_doc_id"
+                 t-att-data-name="reference_doc_name"
+                 data-debug="template-applied"/>
+        </xpath>
+    </template>
+</odoo>

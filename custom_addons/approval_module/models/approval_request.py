@@ -17,6 +17,12 @@ class ApprovalRequest(models.Model):
         compute='_compute_role_approvers',
         help='Chief Finance Officer approval status'
     )
+    cso_approver_id = fields.Many2one(
+        'approval.approver',
+        string='CSO Approval',
+        compute='_compute_role_approvers',
+        help='Chief Strategy Officer approval status'
+    )
     senior_approver_id = fields.Many2one(
         'approval.approver',
         string='CEO office approver', 
@@ -34,6 +40,11 @@ class ApprovalRequest(models.Model):
         string='Department Manager Review',
         compute='_compute_role_approvers',
         help='Department Manager/Line Manager review status'
+    )
+    is_letter_memo_signable = fields.Boolean(
+        string='Letter Memo Signable',
+        compute='_compute_is_letter_memo_signable',
+        help='True when this is an approved letter memo and current user is last approver.',
     )
     delegate_user_ids = fields.Many2many(
         'res.users',
@@ -189,9 +200,10 @@ class ApprovalRequest(models.Model):
     
     @api.depends('approver_ids', 'approver_ids.user_id', 'approver_ids.status')
     def _compute_role_approvers(self):
-        """Compute which approver corresponds to which role (CFO, Senior Approver, CEO, Reviewer)"""
+        """Compute which approver corresponds to which role (CFO, CSO, Senior Approver, CEO, Reviewer)"""
         for request in self:
             cfo = request.company_id.cfo_id if hasattr(request.company_id, 'cfo_id') else False
+            cso = request.company_id.cso_id if hasattr(request.company_id, 'cso_id') else False
             senior_approver = request.company_id.senior_approver_id if hasattr(request.company_id, 'senior_approver_id') else False
             ceo = request.company_id.ceo_id if hasattr(request.company_id, 'ceo_id') else False
             
@@ -216,6 +228,7 @@ class ApprovalRequest(models.Model):
             
             # Find corresponding approver records
             request.cfo_approver_id = request.approver_ids.filtered(lambda a: cfo and a.user_id.id == cfo.id)[:1] if cfo else False
+            request.cso_approver_id = request.approver_ids.filtered(lambda a: cso and a.user_id.id == cso.id)[:1] if cso else False
             request.senior_approver_id = request.approver_ids.filtered(lambda a: senior_approver and a.user_id.id == senior_approver.id)[:1] if senior_approver else False
             request.ceo_approver_id = request.approver_ids.filtered(lambda a: ceo and a.user_id.id == ceo.id)[:1] if ceo else False
             request.reviewer_approver_id = request.approver_ids.filtered(lambda a: reviewer and a.user_id.id == reviewer.id)[:1] if reviewer else False
@@ -905,9 +918,12 @@ class ApprovalRequest(models.Model):
 
             # If reviewer is one of the executives, skip manager-required check
             cfo = self.company_id.cfo_id if hasattr(self.company_id, 'cfo_id') else False
+            cso = self.company_id.cso_id if hasattr(self.company_id, 'cso_id') else False
             senior_approver = self.company_id.senior_approver_id if hasattr(self.company_id, 'senior_approver_id') else False
             ceo = self.company_id.ceo_id if hasattr(self.company_id, 'ceo_id') else False
-            if reviewer_user and reviewer_user in [cfo, senior_approver, ceo]:
+            executives_for_manager_check = [cfo, cso, senior_approver, ceo]
+            executives_for_manager_check = [u for u in executives_for_manager_check if u]
+            if reviewer_user and reviewer_user in executives_for_manager_check:
                 skip_manager_check = True
 
         # Call confirmation logic (customized to optionally skip manager check)
@@ -998,9 +1014,11 @@ class ApprovalRequest(models.Model):
             grandparent = parent and parent.parent_id or False
             # Skip second-manager check if parent is executive and no grandparent exists
             cfo = self.company_id.cfo_id if hasattr(self.company_id, 'cfo_id') else False
+            cso = self.company_id.cso_id if hasattr(self.company_id, 'cso_id') else False
             senior_approver = self.company_id.senior_approver_id if hasattr(self.company_id, 'senior_approver_id') else False
             ceo = self.company_id.ceo_id if hasattr(self.company_id, 'ceo_id') else False
-            executives = [cfo, senior_approver, ceo]
+            executives = [cfo, cso, senior_approver, ceo]
+            executives = [u for u in executives if u]
             if not grandparent:
                 if parent and parent.user_id in executives:
                     grandparent = False
@@ -1219,6 +1237,24 @@ class ApprovalRequest(models.Model):
                                 prev_appr.user_id.name
                             )
 
+                # Additional safeguard: when CEO is a required approver, they must approve last.
+                # This guarantees CEO cannot approve before the CEO Office or any other required approver.
+                if approver and approver.required:
+                    ceo_user = self.company_id.ceo_id if hasattr(self.company_id, 'ceo_id') else False
+                    if ceo_user and approver.user_id == ceo_user:
+                        other_required = self.approver_ids.filtered(
+                            lambda a: a.id != approver.id and a.required
+                        )
+                        pending_others = other_required.filtered(
+                            lambda a: a.status != 'approved'
+                        )
+                        if pending_others:
+                            names = ', '.join(pending_others.mapped('user_id.name'))
+                            raise UserError(
+                                _("The CEO must approve last, after all other required approvers have approved. "
+                                  "Please wait for the following approvers first: %s") % names
+                            )
+
         result = super().action_approve(approver=approver)
         
         # After base approval, activate all approvers with the same sequence (batch non-required approvers)
@@ -1260,7 +1296,9 @@ class ApprovalRequest(models.Model):
                         request._return_to_requester_for_guarantee()
                         continue  # Skip notification, request is not fully approved yet
                 
-                # Request is fully approved with guarantee (if required), send notifications
+                # Request is fully approved with guarantee (if required).
+                # Letter-memo Sign is triggered per checklist line via "Open in Sign" button.
+                # 2) Send configured notifications
                 request._send_approval_notifications()
         
         return result
@@ -1276,6 +1314,31 @@ class ApprovalRequest(models.Model):
                 subtype_xmlid='mail.mt_note',
             )
     
+    @api.depends('request_status', 'category_id', 'category_id.is_letter_memo',
+                 'approver_ids', 'approver_ids.required', 'approver_ids.sequence')
+    @api.depends_context('uid')
+    def _compute_is_letter_memo_signable(self):
+        for request in self:
+            request.is_letter_memo_signable = (
+                request.request_status == 'approved'
+                and request.category_id
+                and getattr(request.category_id, 'is_letter_memo', False)
+                and request._is_last_approver()
+            )
+
+    def _is_last_approver(self):
+        """True if the current user is the last required approver (by sequence) who approved this request."""
+        self.ensure_one()
+        if self.request_status != 'approved':
+            return False
+        required = self.approver_ids.filtered(lambda a: a.required).sorted('sequence')
+        if not required:
+            return False
+        last_line = required[-1]
+        # Current user is last approver if they are the one who signed (user_id or delegated_by_id)
+        current = self.env.user
+        return (last_line.user_id == current or last_line.delegated_by_id == current)
+
     def _notify_requester_of_approval(self, approver):
         """Notify the requester when an approver approves their request"""
         self.ensure_one()
@@ -1644,23 +1707,38 @@ class ApprovalRequest(models.Model):
             if not requester:
                 continue
 
-            # Get company CFO, Senior Approver, and CEO
-            # These will be added at the end in order: CFO, Senior Approver, CEO
+            # Get company executives (CFO, CSO, Senior Approver, CEO)
+            # These will be added at the end in order: CFO, CSO, Senior Approver, CEO
             cfo = request.company_id.cfo_id if hasattr(request.company_id, 'cfo_id') else False
+            cso = request.company_id.cso_id if hasattr(request.company_id, 'cso_id') else False
             senior_approver = request.company_id.senior_approver_id if hasattr(request.company_id, 'senior_approver_id') else False
             ceo = request.company_id.ceo_id if hasattr(request.company_id, 'ceo_id') else False
             
+            # For letter memo categories, the CEO must not appear in the approval chain
+            is_letter_memo_cat = request.category_id and getattr(request.category_id, 'is_letter_memo', False)
+            ceo_id_to_exclude = ceo.id if ceo and is_letter_memo_cat else False
+
             # Track executive users to ensure they're added at the end
             executive_users = []
             if cfo:
                 executive_users.append(('cfo', cfo))
+            if cso:
+                executive_users.append(('cso', cso))
             if senior_approver:
                 executive_users.append(('senior', senior_approver))
-            if ceo:
+            if ceo and not is_letter_memo_cat:
                 executive_users.append(('ceo', ceo))
             executive_user_ids = {u.id for _, u in executive_users}
+            executive_role_by_user_id = {u.id: role_name for role_name, u in executive_users if u}
             # Track required status for executive users from their original configuration
             executive_required_status = {}
+
+            # Check if this category defines a CEO policy via templates (e.g., amount thresholds)
+            ceo_policy_template_exists = bool(
+                request.category_id
+                and hasattr(request.category_id, 'approver_template_ids')
+                and request.category_id.approver_template_ids.filtered(lambda t: t.role == 'ceo')
+            )
 
             # Determine reviewer: Department manager user, fallback to employee's parent manager
             dept_manager_user = False
@@ -1687,6 +1765,35 @@ class ApprovalRequest(models.Model):
                 second_manager_user = False
             is_specialist = not reviewer  # Specialist = no reviewer
 
+            # Pre-scan templates: collect user IDs whose amount condition is NOT met.
+            # These users must NOT be added via manager/line-manager paths
+            # (only reviewers / optional approvers can bypass this).
+            amount_excluded_user_ids = set()
+            if request.category_id and hasattr(request.category_id, 'approver_template_ids'):
+                req_amt = request.amount or 0.0
+                for tmpl in request.category_id.approver_template_ids:
+                    if not getattr(tmpl, 'po_amount', 0):
+                        continue
+                    thr = tmpl.po_amount
+                    op = tmpl.po_amount_operator or 'ge'
+                    met = (
+                        (op == 'gt' and req_amt > thr) or
+                        (op == 'ge' and req_amt >= thr) or
+                        (op == 'lt' and req_amt < thr) or
+                        (op == 'le' and req_amt <= thr) or
+                        (op == 'eq' and req_amt == thr)
+                    )
+                    if not met:
+                        for u in tmpl.user_ids:
+                            amount_excluded_user_ids.add(u.id)
+
+            # Collect reviewer user IDs (optional approvers) – these bypass amount exclusion
+            reviewer_user_ids = set()
+            if request.optional_approver_ids:
+                for opt in request.optional_approver_ids:
+                    if getattr(opt, 'user_id', False):
+                        reviewer_user_ids.add(opt.user_id.id)
+
             # If category has configured approver templates, use them
             if request.category_id and hasattr(request.category_id, 'approver_template_ids') and request.category_id.approver_template_ids:
                 # Always inject reviewers group first (manager + optional approvers)
@@ -1702,15 +1809,28 @@ class ApprovalRequest(models.Model):
                 if not is_specialist and reviewer and request.category_id.manager_approval:
                     manager_required = request.category_id.manager_approval == 'required'
                     reviewer_users.append((reviewer, manager_required))
-                # Add second manager (grandparent) if configured and not executive
-                if second_manager_user and request.category_id.second_manager_approval:
-                    if second_manager_user.id not in executive_user_ids and second_manager_user != reviewer:
-                        second_required = request.category_id.second_manager_approval == 'required'
-                        reviewer_users.append((second_manager_user, second_required))
+                # Add second manager (grandparent) if configured
+                if second_manager_user and request.category_id.second_manager_approval and second_manager_user != reviewer:
+                    second_required = request.category_id.second_manager_approval == 'required'
+                    reviewer_users.append((second_manager_user, second_required))
                 for user_rec_opt, is_required in reviewer_users:
                     if user_rec_opt and user_rec_opt.id not in added_user_ids:
-                        # If line manager is an executive, skip as reviewer
+                        if ceo_id_to_exclude and user_rec_opt.id == ceo_id_to_exclude:
+                            continue
+                        # Skip users whose template amount condition is not met,
+                        # unless they were explicitly added as a reviewer.
+                        if user_rec_opt.id in amount_excluded_user_ids and user_rec_opt.id not in reviewer_user_ids:
+                            continue
+                        # If line manager is an executive, treat them as executive approver
                         if user_rec_opt.id in executive_user_ids:
+                            role_name = executive_role_by_user_id.get(user_rec_opt.id)
+                            # Respect CEO policies defined via templates: if a CEO template exists,
+                            # do not auto-include CEO based solely on manager hierarchy for this category.
+                            if role_name == 'ceo' and ceo_policy_template_exists:
+                                continue
+                            # Only set manager-based required status if not already defined
+                            if user_rec_opt.id not in executive_required_status:
+                                executive_required_status[user_rec_opt.id] = is_required
                             continue
                         vals_r = approver_line(user_rec_opt, seq, required=is_required, category_id=category_id)
                         if vals_r and vals_r.get('user_id'):
@@ -1725,11 +1845,15 @@ class ApprovalRequest(models.Model):
                     for cat_approver in request.category_id.approver_ids.sorted(lambda r: getattr(r, 'sequence', 0) or 0):
                         cat_user = getattr(cat_approver, 'user_id', False)
                         if cat_user and cat_user.id not in added_user_ids:
+                            if ceo_id_to_exclude and cat_user.id == ceo_id_to_exclude:
+                                continue
                             # Skip executive users here - they'll be added at the end
                             if cat_user.id in executive_user_ids:
                                 # Store their required status for later
                                 cat_required = getattr(cat_approver, 'required', True)
-                                executive_required_status[cat_user.id] = cat_required
+                                # Do not override if already set from manager hierarchy
+                                if cat_user.id not in executive_required_status:
+                                    executive_required_status[cat_user.id] = cat_required
                                 continue
                             cat_required = getattr(cat_approver, 'required', True)
                             vals_cat = approver_line(cat_user, seq, required=cat_required, category_id=category_id)
@@ -1763,10 +1887,13 @@ class ApprovalRequest(models.Model):
                         for user_rec in tmpl.user_ids:
                             if user_rec.id in added_user_ids:
                                 continue
+                            if ceo_id_to_exclude and user_rec.id == ceo_id_to_exclude:
+                                continue
                             # Skip executive users here - they'll be added at the end
                             if user_rec.id in executive_user_ids:
                                 # Store their required status for later
-                                executive_required_status[user_rec.id] = tmpl.required
+                                if user_rec.id not in executive_required_status:
+                                    executive_required_status[user_rec.id] = tmpl.required
                                 continue
                             vals = approver_line(user_rec, seq, required=tmpl.required, category_id=category_id)
                             if vals and vals.get('user_id'):
@@ -1780,6 +1907,7 @@ class ApprovalRequest(models.Model):
                         role_to_user = {
                             'reviewer': reviewer,
                             'cfo': cfo,
+                            'cso': cso,
                             'senior': senior_approver,
                             'ceo': ceo,
                         }
@@ -1789,10 +1917,13 @@ class ApprovalRequest(models.Model):
                         user_rec = role_to_user.get(tmpl.role)
                         if not user_rec or user_rec.id in added_user_ids:
                             continue
+                        if ceo_id_to_exclude and user_rec.id == ceo_id_to_exclude:
+                            continue
                         # Skip executive users here - they'll be added at the end
                         if user_rec.id in executive_user_ids:
                             # Store their required status for later
-                            executive_required_status[user_rec.id] = tmpl.required
+                            if user_rec.id not in executive_required_status:
+                                executive_required_status[user_rec.id] = tmpl.required
                             continue
                         vals = approver_line(user_rec, seq, required=tmpl.required, category_id=category_id)
                         if vals and vals.get('user_id'):
@@ -1807,13 +1938,17 @@ class ApprovalRequest(models.Model):
                 # Also remove them from added_user_ids so they can be re-added at the end
                 added_user_ids -= executive_user_ids
                 
-                # Add executive users at the end in order: CFO, Senior Approver, CEO
+                # Add executive users at the end in order: CFO, CSO, Senior Approver, CEO
                 # Only include executives that were explicitly configured as approvers/reviewers
                 for role_name, exec_user in executive_users:
                     if exec_user and exec_user.id not in added_user_ids:
                         # If this executive was never referenced in category/reviewer/templates, skip
                         exec_required = executive_required_status.get(exec_user.id)
                         if exec_required is None:
+                            continue
+                        # Skip executives whose template amount condition is not met,
+                        # unless they were explicitly added as a reviewer.
+                        if exec_user.id in amount_excluded_user_ids and exec_user.id not in reviewer_user_ids:
                             continue
                         vals = approver_line(exec_user, seq, required=exec_required, category_id=category_id)
                         if vals and vals.get('user_id'):
@@ -1841,17 +1976,30 @@ class ApprovalRequest(models.Model):
             if not is_specialist and reviewer and request.category_id.manager_approval:
                 manager_required = request.category_id.manager_approval == 'required'
                 reviewer_users.append((reviewer, manager_required))
-            # Add second manager (grandparent) if configured and not executive
-            if second_manager_user and request.category_id.second_manager_approval:
-                if second_manager_user.id not in executive_user_ids and second_manager_user != reviewer:
-                    second_required = request.category_id.second_manager_approval == 'required'
-                    reviewer_users.append((second_manager_user, second_required))
+            # Add second manager (grandparent) if configured
+            if second_manager_user and request.category_id.second_manager_approval and second_manager_user != reviewer:
+                second_required = request.category_id.second_manager_approval == 'required'
+                reviewer_users.append((second_manager_user, second_required))
 
             for user_rec, is_required in reviewer_users:
                 if not user_rec or user_rec.id in added_user_ids:
                     continue
-                # If line manager is an executive, skip as reviewer
+                if ceo_id_to_exclude and user_rec.id == ceo_id_to_exclude:
+                    continue
+                # Skip users whose template amount condition is not met,
+                # unless they were explicitly added as a reviewer.
+                if user_rec.id in amount_excluded_user_ids and user_rec.id not in reviewer_user_ids:
+                    continue
+                # If line manager is an executive, treat them as executive approver
                 if user_rec.id in executive_user_ids:
+                    role_name = executive_role_by_user_id.get(user_rec.id)
+                    # Respect CEO policies defined via templates: if a CEO template exists,
+                    # do not auto-include CEO based solely on manager hierarchy for this category.
+                    if role_name == 'ceo' and ceo_policy_template_exists:
+                        continue
+                    # Only set manager-based required status if not already defined
+                    if user_rec.id not in executive_required_status:
+                        executive_required_status[user_rec.id] = is_required
                     continue
                 lm_vals = approver_line(user_rec, seq, required=is_required, category_id=category_id)
                 if lm_vals and lm_vals.get('user_id'):
@@ -1866,11 +2014,14 @@ class ApprovalRequest(models.Model):
                 for cat_approver in request.category_id.approver_ids.sorted(lambda r: getattr(r, 'sequence', 0) or 0):
                     cat_user = getattr(cat_approver, 'user_id', False)
                     if cat_user and cat_user.id not in added_user_ids:
+                        if ceo_id_to_exclude and cat_user.id == ceo_id_to_exclude:
+                            continue
                         # Skip executive users here - they'll be added at the end
                         if cat_user.id in executive_user_ids:
                             # Store their required status for later
                             cat_required = getattr(cat_approver, 'required', True)
-                            executive_required_status[cat_user.id] = cat_required
+                            if cat_user.id not in executive_required_status:
+                                executive_required_status[cat_user.id] = cat_required
                             continue
                         cat_required = getattr(cat_approver, 'required', True)
                         vals_cat = approver_line(cat_user, seq, required=cat_required, category_id=category_id)
@@ -1886,13 +2037,17 @@ class ApprovalRequest(models.Model):
             # Also remove them from added_user_ids so they can be re-added at the end
             added_user_ids -= executive_user_ids
             
-            # Add executive users at the end in order: CFO, Senior Approver, CEO
+            # Add executive users at the end in order: CFO, CSO, Senior Approver, CEO
             # Only include executives that were explicitly configured as approvers/reviewers
             for role_name, exec_user in executive_users:
                 if exec_user and exec_user.id not in added_user_ids:
                     # If this executive was never referenced in category/reviewer/templates, skip
                     exec_required = executive_required_status.get(exec_user.id)
                     if exec_required is None:
+                        continue
+                    # Skip executives whose template amount condition is not met,
+                    # unless they were explicitly added as a reviewer.
+                    if exec_user.id in amount_excluded_user_ids and exec_user.id not in reviewer_user_ids:
                         continue
                     vals = approver_line(exec_user, seq, required=exec_required, category_id=category_id)
                     if vals and vals.get('user_id'):
@@ -1934,7 +2089,7 @@ class ApprovalApprover(models.Model):
         string='Role',
         compute='_compute_approval_role',
         store=False,
-        help='Shows the approval role (CFO, CEO, or Reviewer)'
+        help='Shows the approval role (CFO, CSO, CEO, or Reviewer)'
     )
     delegated_by_id = fields.Many2one(
         'res.users',
@@ -2124,9 +2279,9 @@ class ApprovalApprover(models.Model):
         
         return False
     
-    @api.depends('user_id', 'request_id', 'request_id.company_id.cfo_id', 'request_id.company_id.senior_approver_id', 'request_id.company_id.ceo_id', 'delegated_by_id')
+    @api.depends('user_id', 'request_id', 'request_id.company_id.cfo_id', 'request_id.company_id.cso_id', 'request_id.company_id.senior_approver_id', 'request_id.company_id.ceo_id', 'delegated_by_id')
     def _compute_approval_role(self):
-        """Determine if this approver is CFO, Senior Approver, CEO, or Reviewer"""
+        """Determine if this approver is CFO, CSO, Senior Approver, CEO, or Reviewer"""
         for approver in self:
             role = ''
             if not approver.request_id or not approver.user_id:
@@ -2142,6 +2297,9 @@ class ApprovalApprover(models.Model):
             # Check if role_user is CFO
             if hasattr(request.company_id, 'cfo_id') and request.company_id.cfo_id and role_user.id == request.company_id.cfo_id.id:
                 role = 'CFO (Approved by)'
+            # Check if role_user is CSO
+            elif hasattr(request.company_id, 'cso_id') and request.company_id.cso_id and role_user.id == request.company_id.cso_id.id:
+                role = 'CSO (Approved by)'
             # Check if role_user is Senior Approver
             elif hasattr(request.company_id, 'senior_approver_id') and request.company_id.senior_approver_id and role_user.id == request.company_id.senior_approver_id.id:
                 role = 'CEO Office (Pre-authorization)'
@@ -2201,6 +2359,8 @@ class ApprovalChecklistLine(models.Model):
     request_id = fields.Many2one('approval.request', string='Approval Request', ondelete='cascade', required=True)
     name = fields.Char(string='Item', required=True)
     is_required = fields.Boolean(string='Required', default=True)
+    is_letter_memo = fields.Boolean(related='request_id.category_id.is_letter_memo')
+    request_status = fields.Selection(related='request_id.request_status')
     document_ids = fields.Many2many(
         comodel_name='ir.attachment',
         relation='approval_checklist_line_attachment_rel',
@@ -2209,6 +2369,221 @@ class ApprovalChecklistLine(models.Model):
         string='Attachments',
         help='Upload supporting documents for this checklist item.'
     )
+    sign_template_id = fields.Many2one(
+        'sign.template',
+        string='Sign Template',
+        readonly=True,
+        copy=False,
+        help='Sign template created from this checklist line attachment.',
+    )
+    sign_request_id = fields.Many2one(
+        'sign.request',
+        string='Sign Request',
+        readonly=True,
+        copy=False,
+        help='Sign request created when this checklist document was sent for signature.',
+    )
+    letter_number = fields.Char(
+        string='Letter Number',
+        readonly=True,
+        copy=False,
+        help='Unique letter number assigned when this checklist line is opened for signing.',
+    )
+    can_open_in_sign = fields.Boolean(
+        string='Can Open in Sign',
+        compute='_compute_can_open_in_sign',
+    )
+
+    @api.depends('request_id.is_letter_memo_signable', 'document_ids')
+    def _compute_can_open_in_sign(self):
+        for line in self:
+            line.can_open_in_sign = (
+                line.request_id.is_letter_memo_signable
+                and bool(line.document_ids)
+            )
+
+    def _compute_next_letter_number(self):
+        """Build the next letter number from the memo reference and used suffixes."""
+        self.ensure_one()
+        request = self.request_id
+        if not request:
+            return False
+
+        full_reference = (request.name or '').strip()
+        base_reference = full_reference.rsplit('-', 1)[-1].strip() if full_reference else ''
+        if not base_reference:
+            return False
+
+        if self.letter_number:
+            return self.letter_number
+
+        used_indexes = []
+        prefix = f"{base_reference}-"
+        for line in request.checklist_line_ids:
+            if line.id == self.id or not line.letter_number:
+                continue
+            if not line.letter_number.startswith(prefix):
+                continue
+            suffix = line.letter_number[len(prefix):]
+            if suffix.isdigit():
+                used_indexes.append(int(suffix))
+
+        next_index = (max(used_indexes) + 1) if used_indexes else 0
+        return f"{base_reference}-{next_index:02d}"
+
+    def _get_letter_sequence_base(self):
+        """Return the numeric memo sequence portion used by letter fields."""
+        self.ensure_one()
+        full_reference = (self.request_id.name or '').strip()
+        return full_reference.rsplit('-', 1)[-1].strip() if full_reference else False
+
+    def _get_sign_letter_sequence_map(self):
+        """Return the stored per-sign-item letter values for the whole memo."""
+        self.ensure_one()
+        if not self.sign_template_id:
+            return {}
+
+        letter_seq_type = self.env.ref(
+            'approval_module.sign_item_type_letter_sequence',
+            raise_if_not_found=False,
+        )
+        if not letter_seq_type:
+            return {}
+
+        all_templates = self.request_id.checklist_line_ids.mapped('sign_template_id')
+        all_letter_items = all_templates.mapped('sign_item_ids').filtered(
+            lambda item: item.type_id == letter_seq_type
+        ).sorted('id')
+
+        sequence_map = {}
+        for sign_item in all_letter_items:
+            if sign_item.letter_sequence_value:
+                sequence_map[sign_item.id] = sign_item.letter_sequence_value
+        return sequence_map
+
+    def _ensure_template_letter_sequence_values(self):
+        """Assign letter sequence values when the signer opens this document."""
+        self.ensure_one()
+        if not self.sign_template_id or not self.request_id:
+            return {}
+
+        letter_seq_type = self.env.ref(
+            'approval_module.sign_item_type_letter_sequence',
+            raise_if_not_found=False,
+        )
+        if not letter_seq_type:
+            return {}
+
+        current_items = self.sign_template_id.sign_item_ids.filtered(
+            lambda item: item.type_id == letter_seq_type
+        ).sorted(lambda item: (item.page, item.posY, item.posX, item.id))
+        if not current_items:
+            return {}
+
+        base_reference = self._get_letter_sequence_base()
+        if not base_reference:
+            return {}
+
+        all_letter_items = self.request_id.checklist_line_ids.mapped('sign_template_id').mapped('sign_item_ids').filtered(
+            lambda item: item.type_id == letter_seq_type
+        )
+
+        other_items = all_letter_items - current_items
+        other_values = set(other_items.mapped('letter_sequence_value'))
+        current_values = [value for value in current_items.mapped('letter_sequence_value') if value]
+        current_has_duplicates = len(current_values) != len(set(current_values))
+        current_collides_with_others = any(value in other_values for value in current_values)
+        needs_assignment = (
+            len(current_values) != len(current_items)
+            or current_has_duplicates
+            or current_collides_with_others
+        )
+
+        if not needs_assignment:
+            return self._get_sign_letter_sequence_map()
+
+        used_indexes = []
+        prefix = f"{base_reference}-"
+        for item in other_items.filtered(lambda item: item.letter_sequence_value):
+            if not item.letter_sequence_value.startswith(prefix):
+                continue
+            suffix = item.letter_sequence_value[len(prefix):]
+            if suffix.isdigit():
+                used_indexes.append(int(suffix))
+
+        next_index = (max(used_indexes) + 1) if used_indexes else 0
+        for item in current_items:
+            item.sudo().letter_sequence_value = f"{base_reference}-{next_index:02d}"
+            next_index += 1
+
+        return self._get_sign_letter_sequence_map()
+
+    def action_open_in_sign(self):
+        """Create a sign.template from the first attachment and open Sign.
+
+        If the template already has signature fields placed, opens the send
+        wizard so the user can assign signatories and send.  Otherwise opens
+        the template editor so the user can place fields first.
+        """
+        self.ensure_one()
+        request = self.request_id
+        if request.request_status != 'approved':
+            raise UserError(_("The request must be fully approved before opening in Sign."))
+        if not request.category_id or not getattr(request.category_id, 'is_letter_memo', False):
+            raise UserError(_("This is not a letter memo request."))
+        if not request._is_last_approver():
+            raise UserError(_("Only the last approver can open documents in Sign."))
+        if not self.document_ids:
+            raise UserError(_("No attachments found on this checklist item."))
+
+        # Use sudo to read attachments (user may not have ir.attachment record rule access)
+        attachment = self.sudo().document_ids[0]
+        if not attachment.mimetype or 'pdf' not in attachment.mimetype:
+            raise UserError(_("Only PDF documents can be opened in Sign. Please upload a PDF attachment."))
+
+        # Assign a unique letter number to this checklist line if not yet assigned
+        if not self.letter_number:
+            letter_number = self._compute_next_letter_number()
+            if not letter_number:
+                raise UserError(_("Unable to compute the letter number because the memo reference is missing."))
+            self.sudo().letter_number = letter_number
+
+        if not self.sign_template_id:
+            SignTemplate = self.env['sign.template'].sudo()
+            # Always create a dedicated Sign template per checklist line so
+            # line-specific metadata like letter_number cannot bleed across lines.
+            sign_attachment = attachment.copy({
+                'res_model': 'sign.template',
+                'res_id': 0,
+            })
+            template = SignTemplate.create({
+                'name': "%s - %s" % (request.name, self.name),
+                'attachment_id': sign_attachment.id,
+            })
+            self.sudo().sign_template_id = template.id
+
+        template = self.sign_template_id.sudo()
+
+        # If the template already has signature fields, open the send wizard
+        # so the user can assign signatories and send the request.
+        if template.sign_item_ids:
+            ctx = {
+                'active_id': template.id,
+                'active_model': 'sign.template',
+                'default_reference_doc': 'approval.request,%s' % request.id,
+                'default_filename': '%s - %s' % (request.name, self.name),
+            }
+            return {
+                'type': 'ir.actions.act_window',
+                'name': _('Send for Signature'),
+                'res_model': 'sign.send.request',
+                'view_mode': 'form',
+                'target': 'new',
+                'context': ctx,
+            }
+
+        # No fields placed yet – open the template editor first.
+        return template.go_to_custom_template()
 
     def _link_attachments_to_request(self):
         for line in self:
